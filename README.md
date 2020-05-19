@@ -15,10 +15,7 @@ In the case of organic oligomers/polymers, preparing 3D-geometries is the first 
 * [RDKit](https://www.rdkit.org/)
 * [Open Babel](https://openbabel.org/docs/dev/index.html)
 
-Note that, both [RDKit](https://www.rdkit.org/) and [Open Babel](https://openbabel.org/docs/dev/index.html) are need to be installed manually.  For detailed installation procedure visit toolkit’s website [Open Babel](https://openbabel.org/docs/dev/index.html), [RDKit](https://www.rdkit.org/). Make sure that all dependencies are installed correctly and working properly.
-
-Please install rdkit and graphviz first, because they are not pip installable.
-currently rdkit is not pip installable
+Note that, both [RDKit](https://www.rdkit.org/) and [Open Babel](https://openbabel.org/docs/dev/index.html) are need to be installed manually.  For detailed installation procedure visit toolkit’s website: [Open Babel](https://openbabel.org/docs/dev/index.html), [RDKit](https://www.rdkit.org/). Make sure that all dependencies are installed correctly and working properly.
 
 We recommend using Anaconda python, and creating a
 fresh conda environment for the install (e. g. `conda create -n MY_ENV_NAME`).
