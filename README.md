@@ -1,6 +1,13 @@
-# Welcome to PolymerStructurePredictor (PSP)
+# PolymerStructurePredictor (PSP)
 
-PSP documents are available on [Ramprasad Group website](http://ramprasad.mse.gatech.edu/).
+In the case of organic oligomers/polymers, preparing 3D-geometries is the first and crucial step for high-level *ab-initio* calculation. Building 3D structures by hand is not only a tedious job but sometimes challenging as well. The PSP makes your life a lot easier by automatically generating proper 3D structures from SMILES strings.
+
+>The PSP generates monomer, oligomers and polymer chains as well as crystal structures from a SMILES string.
+
+## Documentation, Discussion and Contribution
+* PSP documents are available on [Ramprasad Group website](http://ramprasad.mse.gatech.edu/).
+* Mailing list:
+* Issues: 
 
 ## Installation
 
