@@ -1,6 +1,6 @@
 # PolymerStructurePredictor (PSP)
 
-In the case of organic oligomers/polymers, preparing 3D-geometries is the first and crucial step for high-level *ab-initio* calculation. Building 3D structures by hand is not only a tedious job but sometimes challenging as well. The PSP makes your life a lot easier by automatically generating proper 3D structures from SMILES strings.
+In the case of organic oligomers/polymers, preparing 3D-geometries is the first and crucial step for high-level *ab-initio* calculations. Building 3D structures by hand is not only a tedious job but sometimes challenging as well. The PSP makes your life a lot easier by automatically generating proper 3D structures from SMILES strings.
 
 >The PSP generates monomer, oligomers and polymer chains as well as crystal structures from a SMILES string.
 
