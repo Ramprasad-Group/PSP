@@ -13,9 +13,10 @@ obConversion.SetInAndOutFormats("mol", "xyz")
 
 class PolymerBuilder:
 
-    def __init__(self, df_smiles, num_conf=1, input_monomer_angles='medium', input_dimer_angles='low', Steps=5, Substeps=5, n_cores=0, method='SA'):
+    def __init__(self, df_smiles, num_conf=1, length=['n'], input_monomer_angles='medium', input_dimer_angles='low', Steps=20, Substeps=10, n_cores=0, method='SA'):
         self.df_smiles = df_smiles
         self.num_conf = num_conf
+        self.length = length
         self.input_monomer_angles = input_monomer_angles
         self.input_dimer_angles = input_dimer_angles
         self.Steps = Steps
@@ -69,9 +70,8 @@ class PolymerBuilder:
         if self.n_cores == 0:
             self.n_cores = multiprocessing.cpu_count() - 1
 
-        result=Parallel(n_jobs=self.n_cores)(delayed(bd.build_polymer)(unit_name, df, ID,
-            SMILES, dum, xyz_in_dir, xyz_tmp_dir,
-            vasp_out_dir, rot_angles_monomer, rot_angles_dimer, self.Steps, self.Substeps, self.num_conf, self.method)
+        result=Parallel(n_jobs=self.n_cores)(delayed(bd.build_polymer)(unit_name, df, ID, dum, xyz_in_dir, xyz_tmp_dir,
+            vasp_out_dir, rot_angles_monomer, rot_angles_dimer, self.Steps, self.Substeps, self.num_conf, self.length, self.method)
             for unit_name in df[ID].values)
     #        print(result)
         for i in result:

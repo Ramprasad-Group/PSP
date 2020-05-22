@@ -1,0 +1,12 @@
+README.md
+setup.py
+PolymerStructurePredictor/PB_lib.py
+PolymerStructurePredictor/PolymerBuilder.py
+PolymerStructurePredictor/__init__.py
+PolymerStructurePredictor/simulated_annealing.py
+PolymerStructurePredictor.egg-info/PKG-INFO
+PolymerStructurePredictor.egg-info/SOURCES.txt
+PolymerStructurePredictor.egg-info/dependency_links.txt
+PolymerStructurePredictor.egg-info/not-zip-safe
+PolymerStructurePredictor.egg-info/top_level.txt
+test/test.py

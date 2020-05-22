@@ -319,6 +319,7 @@ def gen_vasp(vasp_dir,unit_name,unit,dum1,dum2,atom1,atom2,dum,unit_dis,SN):
     unit = trans_origin(unit, atom2)
     unit = alignZ(unit, atom2, dum1)
     unit = unit.sort_values(by=[0])
+#    unit[3] = unit[3] + (unit_dis+add_dis+1.68)/2
 
     keep_space = 6
 #    bond_dis = 0.1
@@ -329,6 +330,9 @@ def gen_vasp(vasp_dir,unit_name,unit,dum1,dum2,atom1,atom2,dum,unit_dis,SN):
     b_vec = unit[2].max() - unit[2].min() + keep_space
 
     c_vec = unit.loc[dum1][3] + unit_dis + add_dis#
+
+    # move unit to the center of a box
+    unit[3] = unit[3] + (1.68 + unit_dis + add_dis)/2
 
     unit = unit[unit[0] != dum]
 
@@ -602,6 +606,36 @@ def mono2dimer(unit_name,unit_input,check_connectivity_monomer,dum1, dum2, atom1
 
     return check_connectivity_dimer
 
+# Build oligomers
+def oligomer_build(unit,unit_name,dum1, dum2, atom1, atom2,oligo_len,unit_dis,neigh_atoms_info):
+    unit_copy = unit.copy()
+    unit_copy = trans_origin(unit_copy, dum1)
+    unit_copy = alignZ(unit_copy, dum1, dum2)
+
+    if oligo_len == 1:
+        oligomer = unit_copy
+        dum2_oligo = dum2
+        atom2_oligo = atom2
+    else:
+        oligomer, check_connectivity_dimer = build(unit_name, oligo_len, unit_copy, dum1, dum2, atom1, atom2, unit_dis)
+
+        add_atoms = (oligo_len - 1) * (len(unit.index) - 2)
+        dum2_oligo = dum2 + add_atoms
+        atom2_oligo = atom2 + add_atoms
+
+    if find_bondorder(dum1, atom1, neigh_atoms_info) == 1:
+        dums=[dum1,dum2_oligo]
+        atoms=[atom1,atom2_oligo]
+        for i, j in zip(dums, atoms):
+            #print(i,j)
+            vec1,vec2,vec3 = oligomer.loc[i][1]-oligomer.loc[j][1],oligomer.loc[i][2]-oligomer.loc[j][2],oligomer.loc[i][3]-oligomer.loc[j][3]
+            vec_mag = np.sqrt(vec1*vec1+vec2*vec2+vec3*vec3)
+            vec_normal = (vec1,vec2,vec3)/vec_mag
+            new_coord = (oligomer.loc[j][1],oligomer.loc[j][2],oligomer.loc[j][3]) + 1.08 * vec_normal
+            oligomer = oligomer.append(pd.DataFrame(['H']+list(new_coord)).T,ignore_index=True)
+
+    return oligomer, dum1, atom1, dum2_oligo, atom2_oligo
+
 
 # Build a polymer from a monomer unit.
 # 1. Rotate all single bonds and find out the best monomer by maximizing angle between two possible vectors between two sets of connecting and dummy atoms.
@@ -611,7 +645,7 @@ def mono2dimer(unit_name,unit_input,check_connectivity_monomer,dum1, dum2, atom1
 # 5. Search the best unit and build a dimer
 # 6. Always check connectivity between atoms to verify if a monomer/dimer is not acceptable or not.
 
-def build_polymer(unit_name,df_smiles,ID,SMILES,dum,xyz_in_dir,xyz_tmp_dir,vasp_out_dir,rot_angles_monomer,rot_angles_dimer,Steps, Substeps,num_conf,method):
+def build_polymer(unit_name,df_smiles,ID,dum,xyz_in_dir,xyz_tmp_dir,vasp_out_dir,rot_angles_monomer,rot_angles_dimer,Steps, Substeps,num_conf,length,method):
     vasp_out_dir_indi=vasp_out_dir+unit_name+'/'
     build_dir(vasp_out_dir_indi)
 
@@ -619,6 +653,9 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,dum,xyz_in_dir,xyz_tmp_dir,vasp_
     decision = 'FAILURE'
     reject_polymers=[]
     SN = 0
+
+    # Oligomers
+    oligo_list = list(set(length) - set(['n']))
 
     # Distances are optimized with reference to C-C single bond (1.68 angstrom)
     dums_dis_dict = {'Cl':-0.17, 'F':0.325, 'B':-0.02, 'O': 0.29, 'Si':-0.19, 'Br':-0.226}
@@ -634,7 +671,7 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,dum,xyz_in_dir,xyz_tmp_dir,vasp_
             convert_smiles2xyz, m1 = smiles_xyz(unit_name,smiles_each,xyz_in_dir)
 
             if convert_smiles2xyz == 'NOT_DONE':
-#                print(unit_name, "Couldnt convert smiles to xyz")
+                #print(unit_name, "Couldnt convert smiles to xyz")
                 if dum_count == len(list(dums_dis_dict.index)):
                     return unit_name, 'REJECT', 0
                 else:
@@ -646,8 +683,11 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,dum,xyz_in_dir,xyz_tmp_dir,vasp_
             # Find location of two dummy atoms
             try:
                 dum1, dum2 = IdentifyDum(unit,dum)
+#                print(dum1,dum2)
+                if dum1 > dum2:
+                    dum1,dum2=dum2,dum1
             except:
-#                print(unit_name, " is not a polymer; Failed")
+                #   print(unit_name, " is not a polymer; Failed")
                 if dum_count == len(list(dums_dis_dict.index)):
                     return unit_name, 'REJECT', 0
                 else:
@@ -663,16 +703,17 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,dum,xyz_in_dir,xyz_tmp_dir,vasp_
                 atom2=neigh_atoms_info['NeiAtom'][dum2].copy()[0]
                 if atom1 and atom2 is not None:
                     unit_dis = dums_dis_dict.loc[dum]
+#                    print('Unit Dis: ',unit_dis)
                     break
             except:
-#                print(unit_name, " Failed; Check xyz geometry in ", xyz_in_dir)
+                #  print(unit_name, " Failed; Check xyz geometry in ", xyz_in_dir)
                 if dum_count == len(list(dums_dis_dict.index)):
                     return unit_name, 'REJECT', 0
                 else:
                     continue
 
     if atom1 == atom2:
-#        print(unit_name, " Chain length of monomer: only one atom ; Can't handle ")
+        # print(unit_name, " Chain length of monomer: only one atom ; Can't handle ")
         return unit_name, 'REJECT', 0
 
     else:
@@ -686,9 +727,19 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,dum,xyz_in_dir,xyz_tmp_dir,vasp_
         if check_connectivity_dimer == 'CORRECT':
             decision = 'SUCCESS'
             SN += 1
+#            print(length, 'Zero')
+            if 'n' in length:
+                gen_vasp(vasp_out_dir_indi, unit_name, unit, dum1, dum2, atom1, atom2, dum, unit_dis, str(SN))
 
-            # create VASP file
-            gen_vasp(vasp_out_dir_indi, unit_name, unit, dum1, dum2, atom1, atom2, dum, unit_dis, str(SN))
+            if len(oligo_list) > 0:
+                for oligo_len in oligo_list:
+                    oligomer, dum1_oligo, atom1_oligo, dum2_oligo, atom2_oligo = oligomer_build(unit, unit_name, dum1, dum2, atom1, atom2, oligo_len, unit_dis,neigh_atoms_info)
+                    gen_vasp(vasp_out_dir_indi, unit_name, oligomer, dum1_oligo, dum2_oligo, atom1_oligo, atom2_oligo, dum, unit_dis+5.0, str(SN)+'_N'+str(oligo_len))
+
+                    # Remove dummy atoms
+                    oligomer = oligomer[oligomer[0] != dum]
+                    gen_xyz(vasp_out_dir_indi+unit_name+'_'+str(SN)+'_N'+str(oligo_len)+'.xyz',oligomer)
+
             if SN == num_conf:
                 return unit_name, 'SUCCESS', 1
 
@@ -704,7 +755,7 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,dum,xyz_in_dir,xyz_tmp_dir,vasp_
             results = results.head(num_conf+10)
             TotalSN=0
             for index, row in results.iterrows():
-#                print('Hari--------Monomer',SN)
+                # print('Hari--------Monomer',SN)
                 TotalSN +=1
                 final_unit = pd.read_csv(row['xyzFile'], header=None, skiprows=2,delim_whitespace=True)
 
@@ -720,14 +771,24 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,dum,xyz_in_dir,xyz_tmp_dir,vasp_
                 if check_connectivity_dimer == 'CORRECT':
                     decision='SUCCESS'
                     SN += 1
+                    if 'n' in length:
+                        gen_vasp(vasp_out_dir_indi,unit_name,final_unit,dum1,dum2,atom1,atom2,dum,unit_dis,str(SN))
 
-                    gen_vasp(vasp_out_dir_indi,unit_name,final_unit,dum1,dum2,atom1,atom2,dum,unit_dis,str(SN))
+                    if len(oligo_list) > 0:
+                        for oligo_len in oligo_list:
+                            oligomer, dum1_oligo, atom1_oligo, dum2_oligo, atom2_oligo = oligomer_build(unit, unit_name,dum1, dum2,atom1, atom2,oligo_len,unit_dis,neigh_atoms_info)
+                            gen_vasp(vasp_out_dir_indi, unit_name, oligomer, dum1_oligo, dum2_oligo, atom1_oligo,atom2_oligo, dum, unit_dis + 5.0, str(SN) + '_N' + str(oligo_len))
+
+                            # Remove dummy atoms
+                            oligomer = oligomer[oligomer[0] != dum]
+                            gen_xyz(vasp_out_dir_indi + unit_name + '_' + str(SN) + '_N' + str(oligo_len) + '.xyz', oligomer)
+
                     if SN == num_conf:
-                        break
+                         break
 
                 # If we do not get a proper monomer unit, then consider a dimer as a monomer unit and build a dimer of the same
                 if SN < num_conf and TotalSN == results.index.size:
-#                    print(SN,num_conf,'******************************************')
+                    # print(SN,num_conf,'******************************************')
                     unit = final_unit.copy()
                     unit = trans_origin(unit, atom1)
                     unit = alignZ(unit, atom1, atom2)
@@ -736,7 +797,7 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,dum,xyz_in_dir,xyz_tmp_dir,vasp_
                     isempty = unit_dimer.empty
 
                     if isempty == True:
-    #                   print(unit_name, ": Couldn't find an acceptable dimer. Please check the structure.")
+                        # print(unit_name, ": Couldn't find an acceptable dimer. Please check the structure.")
                         return unit_name, 'FAILURE', 0
 
                     check_connectivity_dimer = mono2dimer(unit_name, unit_dimer, 'CORRECT', dum1_2nd, dum2_2nd, atom1_2nd, atom2_2nd,unit_dis)
@@ -744,8 +805,18 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,dum,xyz_in_dir,xyz_tmp_dir,vasp_
                     if check_connectivity_dimer == 'CORRECT':
                         decision = 'SUCCESS'
                         SN += 1
-                        # create VASP file
-                        gen_vasp(vasp_out_dir_indi, unit_name, unit_dimer, dum1_2nd, dum2_2nd, atom1_2nd, atom2_2nd, dum, unit_dis,str(SN))
+                        if 'n' in length:
+                            gen_vasp(vasp_out_dir_indi, unit_name, unit_dimer, dum1_2nd, dum2_2nd, atom1_2nd, atom2_2nd, dum, unit_dis,str(SN))
+
+                        if len(oligo_list) > 0:
+                            for oligo_len in oligo_list:
+                                oligomer, dum1_oligo, atom1_oligo, dum2_oligo, atom2_oligo = oligomer_build(unit,unit_name,dum1, dum2,atom1,atom2,oligo_len,unit_dis,neigh_atoms_info)
+                                gen_vasp(vasp_out_dir_indi, unit_name, oligomer, dum1_oligo, dum2_oligo, atom1_oligo,atom2_oligo, dum, unit_dis + 5.0, str(SN) + '_N' + str(oligo_len))
+
+                                # Remove dummy atoms
+                                oligomer = oligomer[oligomer[0] != dum]
+                                gen_xyz(vasp_out_dir_indi + unit_name + '_' + str(SN) + '_N' + str(oligo_len) + '.xyz',oligomer)
+
                         if SN == num_conf:
                             break
 
@@ -770,7 +841,19 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,dum,xyz_in_dir,xyz_tmp_dir,vasp_
                         if check_connectivity_dimer == 'CORRECT':
                             decision='SUCCESS'
                             SN += 1
-                            gen_vasp(vasp_out_dir_indi, unit_name, final_unit, dum1_2nd, dum2_2nd, atom1_2nd, atom2_2nd, dum,unit_dis,str(SN))
+                            if 'n' in length:
+                                gen_vasp(vasp_out_dir_indi, unit_name, final_unit, dum1_2nd, dum2_2nd, atom1_2nd, atom2_2nd, dum,unit_dis,str(SN))
+
+                            if len(oligo_list) > 0:
+                                for oligo_len in oligo_list:
+                                    oligomer, dum1_oligo, atom1_oligo, dum2_oligo, atom2_oligo = oligomer_build(unit,unit_name,dum1,dum2,atom1,atom2,oligo_len,unit_dis,neigh_atoms_info)
+                                    gen_vasp(vasp_out_dir_indi, unit_name, oligomer, dum1_oligo, dum2_oligo,atom1_oligo, atom2_oligo, dum, unit_dis + 5.0,str(SN) + '_N' + str(oligo_len))
+
+                                    # Remove dummy atoms
+                                    oligomer = oligomer[oligomer[0] != dum]
+                                    gen_xyz(
+                                        vasp_out_dir_indi + unit_name + '_' + str(SN) + '_N' + str(oligo_len) + '.xyz',oligomer)
+
                             if SN == num_conf:
                                 break
 
@@ -797,7 +880,20 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,dum,xyz_in_dir,xyz_tmp_dir,vasp_
                         if check_connectivity_dimer == 'CORRECT':
                             decision = 'SUCCESS'
                             SN += 1
-                            gen_vasp(vasp_out_dir_indi, unit_name, dimer, dum1_2nd, dum2_2nd, atom1_2nd, atom2_2nd, dum,unit_dis,str(SN))
+                            if 'n' in length:
+                                gen_vasp(vasp_out_dir_indi, unit_name, dimer, dum1_2nd, dum2_2nd, atom1_2nd, atom2_2nd, dum,unit_dis,str(SN))
+
+                            if len(oligo_list) > 0:
+                                for oligo_len in oligo_list:
+                                    oligomer, dum1_oligo, atom1_oligo, dum2_oligo, atom2_oligo = oligomer_build(unit,unit_name,dum1,dum2,atom1,atom2,oligo_len,unit_dis,neigh_atoms_info)
+                                    gen_vasp(vasp_out_dir_indi, unit_name, oligomer, dum1_oligo, dum2_oligo,atom1_oligo, atom2_oligo, dum, unit_dis + 5.0,str(SN) + '_N' + str(oligo_len))
+
+                                    # Remove dummy atoms
+                                    oligomer = oligomer[oligomer[0] != dum]
+                                    gen_xyz(
+                                        vasp_out_dir_indi + unit_name + '_' + str(SN) + '_N' + str(oligo_len) + '.xyz',oligomer)
+
                             if SN == num_conf:
                                 break
+
     return unit_name, decision, SN
