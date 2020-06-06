@@ -51,7 +51,7 @@ class PolymerBuilder:
         bd.build_dir(xyz_tmp_dir)
 
         # location of directory for VASP inputs (polymers) and build a directory
-        vasp_out_dir = 'vasp-out/'
+        vasp_out_dir = 'output/'
         bd.build_dir(vasp_out_dir)
 
         start_1 = time.time()
@@ -61,7 +61,6 @@ class PolymerBuilder:
         ID='RID'
         SMILES='smiles'
         df=self.df_smiles.copy()
-    #        df[SMILES] = df[SMILES].str.replace(r'*', dum)
         df[ID] = df[ID].apply(str)
 
         rot_angles_monomer = vars()[self.input_monomer_angles]
@@ -73,9 +72,7 @@ class PolymerBuilder:
         result=Parallel(n_jobs=self.n_cores)(delayed(bd.build_polymer)(unit_name, df, ID, dum, xyz_in_dir, xyz_tmp_dir,
             vasp_out_dir, rot_angles_monomer, rot_angles_dimer, self.Steps, self.Substeps, self.num_conf, self.length, self.method)
             for unit_name in df[ID].values)
-    #        print(result)
         for i in result:
-#            print(i)
             chk_tri.append([i[0],i[1],i[2]])
         end_1 = time.time()
         print('      polymer chain building completed.')

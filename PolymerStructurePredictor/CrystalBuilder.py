@@ -30,8 +30,9 @@ class CrystalBuilder:
         output = []
         for i in result:
             output.append([i[0], i[1], i[2]])
-
-        print('Maximum number of possible crustals for each polymer chain: ', self.Nsamples * self.Nsamples * (self.Nsamples - 1))
+        print("")
+        print('Crystal Builder Started ...')
+        print('Maximum number of possible crustals for each polymer chain: ', self.Nsamples * self.Nsamples * (self.Nsamples))
         output = pd.DataFrame(output, columns=['ID', 'Count', 'radius'])
         end_1 = time.time()
         print('      crystal building completed.')
@@ -147,12 +148,12 @@ def rotateXY(xyz_coordinates, theta):  # XYZ coordinates and angle
 def CrystalBuilderMain(VaspInp,Nsamples,Input_radius,OutDir):
     build_dir(OutDir+VaspInp.split('/')[-1])
 
-    file_info, basis_vec, Num_atom, xyz_coordinates = readvasp(VaspInp+'.vasp')
+    file_info, basis_vec, Num_atom, xyz_coordinates = readvasp(VaspInp.replace('.vasp','')+'.vasp')
     VaspInp = VaspInp.split('/')[-1]
     samples=Nsamples-1
     tm=np.around(np.arange(0,max(xyz_coordinates[2].values)-min(xyz_coordinates[2].values)+(max(xyz_coordinates[2].values)-min(xyz_coordinates[2].values))/samples,(max(xyz_coordinates[2].values)-min(xyz_coordinates[2].values))/samples), decimals=2)
     rm1=np.around(np.arange(0,180+(180/samples),180/samples), decimals=1)
-    rm2=np.around(np.arange(0,180,180/samples), decimals=1) # 0 and 180 degree creates problems
+    rm2=np.around(np.arange(0,180+(180/samples),180/samples), decimals=1) # 0 and 180 degree creates problems
 
     first_poly=Center_XY_r(xyz_coordinates,0.0,0.0)
 
@@ -160,6 +161,7 @@ def CrystalBuilderMain(VaspInp,Nsamples,Input_radius,OutDir):
     # Max (X,Y) + 2.0
     if Input_radius == 'auto':
         radius=max([int((first_poly[0].max()-first_poly[0].min())+0.5),int((first_poly[1].max()-first_poly[1].min())+0.5)])+2.0
+
     else:
         radius = float(Input_radius)
 

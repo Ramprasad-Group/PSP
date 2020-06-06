@@ -5,7 +5,7 @@ import random
 import math
 import openbabel as ob
 obConversion = ob.OBConversion()
-obConversion.SetInFormat("xyz")
+obConversion.SetInAndOutFormats("xyz","xyz")
 ff = ob.OBForceField.FindForceField('UFF')
 mol = ob.OBMol()
 np.set_printoptions(precision=20)
@@ -16,10 +16,6 @@ def f(unit_name,sl,unit,bond,angle,neigh_atoms_info,xyz_tmp_dir,dum1,dum2,atom1,
     obConversion.ReadFile(mol, file_name)
     ff.Setup(mol)
     E_cost = ff.Energy() + ff.Energy()*(1-(ang_1st_2nd/180.0)) + ff.Energy()* penalty * 10
-#    print(ang_1st_2nd,ff.Energy(),ff.Energy()*(1-(ang_1st_2nd/180.0)),E_cost)
-#    print("Distance Angle Energy")
-#    print(dis_dum1_dum2, ang_1st_2nd, E_cost)
-#    print("----------------------")
     return E_cost, conf_unit, file_name
 
 ######################################################
@@ -75,15 +71,12 @@ def SA(unit_name,unit,bonds,angle,neigh_atoms_info,xyz_tmp_dir,dum1,dum2,atom1,a
     unit_ori=unit.copy()
 
     for i in range(n):
-#        unit = unit_ori.copy()
-#        print('Cycle: ' + str(i) + ' with Temperature: ' + str(t))
         for j in range(m):
             unit_prev=unit.copy()
             xi[0] = np.random.choice(i1)
             xi[1] = np.random.choice(i2)
             fc_new,unit,file_name=f(unit_name,i,unit, bonds.loc[xi[0]], xi[1], neigh_atoms_info, xyz_tmp_dir,dum1,dum2,atom1,atom2)
             DeltaE = abs(fc_new - fc)
-#            print(fc,fc_new,DeltaE)
 
             if (fc_new > fc):
                 # Initialize DeltaE_avg if a worse solution was found
@@ -96,9 +89,8 @@ def SA(unit_name,unit,bonds,angle,neigh_atoms_info,xyz_tmp_dir,dum1,dum2,atom1,a
 
                 # objective function is worse
                 # generate probability of acceptance
-#                print("Delta E: ",DeltaE," Delta E avg: ", DeltaE_avg)
                 p = math.exp(-DeltaE / (DeltaE_avg * t))
-#                print("P: ",p, random.random())
+
                 # determine whether to accept worse point
                 if (random.random() < p):
                     # accept the worse solution
@@ -120,10 +112,9 @@ def SA(unit_name,unit,bonds,angle,neigh_atoms_info,xyz_tmp_dir,dum1,dum2,atom1,a
                 na = na + 1.0
                 # update DeltaE_avg
                 DeltaE_avg = (DeltaE_avg * (na - 1.0) + DeltaE) / na
-#                print("Delta E avg",DeltaE_avg)
+
             else:
                 unit=unit_prev.copy()
-#                print("Didn't accept")
 
         # Record the best x values at the end of every cycle
         x[i + 1][0] = xc[0]
@@ -133,8 +124,7 @@ def SA(unit_name,unit,bonds,angle,neigh_atoms_info,xyz_tmp_dir,dum1,dum2,atom1,a
         except:
             results.append([i, fc, 'XXX'])
         fs[i + 1] = fc
-#        print(unit_name,np.around(fs[i-1:i+2], decimals=15))
-#        print(unit_name,i-1,fs[i - 1], i,fs[i], i+1,fs[i + 1])
+
         if np.around(fs[i],decimals=15) == np.around(fs[i+1],decimals=15) and np.around(fs[i-1],decimals=15) == np.around(fs[i+1],decimals=15):
             break
         # Lower the temperature for next cycle

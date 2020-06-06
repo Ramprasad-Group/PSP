@@ -6,29 +6,54 @@ import os
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem import ChemicalForceFields
-import openbabel as ob
+
 #from rdkit import rdBase
 #rdBase.DisableLog('rdApp.error')
 from rdkit import RDLogger
 RDLogger.DisableLog('rdApp.*')
 import re
 
-
+# OpenBabel
+import openbabel as ob
 obConversion = ob.OBConversion()
-obConversion.SetInAndOutFormats("mol", "xyz")
+obConversion.SetInAndOutFormats("xyz","xyz")
+ff = ob.OBForceField.FindForceField('UFF')
+mol = ob.OBMol()
+np.set_printoptions(precision=20)
+constraints = ob.OBFFConstraints()
+#obConversion = ob.OBConversion()
+#obConversion.SetInAndOutFormats("mol", "xyz")
+
 from scipy.spatial.distance import cdist
+
 # This function try to create a directory
-# If it fails, the program will be terminated.
 def build_dir(path):
     try:
         os.mkdir(path)
     except OSError:
         pass
 
+# This function minimize molecule using UFF forcefield and Steepest Descent method
+# INPUT: ID, path and name of XYZ file, row indices of dummy and connecting atoms, name of working directory
+# OUTPUT: XYZ coordinates of the optimized molecule
+def localopt(unit_name,file_name,dum1,dum2,atom1,atom2,xyz_tmp_dir):
+    obConversion.ReadFile(mol, file_name)
+    for atom_id in [dum1+1,dum2+1,atom1+1,atom2+1]:
+        constraints.AddAtomConstraint(atom_id)
 
-# This function create mol and XYZ files from SMILES
-# INPUT: a DATAFRAME of ID and SMILES, ID and SMILES column names, directories for mol and xyz files
-# OUTPUT: mol and xyz files in 'work_dir', list of xyz file names
+    # Set the constraints
+    ff.Setup(mol, constraints)
+    ff.SteepestDescent(5000)
+    ff.UpdateCoordinates(mol)
+    obConversion.WriteFile(mol, xyz_tmp_dir + unit_name + '_opt.xyz')
+
+    # read XYZ file: skip the first two rows
+    unit_opt = pd.read_csv(xyz_tmp_dir + unit_name + '_opt.xyz', header=None, skiprows=2, delim_whitespace=True)
+    return unit_opt
+
+# This function create XYZ files from SMILES
+# INPUT: ID, SMILES, directory name
+# OUTPUT: xyz files in 'work_dir', result = DONE/NOT DONE, mol without Hydrogen atom
 def smiles_xyz(unit_name,SMILES,dir_xyz):
     try:
         # Get mol(m1) from smiles
@@ -52,11 +77,12 @@ def smiles_xyz(unit_name,SMILES,dir_xyz):
 
         result='DONE'
     except:
-#        print(unit_name, 'Check SMILES')
-        result='NOT_DONE', m1
+        result='NOT_DONE'
     return result, m1
 
 # Search a good conformer
+# INPUT: ID, mol without Hydrogen atom, row indices of dummy and connecting atoms, directory
+# OUTPUT: XYZ coordinates of the optimized molecule
 def find_best_conf(unit_name,m1,dum1,dum2,atom1,atom2,xyz_in_dir):
     m2 = Chem.AddHs(m1)
     cids = AllChem.EmbedMultipleConfs(m2, numConfs=100)
@@ -74,19 +100,25 @@ def find_best_conf(unit_name,m1,dum1,dum2,atom1,atom2,xyz_in_dir):
     cid_list = cid_list.sort_values(by=['Energy'], ascending=True)
     Chem.rdmolfiles.MolToXYZFile(m2, xyz_in_dir + str(unit_name) + '.xyz', confId=int(cid_list.head(1)['cid'].values[0]))
 
-# This function identifies row numbers of dummy atoms
-# INPUT: unit contains name of elements and their respective XYZ coordinates
-# OUTPUT: row numbers of dummy atom 1(dum1) and 2 (dum2).
-def IdentifyDum(unit,dum):
-    dum1 = unit.loc[(unit[0] == dum)].index.values[0]
-    dum2 = unit.loc[(unit[0] == dum)].index.values[1]
-    # On Z-axis, dum1 comes first and then dum2.
-    if unit.iloc[dum1][3] > unit.iloc[dum2][3]:
-        dum1, dum2 = dum2, dum1
-    return dum1, dum2
+# This function indentifies row numbers of dummy atoms
+# INPUT: SMILES
+# OUTPUT: row indices of dummy atoms and nature of bond with connecting atom
+def FetchDum(smiles):
+    m = Chem.MolFromSmiles(smiles)
+    dummy_index = []
+    if m is not None:
+        for atom in m.GetAtoms():
+            if atom.GetSymbol() == '*':
+                dummy_index.append(atom.GetIdx())
+        for bond in m.GetBonds():
+            if bond.GetBeginAtom().GetSymbol() == '*' or bond.GetEndAtom().GetSymbol() =='*':
+                bond_type = bond.GetBondType()
+ #               print(bond_type)
+                break
+    return dummy_index, str(bond_type)
 
 # Build an Oligomer
-# INPUT: Length of an oligomer to be built, XYZ-coordinates of a monomer, row numbers for dummy atoms (dum1,dum2) and connecting atoms (atom1 and atom2)
+# INPUT: ID, Length of an oligomer to be built, XYZ-coordinates of a monomer, row numbers for dummy and connecting atoms, unit distance
 # OUTPUT: XYZ-coordinates of an oligomer and outcome of connectivity check
 def build(unit_name,length,unit,dum1,dum2,atom1,atom2,unit_dis):
     add_dis = add_dis_func(unit, atom1, atom2)
@@ -94,9 +126,7 @@ def build(unit_name,length,unit,dum1,dum2,atom1,atom2,unit_dis):
     # XYZ positions of atom2
     unit_disX=unit.loc[atom2].values[1]
     unit_disY=unit.loc[atom2].values[2]
-    unit_disZ=unit.loc[atom2].values[3] + unit_dis + add_dis #0.1 # 0.3 angstrom is added in the Z direction to avoid unwanted connectivity
-                                            # This is important because C-B (connecting and dummy atoms) is small than the actual C-C bond
-                                            # Impact of this should be checked for bonds other than C-B, such as O-B.
+    unit_disZ=unit.loc[atom2].values[3] + unit_dis + add_dis
 
     build=pd.DataFrame() # START A DATAFRAME
     for len in np.arange(1,length+1,1): # EACH UNIT IN A MOLECULE
@@ -141,7 +171,9 @@ def build(unit_name,length,unit,dum1,dum2,atom1,atom2,unit_dis):
 
     return build, check_connectivity
 
-# Build all possible dimers
+# Build all possible dimers (For DIMER method)
+# INPUT: ID, XYZ-coordinates of two monomers, row numbers for dummy and connecting atoms, unit distance
+# OUTPUT: XYZ-coordinates of dimer, Connectivity check, and row numbers for new dummy and connecting atoms
 def TwoMonomers_Dimer(unit_name,unit1,unit2,dum1,dum2,atom1,atom2,dum,unit_dis):
     add_dis = add_dis_func(unit1, atom1, atom2)
 
@@ -152,14 +184,12 @@ def TwoMonomers_Dimer(unit_name,unit1,unit2,dum1,dum2,atom1,atom2,dum,unit_dis):
     # XYZ positions of atom2
     unit_disX=unit1.loc[atom2].values[1]
     unit_disY=unit1.loc[atom2].values[2]
-    unit_disZ=unit1.loc[atom2].values[3]+unit_dis+add_dis # 0.3 angstrom is added in the Z direction to avoid unwanted connectivity
-                                            # This is important because C-B (connecting and dummy atoms) is small than the actual C-C bond
-                                            # Impact of this should be checked for bonds other than C-B, such as O-B.
+    unit_disZ=unit1.loc[atom2].values[3]+unit_dis+add_dis
 
     build=pd.DataFrame() # START A DATAFRAME
     build=build.append(unit1.drop([dum2]), ignore_index=True)
 
-# Move the second unit
+    # Move the second unit
     unit2[1] = unit2[1] + unit_disX
     unit2[2] = unit2[2] + unit_disY
     unit2[3] = unit2[3] + unit_disZ
@@ -182,20 +212,12 @@ def TwoMonomers_Dimer(unit_name,unit1,unit2,dum1,dum2,atom1,atom2,dum,unit_dis):
             atom2_index = atom2 - 1
         # Add some distance to avoid detection atom2-atom1 bond in dimer
         dist[atom2_index, atom1_index] += 100.0
-#                print(atom2_index,atom1,dist[atom2_index,atom1_index])
+
         if (dist<1.6).any(): # in angstrom
             check_connectivity = 'WRONG'
 
-        # find dummy and connecting atoms of the newly build monomer unit
-        dum1_2nd, dum2_2nd = IdentifyDum(build, dum)
-        gen_xyz('work_dir/' + unit_name + '.xyz', build)
+        dum1_2nd, atom1_2nd, dum2_2nd, atom2_2nd = dum1,atom1,dum2+unit1.shape[0]-2,atom2+unit1.shape[0]-2
 
-        check_valency, neigh_atoms_info_dimer = connec_info('work_dir/' + unit_name + '.xyz')
-        try:
-            atom1_2nd = neigh_atoms_info_dimer['NeiAtom'][dum1_2nd].copy()[0]
-            atom2_2nd = neigh_atoms_info_dimer['NeiAtom'][dum2_2nd].copy()[0]
-        except:
-            atom1_2nd, atom2_2nd =0,0
     else:
         dum1_2nd, dum2_2nd, atom1_2nd, atom2_2nd = 0,0,0,0
 
@@ -209,7 +231,6 @@ def TwoMonomers_Dimer(unit_name,unit1,unit2,dum1,dum2,atom1,atom2,dum,unit_dis):
 def findConnectingAtoms(atoms,neigh_atoms_info):
     ConnectingAtoms=[]
     for i in atoms:
-#        print(i,neigh_atoms_info.loc[i]['NeiAtom'])
         ConnectingAtoms.extend(neigh_atoms_info.loc[i]['NeiAtom'])
     return ConnectingAtoms
 
@@ -311,7 +332,7 @@ def gen_xyz(filename, unit):
         unit.to_csv(f, sep=' ', index=False, header=False)  # XYZ COORDINATES OF NEW MOLECULE
 
 # This function generates a VASP input (polymer) file
-# INPUT: name of VASP directory, name of a monomer, XYZ-coordinates, first connecting atom, second dummy atom and chemical name of dummy atom
+# INPUT: name of VASP directory, name of a monomer, XYZ-coordinates, row numbers for dummy and connecting atoms , chemical name of dummy atom, Serial number
 # OUTPUT: Generates a VASP input file
 def gen_vasp(vasp_dir,unit_name,unit,dum1,dum2,atom1,atom2,dum,unit_dis,SN):
     add_dis = add_dis_func(unit,atom1,atom2)
@@ -319,10 +340,8 @@ def gen_vasp(vasp_dir,unit_name,unit,dum1,dum2,atom1,atom2,dum,unit_dis,SN):
     unit = trans_origin(unit, atom2)
     unit = alignZ(unit, atom2, dum1)
     unit = unit.sort_values(by=[0])
-#    unit[3] = unit[3] + (unit_dis+add_dis+1.68)/2
 
     keep_space = 6
-#    bond_dis = 0.1
     file = open(vasp_dir + unit_name.replace('.xyz', '') + '_' + SN + '.vasp', 'w+')
     file.write('### ' + str(unit_name) + ' ###\n')
     file.write('1\n')
@@ -334,8 +353,7 @@ def gen_vasp(vasp_dir,unit_name,unit,dum1,dum2,atom1,atom2,dum,unit_dis,SN):
     # move unit to the center of a box
     unit[3] = unit[3] + (1.68 + unit_dis + add_dis)/2
 
-    unit = unit[unit[0] != dum]
-
+    unit = unit.drop([dum1,dum2])
     file.write(' ' + str(a_vec) + ' ' + str(0.0) + ' ' + str(0.0) + '\n')
     file.write(' ' + str(0.0) + ' ' + str(b_vec) + ' ' + str(0.0) + '\n')
     file.write(' ' + str(0.0) + ' ' + str(0.0) + ' ' + str(c_vec) + '\n')
@@ -448,7 +466,7 @@ def rotateYZ(unit, theta):  # XYZ coordinates and angle
     return unit
 
 # Check connectivity between atoms in a dimer
-# INPUT: Name of the polymer, XYZ-coordinates of unit1, unit2 and dimer.
+# INPUT: ID, XYZ-coordinates of unit1, unit2 and dimer.
 # OUTPUT: Check connectivity (CORRECT or WRONG)
 def CheckConnectivity(unit_name,unit1,unit2,dimer):
     gen_xyz('work_dir/unit1_' + unit_name + '.xyz', unit1)
@@ -476,7 +494,6 @@ def CheckConnectivity(unit_name,unit1,unit2,dimer):
             # if connectivity information is changed for more than two atoms, reject the structure
             elif count > 2:
                 check_connectivity = 'WRONG'
-#                print(count)
                 break
     return check_connectivity
 
@@ -489,7 +506,9 @@ def rot_unit(unit,atom1,rot_atom1,rot_atoms,angle):
     unit = rotateZ(unit, angle, rot_atoms)
     return unit
 
-# Correct distance
+# This function estimate distance between two repeating units
+# INPUT: XYZ coordinates, row numbers for connecting atoms
+# OUTPUT: Distance
 def add_dis_func(unit,atom1,atom2):
     add_dis = 0.0
     if unit.loc[atom1][0] == 'C' and unit.loc[atom2][0] == 'N':
@@ -502,10 +521,9 @@ def add_dis_func(unit,atom1,atom2):
         add_dis = -0.223
     return add_dis
 
-# Rotate over Z-axis and combine it with another unit (not flipped) to build new monomer unit
+# Rotate over Z-axis and combine it with another unit to build new monomer unit (non periodic)
 def build_dimer_rotate(unit_name,rot_angles,unit1,unit2,dum,dum1,dum2,atom1,atom2,unit_dis):
     add_dis = add_dis_func(unit1,atom1,atom2)
-#    print(unit_name,": Couldn't build polymer from monomer; building a dimer...")
     list_conf=[]
     unit_2nd = {}  # All possible new units
     count = 1
@@ -519,7 +537,7 @@ def build_dimer_rotate(unit_name,rot_angles,unit1,unit2,dum,dum1,dum2,atom1,atom
         unit_2nd[count] = trans_origin(unit_2nd[count], atom1)
         unit_2nd[count] = alignZ(unit_2nd[count], atom1,atom2)
         unit_2nd[count] = rotateZ(unit_2nd[count],i,np.arange(len(unit_2nd[count][0].values)))
-# combine two units
+        # combine two units
         unit_2nd[count] = trans_origin(unit_2nd[count], dum2)
         unit_2nd[count] = alignZ(unit_2nd[count], dum2, atom2)
         unit_2nd[count] = trans_origin(unit_2nd[count], atom2)
@@ -527,16 +545,10 @@ def build_dimer_rotate(unit_name,rot_angles,unit1,unit2,dum,dum1,dum2,atom1,atom
         unit_2nd[count] = unit_2nd[count].drop([dum2])
         unit_2nd[count] = unit_2nd[count].append(unit1.drop([dum1]), ignore_index=True)
 
-# find dummy and connecting atoms of the newly build monomer unit
-        dum1_2nd, dum2_2nd = IdentifyDum(unit_2nd[count], dum)
         gen_xyz('work_dir/' + unit_name + '.xyz', unit_2nd[count])
-
         check_valency, neigh_atoms_info_dimer = connec_info('work_dir/' + unit_name + '.xyz')
-        try:
-            atom1_2nd = neigh_atoms_info_dimer['NeiAtom'][dum1_2nd].copy()[0]
-            atom2_2nd = neigh_atoms_info_dimer['NeiAtom'][dum2_2nd].copy()[0]
-        except:
-            continue
+
+        dum1_2nd, atom1_2nd, dum2_2nd, atom2_2nd = dum2+unit1.shape[0]-2, atom2+unit1.shape[0]-2, dum1, atom1
 
         Num_atoms_unit = len(unit_2nd[count].index.tolist())
         check_connectivity = CheckConnectivity(unit_name, unit_2nd[count].iloc[0:int(Num_atoms_unit/2)],unit_2nd[count].iloc[int(Num_atoms_unit/2):Num_atoms_unit], unit_2nd[count])
@@ -548,23 +560,16 @@ def build_dimer_rotate(unit_name,rot_angles,unit1,unit2,dum,dum1,dum2,atom1,atom
                                     unit_2nd[count].loc[dum2_2nd])
 
             list_conf.append([count,dis_dum1_dum2,ang_1st_2nd])
-#            exit()
-#            unit_dimer = unit_2nd[count].copy()
-#            print(unit_name, 'Dimer', check_connectivity, i)
-#            break
-#        else:
-#            print(unit_name, 'Dimer ', check_connectivity, i)
 
         count += 1
     try:
         list_conf = pd.DataFrame(list_conf, columns=['count','dis','Dang'])
         list_conf = list_conf.sort_values(by=['Dang','dis'], ascending=False)
-#        print(list_conf)
-#        print(list_conf['count'].head(1).values[0])
+
         unit_dimer = unit_2nd[list_conf['count'].head(1).values[0]].copy()
     except:
         pass
-#    exit()
+
     return unit_dimer, neigh_atoms_info_dimer, dum1_2nd, dum2_2nd, atom1_2nd, atom2_2nd
 
 # This function create a conformer
@@ -589,10 +594,11 @@ def create_conformer(unit_name,sl,unit,bond,neigh_atoms_info,angle,xyz_tmp_dir,d
         if sorted(neigh_atoms_info.loc[row]['NeiAtom']) != sorted(neigh_atoms_info_new.loc[row]['NeiAtom']):
             check_connectivity = 'WRONG'
             penalty=1
-#    print(check_connectivity, penalty)
     return file_name, conf_unit, dis_dum1_dum2, ang_1st_2nd, penalty
 
 # Build a dimer and check connectivity
+# INPUT: ID, XYZ-coordinates, Connectivity in monomer, row numbers of dummy and connecting atoms, unit distance
+# OUTPUT: Connectivity in Dimer
 def mono2dimer(unit_name,unit_input,check_connectivity_monomer,dum1, dum2, atom1, atom2, unit_dis):
     if check_connectivity_monomer == 'CORRECT':
         unit_copy = unit_input.copy()
@@ -607,6 +613,7 @@ def mono2dimer(unit_name,unit_input,check_connectivity_monomer,dum1, dum2, atom1
     return check_connectivity_dimer
 
 # Build oligomers
+# INPUT: XYZ-coordinates, ID, row numbers of dummy and connecting atoms, length of oligomer, unit distance and information by OpenBabel
 def oligomer_build(unit,unit_name,dum1, dum2, atom1, atom2,oligo_len,unit_dis,neigh_atoms_info):
     unit_copy = unit.copy()
     unit_copy = trans_origin(unit_copy, dum1)
@@ -627,7 +634,6 @@ def oligomer_build(unit,unit_name,dum1, dum2, atom1, atom2,oligo_len,unit_dis,ne
         dums=[dum1,dum2_oligo]
         atoms=[atom1,atom2_oligo]
         for i, j in zip(dums, atoms):
-            #print(i,j)
             vec1,vec2,vec3 = oligomer.loc[i][1]-oligomer.loc[j][1],oligomer.loc[i][2]-oligomer.loc[j][2],oligomer.loc[i][3]-oligomer.loc[j][3]
             vec_mag = np.sqrt(vec1*vec1+vec2*vec2+vec3*vec3)
             vec_normal = (vec1,vec2,vec3)/vec_mag
@@ -637,13 +643,14 @@ def oligomer_build(unit,unit_name,dum1, dum2, atom1, atom2,oligo_len,unit_dis,ne
     return oligomer, dum1, atom1, dum2_oligo, atom2_oligo
 
 
-# Build a polymer from a monomer unit.
+# Build a polymer from a monomer unit. (main function)
 # 1. Rotate all single bonds and find out the best monomer by maximizing angle between two possible vectors between two sets of connecting and dummy atoms.
 # 2. Distance between two dummy atoms is considered as the second criteria to choose a good monomer unit.
 # 3. If a good monomer is found, then build a dimer.
 # 4. If a good monomer is not found, combine two monomers (flip/rotate one unit) and consider it as a new monomer unit
 # 5. Search the best unit and build a dimer
 # 6. Always check connectivity between atoms to verify if a monomer/dimer is not acceptable or not.
+# 7. Minimize final geometry using Steepest Descent
 
 def build_polymer(unit_name,df_smiles,ID,dum,xyz_in_dir,xyz_tmp_dir,vasp_out_dir,rot_angles_monomer,rot_angles_dimer,Steps, Substeps,num_conf,length,method):
     vasp_out_dir_indi=vasp_out_dir+unit_name+'/'
@@ -654,63 +661,56 @@ def build_polymer(unit_name,df_smiles,ID,dum,xyz_in_dir,xyz_tmp_dir,vasp_out_dir
     reject_polymers=[]
     SN = 0
 
-    # Oligomers
-    oligo_list = list(set(length) - set(['n']))
+    # Get SMILES
+    smiles_each = df_smiles[df_smiles[ID] == unit_name]['smiles'].values[0]
 
-    # Distances are optimized with reference to C-C single bond (1.68 angstrom)
-    dums_dis_dict = {'Cl':-0.17, 'F':0.325, 'B':-0.02, 'O': 0.29, 'Si':-0.19, 'Br':-0.226}
-    dums_dis_dict = pd.Series(dums_dis_dict)
+    # Get index of dummy atoms and bond type associated with it
+    try:
+        dum_index, bond_type = FetchDum(smiles_each)
+        if len(dum_index) == 2:
+            dum1 = dum_index[0]
+            dum2 = dum_index[1]
+        else:
+            return unit_name, 'REJECT', 0
+    except:
+        return unit_name, 'REJECT', 0
 
-    dum_count=0
-    for dum in list(dums_dis_dict.index):
-        smiles_each = df_smiles[df_smiles[ID] == unit_name]['smiles'].values[0]
-        dum_count +=1
-        if smiles_each.find(dum) == -1:
-            smiles_each = smiles_each.replace(r'*', dum)
+    # Assign dummy atom according to bond type
+    if bond_type == 'SINGLE':
+        dum, unit_dis = 'Cl', -0.17
+        # List of oligomers
+        oligo_list = list(set(length) - set(['n']))
+    elif bond_type == 'DOUBLE':
+        dum, unit_dis = 'O', 0.25
+        # List of oligomers
+        oligo_list = []
+    else:
+        return unit_name, 'REJECT', 0
 
-            convert_smiles2xyz, m1 = smiles_xyz(unit_name,smiles_each,xyz_in_dir)
+    # Replace '*' with dummy atom
+    smiles_each = smiles_each.replace(r'*', dum)
 
-            if convert_smiles2xyz == 'NOT_DONE':
-                #print(unit_name, "Couldnt convert smiles to xyz")
-                if dum_count == len(list(dums_dis_dict.index)):
-                    return unit_name, 'REJECT', 0
-                else:
-                    continue
+    # Convert SMILES to XYZ coordinates
+    convert_smiles2xyz, m1 = smiles_xyz(unit_name,smiles_each,xyz_in_dir)
 
-            # read XYZ file: skip the first two rows
-            unit=pd.read_csv(xyz_in_dir + unit_name + '.xyz', header=None, skiprows=2, delim_whitespace=True)
+    # if fails to get XYZ coordinates; STOP
+    if convert_smiles2xyz == 'NOT_DONE':
+        return unit_name, 'REJECT', 0
 
-            # Find location of two dummy atoms
-            try:
-                dum1, dum2 = IdentifyDum(unit,dum)
-#                print(dum1,dum2)
-                if dum1 > dum2:
-                    dum1,dum2=dum2,dum1
-            except:
-                #   print(unit_name, " is not a polymer; Failed")
-                if dum_count == len(list(dums_dis_dict.index)):
-                    return unit_name, 'REJECT', 0
-                else:
-                    continue
+    # read XYZ file: skip the first two rows
+    unit=pd.read_csv(xyz_in_dir + unit_name + '.xyz', header=None, skiprows=2, delim_whitespace=True)
 
-            # Collect valency and connecting information for each atom
-            check_valency, neigh_atoms_info = connec_info(xyz_in_dir + unit_name + '.xyz')
+    # Collect valency and connecting information for each atom
+    check_valency, neigh_atoms_info = connec_info(xyz_in_dir + unit_name + '.xyz')
 
-            try:
-            # Find connecting atoms associated with dummy atoms.
-            # dum1 and dum2 are connected to atom1 and atom2, respectively.
-                atom1=neigh_atoms_info['NeiAtom'][dum1].copy()[0]
-                atom2=neigh_atoms_info['NeiAtom'][dum2].copy()[0]
-                if atom1 and atom2 is not None:
-                    unit_dis = dums_dis_dict.loc[dum]
-#                    print('Unit Dis: ',unit_dis)
-                    break
-            except:
-                #  print(unit_name, " Failed; Check xyz geometry in ", xyz_in_dir)
-                if dum_count == len(list(dums_dis_dict.index)):
-                    return unit_name, 'REJECT', 0
-                else:
-                    continue
+    try:
+    # Find connecting atoms associated with dummy atoms.
+    # dum1 and dum2 are connected to atom1 and atom2, respectively.
+        atom1=neigh_atoms_info['NeiAtom'][dum1].copy()[0]
+        atom2=neigh_atoms_info['NeiAtom'][dum2].copy()[0]
+
+    except:
+        return unit_name, 'REJECT', 0
 
     if atom1 == atom2:
         # print(unit_name, " Chain length of monomer: only one atom ; Can't handle ")
@@ -719,15 +719,16 @@ def build_polymer(unit_name,df_smiles,ID,dum,xyz_in_dir,xyz_tmp_dir,vasp_out_dir
     else:
         # create 100 conformers and select which has the largest dihedral angle (within 8 degree) and lowest energy
         find_best_conf(unit_name,m1,dum1,dum2,atom1,atom2,xyz_in_dir)
-        # read XYZ file: skip the first two rows
-        unit = pd.read_csv(xyz_in_dir + unit_name + '.xyz', header=None, skiprows=2, delim_whitespace=True)
+
+        # Minimize geometry using steepest descent
+        unit = localopt(unit_name,xyz_in_dir + unit_name + '.xyz', dum1, dum2, atom1, atom2, xyz_tmp_dir)
 
         check_connectivity_dimer = mono2dimer(unit_name, unit, 'CORRECT', dum1, dum2, atom1, atom2, unit_dis)
 
         if check_connectivity_dimer == 'CORRECT':
             decision = 'SUCCESS'
             SN += 1
-#            print(length, 'Zero')
+
             if 'n' in length:
                 gen_vasp(vasp_out_dir_indi, unit_name, unit, dum1, dum2, atom1, atom2, dum, unit_dis, str(SN))
 
@@ -737,7 +738,7 @@ def build_polymer(unit_name,df_smiles,ID,dum,xyz_in_dir,xyz_tmp_dir,vasp_out_dir
                     gen_vasp(vasp_out_dir_indi, unit_name, oligomer, dum1_oligo, dum2_oligo, atom1_oligo, atom2_oligo, dum, unit_dis+5.0, str(SN)+'_N'+str(oligo_len))
 
                     # Remove dummy atoms
-                    oligomer = oligomer[oligomer[0] != dum]
+                    oligomer = oligomer.drop([dum1_oligo,dum2_oligo])
                     gen_xyz(vasp_out_dir_indi+unit_name+'_'+str(SN)+'_N'+str(oligo_len)+'.xyz',oligomer)
 
             if SN == num_conf:
@@ -755,9 +756,10 @@ def build_polymer(unit_name,df_smiles,ID,dum,xyz_in_dir,xyz_tmp_dir,vasp_out_dir
             results = results.head(num_conf+10)
             TotalSN=0
             for index, row in results.iterrows():
-                # print('Hari--------Monomer',SN)
                 TotalSN +=1
-                final_unit = pd.read_csv(row['xyzFile'], header=None, skiprows=2,delim_whitespace=True)
+
+                # Minimize geometry using steepest descent
+                final_unit = localopt(unit_name,row['xyzFile'], dum1, dum2, atom1, atom2, xyz_tmp_dir)
 
                 check_connectivity_monomer = 'CORRECT'
 
@@ -780,7 +782,7 @@ def build_polymer(unit_name,df_smiles,ID,dum,xyz_in_dir,xyz_tmp_dir,vasp_out_dir
                             gen_vasp(vasp_out_dir_indi, unit_name, oligomer, dum1_oligo, dum2_oligo, atom1_oligo,atom2_oligo, dum, unit_dis + 5.0, str(SN) + '_N' + str(oligo_len))
 
                             # Remove dummy atoms
-                            oligomer = oligomer[oligomer[0] != dum]
+                            oligomer = oligomer.drop([dum1_oligo,dum2_oligo])
                             gen_xyz(vasp_out_dir_indi + unit_name + '_' + str(SN) + '_N' + str(oligo_len) + '.xyz', oligomer)
 
                     if SN == num_conf:
@@ -788,7 +790,6 @@ def build_polymer(unit_name,df_smiles,ID,dum,xyz_in_dir,xyz_tmp_dir,vasp_out_dir
 
                 # If we do not get a proper monomer unit, then consider a dimer as a monomer unit and build a dimer of the same
                 if SN < num_conf and TotalSN == results.index.size:
-                    # print(SN,num_conf,'******************************************')
                     unit = final_unit.copy()
                     unit = trans_origin(unit, atom1)
                     unit = alignZ(unit, atom1, atom2)
@@ -799,6 +800,12 @@ def build_polymer(unit_name,df_smiles,ID,dum,xyz_in_dir,xyz_tmp_dir,vasp_out_dir
                     if isempty == True:
                         # print(unit_name, ": Couldn't find an acceptable dimer. Please check the structure.")
                         return unit_name, 'FAILURE', 0
+
+                    # Generate XYZ file
+                    gen_xyz(xyz_tmp_dir + unit_name +'_dimer.xyz', unit_dimer)
+
+                    # Minimize geometry using steepest descent
+                    unit_dimer = localopt(unit_name,xyz_tmp_dir + unit_name +'_dimer.xyz', dum1, dum2, atom1, atom2, xyz_tmp_dir)
 
                     check_connectivity_dimer = mono2dimer(unit_name, unit_dimer, 'CORRECT', dum1_2nd, dum2_2nd, atom1_2nd, atom2_2nd,unit_dis)
 
@@ -814,12 +821,11 @@ def build_polymer(unit_name,df_smiles,ID,dum,xyz_in_dir,xyz_tmp_dir,vasp_out_dir
                                 gen_vasp(vasp_out_dir_indi, unit_name, oligomer, dum1_oligo, dum2_oligo, atom1_oligo,atom2_oligo, dum, unit_dis + 5.0, str(SN) + '_N' + str(oligo_len))
 
                                 # Remove dummy atoms
-                                oligomer = oligomer[oligomer[0] != dum]
+                                oligomer = oligomer.drop([dum1_oligo,dum2_oligo])
                                 gen_xyz(vasp_out_dir_indi + unit_name + '_' + str(SN) + '_N' + str(oligo_len) + '.xyz',oligomer)
 
                         if SN == num_conf:
                             break
-
                     ##  Find single bonds and rotate
                     single_bond_dimer = single_bonds(neigh_atoms_info_dimer,unit_dimer)
 
@@ -827,7 +833,8 @@ def build_polymer(unit_name,df_smiles,ID,dum,xyz_in_dir,xyz_tmp_dir,vasp_out_dir
                     results = results.sort_index(ascending=False)
 
                     for index, row in results.iterrows():
-                        final_unit = pd.read_csv(row['xyzFile'], header=None, skiprows=2, delim_whitespace=True)
+                        # Minimize geometry using steepest descent
+                        final_unit = localopt(unit_name,row['xyzFile'], dum1, dum2, atom1, atom2, xyz_tmp_dir)
 
                         check_connectivity_monomer = 'CORRECT'
 
@@ -850,7 +857,7 @@ def build_polymer(unit_name,df_smiles,ID,dum,xyz_in_dir,xyz_tmp_dir,vasp_out_dir
                                     gen_vasp(vasp_out_dir_indi, unit_name, oligomer, dum1_oligo, dum2_oligo,atom1_oligo, atom2_oligo, dum, unit_dis + 5.0,str(SN) + '_N' + str(oligo_len))
 
                                     # Remove dummy atoms
-                                    oligomer = oligomer[oligomer[0] != dum]
+                                    oligomer = oligomer.drop([dum1_oligo,dum2_oligo])
                                     gen_xyz(
                                         vasp_out_dir_indi + unit_name + '_' + str(SN) + '_N' + str(oligo_len) + '.xyz',oligomer)
 
@@ -875,8 +882,7 @@ def build_polymer(unit_name,df_smiles,ID,dum,xyz_in_dir,xyz_tmp_dir,vasp_out_dir
                         unit = alignZ(unit, dum1_2nd, dum2_2nd)
                         polymer, check_connectivity_dimer = build(unit_name, 2, unit, dum1_2nd, dum2_2nd, atom1_2nd,
                                                                   atom2_2nd,unit_dis)
-#                        gen_xyz(xyz_out_dir_indi + unit_name + '_' + str(SN) + '.xyz', unit)
-#                        gen_xyz(xyz2_out_dir_indi + unit_name + '_' + str(SN) + '.xyz', polymer)
+
                         if check_connectivity_dimer == 'CORRECT':
                             decision = 'SUCCESS'
                             SN += 1
@@ -889,7 +895,7 @@ def build_polymer(unit_name,df_smiles,ID,dum,xyz_in_dir,xyz_tmp_dir,vasp_out_dir
                                     gen_vasp(vasp_out_dir_indi, unit_name, oligomer, dum1_oligo, dum2_oligo,atom1_oligo, atom2_oligo, dum, unit_dis + 5.0,str(SN) + '_N' + str(oligo_len))
 
                                     # Remove dummy atoms
-                                    oligomer = oligomer[oligomer[0] != dum]
+                                    oligomer = oligomer.drop([dum1_oligo,dum2_oligo])
                                     gen_xyz(
                                         vasp_out_dir_indi + unit_name + '_' + str(SN) + '_N' + str(oligo_len) + '.xyz',oligomer)
 
