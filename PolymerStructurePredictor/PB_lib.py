@@ -652,7 +652,7 @@ def oligomer_build(unit,unit_name,dum1, dum2, atom1, atom2,oligo_len,unit_dis,ne
 # 6. Always check connectivity between atoms to verify if a monomer/dimer is not acceptable or not.
 # 7. Minimize final geometry using Steepest Descent
 
-def build_polymer(unit_name,df_smiles,ID,dum,xyz_in_dir,xyz_tmp_dir,vasp_out_dir,rot_angles_monomer,rot_angles_dimer,Steps, Substeps,num_conf,length,method):
+def build_polymer(unit_name,df_smiles,ID,xyz_in_dir,xyz_tmp_dir,vasp_out_dir,rot_angles_monomer,rot_angles_dimer,Steps, Substeps,num_conf,length,method):
     vasp_out_dir_indi=vasp_out_dir+unit_name+'/'
     build_dir(vasp_out_dir_indi)
 

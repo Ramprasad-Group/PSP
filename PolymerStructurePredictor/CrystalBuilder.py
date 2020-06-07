@@ -8,7 +8,7 @@ from joblib import Parallel, delayed
 import fileinput
 
 class CrystalBuilder:
-    def __init__(self, VaspInp_list, Nsamples, Input_radius, OutDir, n_cores=0):
+    def __init__(self, VaspInp_list, Nsamples=5, Input_radius='auto', OutDir='Crystals/', n_cores=0):
         self.VaspInp_list = VaspInp_list
         self.Nsamples = Nsamples
         self.Input_radius = Input_radius
@@ -29,7 +29,7 @@ class CrystalBuilder:
 
         output = []
         for i in result:
-            output.append([i[0], i[1], i[2]])
+            output.append([i[0].replace('.vasp',''), i[1], i[2]])
         print("")
         print('Crystal Builder Started ...')
         print('Maximum number of possible crustals for each polymer chain: ', self.Nsamples * self.Nsamples * (self.Nsamples))

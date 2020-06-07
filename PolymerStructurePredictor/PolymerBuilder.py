@@ -57,8 +57,7 @@ class PolymerBuilder:
         start_1 = time.time()
         list_out_xyz = 'out.csv'
         chk_tri=[]
-        dum = 'B'
-        ID='RID'
+        ID='ID'
         SMILES='smiles'
         df=self.df_smiles.copy()
         df[ID] = df[ID].apply(str)
@@ -69,7 +68,7 @@ class PolymerBuilder:
         if self.n_cores == 0:
             self.n_cores = multiprocessing.cpu_count() - 1
 
-        result=Parallel(n_jobs=self.n_cores)(delayed(bd.build_polymer)(unit_name, df, ID, dum, xyz_in_dir, xyz_tmp_dir,
+        result=Parallel(n_jobs=self.n_cores)(delayed(bd.build_polymer)(unit_name, df, ID, xyz_in_dir, xyz_tmp_dir,
             vasp_out_dir, rot_angles_monomer, rot_angles_dimer, self.Steps, self.Substeps, self.num_conf, self.length, self.method)
             for unit_name in df[ID].values)
         for i in result:
@@ -78,7 +77,7 @@ class PolymerBuilder:
         print('      polymer chain building completed.')
         print('      polymer chain builing time: ', np.round((end_1-start_1)/60,2), ' minutes')
 
-        chk_tri = pd.DataFrame(chk_tri, columns=['Name', 'Results','Conformers'])
+        chk_tri = pd.DataFrame(chk_tri, columns=['ID', 'Result','Conformers'])
         chk_tri.to_csv(list_out_xyz)
 
         ### Delete work directory
