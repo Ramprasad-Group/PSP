@@ -146,10 +146,13 @@ def rotateXY(xyz_coordinates, theta):  # XYZ coordinates and angle
 
 #for VaspInp in VaspInp_list:
 def CrystalBuilderMain(VaspInp,Nsamples,Input_radius,OutDir):
-    build_dir(OutDir+VaspInp.split('/')[-1])
+    file_info, basis_vec, Num_atom, xyz_coordinates = readvasp(VaspInp.replace('.vasp', '') + '.vasp')
+    VaspInp = VaspInp.split('/')[-1].replace('.vasp','')
+#    print(VaspInp)
+    build_dir(OutDir+VaspInp)#.split('/')[-1])
+#    print(VaspInp)
 
-    file_info, basis_vec, Num_atom, xyz_coordinates = readvasp(VaspInp.replace('.vasp','')+'.vasp')
-    VaspInp = VaspInp.split('/')[-1]
+#    VaspInp = VaspInp.split('/')[-1]
     samples=Nsamples-1
     tm=np.around(np.arange(0,max(xyz_coordinates[2].values)-min(xyz_coordinates[2].values)+(max(xyz_coordinates[2].values)-min(xyz_coordinates[2].values))/samples,(max(xyz_coordinates[2].values)-min(xyz_coordinates[2].values))/samples), decimals=2)
     rm1=np.around(np.arange(0,180+(180/samples),180/samples), decimals=1)

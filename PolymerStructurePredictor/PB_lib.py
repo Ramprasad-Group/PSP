@@ -671,8 +671,10 @@ def build_polymer(unit_name,df_smiles,ID,xyz_in_dir,xyz_tmp_dir,vasp_out_dir,rot
             dum1 = dum_index[0]
             dum2 = dum_index[1]
         else:
+            print(unit_name, ": There are more than two dummy atoms in the SMILES string; Hint: The PSP works for only one-dimensional polymers.")
             return unit_name, 'REJECT', 0
     except:
+        print(unit_name, ": Couldn't fetch position of dummy atoms. Hints: (1) In SMILES strings, use '*' for a dummy atom, (2) Check RDKit installation ")
         return unit_name, 'REJECT', 0
 
     # Assign dummy atom according to bond type
@@ -685,6 +687,7 @@ def build_polymer(unit_name,df_smiles,ID,xyz_in_dir,xyz_tmp_dir,vasp_out_dir,rot
         # List of oligomers
         oligo_list = []
     else:
+        print(unit_name, ": Unusal bond type (Only single or double bonds are acceptable.). Hints: (1) Check bonds between dummy and connecting aroms in SMILES string (2) Check RDKit installation.")
         return unit_name, 'REJECT', 0
 
     # Replace '*' with dummy atom
@@ -695,6 +698,7 @@ def build_polymer(unit_name,df_smiles,ID,xyz_in_dir,xyz_tmp_dir,vasp_out_dir,rot
 
     # if fails to get XYZ coordinates; STOP
     if convert_smiles2xyz == 'NOT_DONE':
+        print(unit_name, ": Couldn't get XYZ coordinates from SMILES string. Hints: (1) Check SMILES string, (2) Check RDKit installation")
         return unit_name, 'REJECT', 0
 
     # read XYZ file: skip the first two rows
@@ -710,10 +714,11 @@ def build_polymer(unit_name,df_smiles,ID,xyz_in_dir,xyz_tmp_dir,vasp_out_dir,rot
         atom2=neigh_atoms_info['NeiAtom'][dum2].copy()[0]
 
     except:
+        print(unit_name, ": Couldn't get position of connecting atoms. Hints: (1) XYZ coordinates are not acceptable, (2) Check Open Babel installation.")
         return unit_name, 'REJECT', 0
 
     if atom1 == atom2:
-        # print(unit_name, " Chain length of monomer: only one atom ; Can't handle ")
+        print(unit_name, ": Both dummy atoms connect to the same connecting atom. Hint: (1) the PSP can't handle this")
         return unit_name, 'REJECT', 0
 
     else:

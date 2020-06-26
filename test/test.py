@@ -5,7 +5,7 @@ import PolymerStructurePredictor.CrystalBuilder as CB
 df_smiles = pd.read_csv('test.csv', low_memory=False)   # fingerprinted data
 df_smiles=df_smiles[['ID','smiles']]
 
-chain_builder = PB.PolymerBuilder(df_smiles,num_conf=1, length=[1,2,5,'n'], Steps=20, Substeps=10, input_monomer_angles='intense', input_dimer_angles='medium', n_cores=0)
+chain_builder = PB.PolymerBuilder(df_smiles,num_conf=1, Steps=20, Substeps=10, input_monomer_angles='intense', input_dimer_angles='medium', n_cores=0)
 results = chain_builder.BuildPolymer()
 print(results)
 
