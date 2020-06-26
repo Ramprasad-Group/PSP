@@ -74,6 +74,7 @@ class PolymerBuilder:
         for i in result:
             chk_tri.append([i[0],i[1],i[2]])
         end_1 = time.time()
+        print("")
         print('      polymer chain building completed.')
         print('      polymer chain builing time: ', np.round((end_1-start_1)/60,2), ' minutes')
 
