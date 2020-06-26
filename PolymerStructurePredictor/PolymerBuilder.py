@@ -76,7 +76,7 @@ class PolymerBuilder:
         end_1 = time.time()
         print("")
         print('      polymer chain building completed.')
-        print('      polymer chain builing time: ', np.round((end_1-start_1)/60,2), ' minutes')
+        print('      polymer chain building time: ', np.round((end_1-start_1)/60,2), ' minutes')
 
         chk_tri = pd.DataFrame(chk_tri, columns=['ID', 'Result','Conformers'])
         chk_tri.to_csv(list_out_xyz)

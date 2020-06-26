@@ -671,7 +671,7 @@ def build_polymer(unit_name,df_smiles,ID,xyz_in_dir,xyz_tmp_dir,vasp_out_dir,rot
             dum1 = dum_index[0]
             dum2 = dum_index[1]
         else:
-            print(unit_name, ": There are more than two dummy atoms in the SMILES string; Hint: The PSP works for only one-dimensional polymers.")
+            print(unit_name, ": There are more than two dummy atoms in the SMILES string; Hint: The PSP works only for one-dimensional polymers.")
             return unit_name, 'REJECT', 0
     except:
         print(unit_name, ": Couldn't fetch the position of dummy atoms. Hints: (1) In SMILES strings, use '*' for a dummy atom, (2) Check RDKit installation.")
