@@ -11,7 +11,7 @@ from joblib import Parallel, delayed
 obConversion = ob.OBConversion()
 obConversion.SetInAndOutFormats("mol", "xyz")
 
-class Build:
+class Builder:
     def __init__(self, df_smiles, num_conf=1, length=['n'], input_monomer_angles='medium', input_dimer_angles='low', Steps=20, Substeps=10, n_cores=0, method='SA', ID_col='ID', SMILES_col='smiles', OutDir='Single-Chains'):
         self.ID_col = ID_col
         self.SMILES_col = SMILES_col
@@ -57,7 +57,7 @@ class Build:
         bd.build_dir(vasp_out_dir)
 
         start_1 = time.time()
-        list_out_xyz = 'out.csv'
+        list_out_xyz = 'output.csv'
         chk_tri=[]
         ID=self.ID_col
         SMILES=self.SMILES_col

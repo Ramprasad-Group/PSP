@@ -7,7 +7,7 @@ import multiprocessing
 from joblib import Parallel, delayed
 import fileinput
 
-class Build:
+class Builder:
     def __init__(self, VaspInp_list, Nsamples=5, Input_radius='auto', OutDir='Crystals/', n_cores=0):
         self.VaspInp_list = VaspInp_list
         self.Nsamples = Nsamples
@@ -15,7 +15,7 @@ class Build:
         self.OutDir = OutDir
         self.n_cores = n_cores
 
-    def build(self):
+    def BuildCrystal(self):
         start_1 = time.time()
 
         build_dir(self.OutDir)
