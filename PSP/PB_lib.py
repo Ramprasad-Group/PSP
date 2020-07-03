@@ -16,13 +16,10 @@ import re
 # OpenBabel
 import openbabel as ob
 obConversion = ob.OBConversion()
-obConversion.SetInAndOutFormats("xyz","xyz")
 ff = ob.OBForceField.FindForceField('UFF')
 mol = ob.OBMol()
 np.set_printoptions(precision=20)
 constraints = ob.OBFFConstraints()
-#obConversion = ob.OBConversion()
-#obConversion.SetInAndOutFormats("mol", "xyz")
 
 from scipy.spatial.distance import cdist
 
@@ -37,6 +34,7 @@ def build_dir(path):
 # INPUT: ID, path and name of XYZ file, row indices of dummy and connecting atoms, name of working directory
 # OUTPUT: XYZ coordinates of the optimized molecule
 def localopt(unit_name,file_name,dum1,dum2,atom1,atom2,xyz_tmp_dir):
+    obConversion.SetInAndOutFormats("xyz", "xyz")
     obConversion.ReadFile(mol, file_name)
     for atom_id in [dum1+1,dum2+1,atom1+1,atom2+1]:
         constraints.AddAtomConstraint(atom_id)
@@ -251,31 +249,22 @@ def find_bondorder(atom1,rot_atom1,neigh_atoms_info):
     return neigh_atoms_info.loc[atom1]['BO'][index_rot_atom1]
 
 # Find single bonds and associated atoms
-# INPUT: unit, neigh_atoms_info
+# INPUT: unit_name, XYZ coordinates, xyz_tmp_dir
+# OUTPUT: mol for RDKit
+def xyz2RDKitmol(unit_name,unit,xyz_tmp_dir):
+    obConversion.SetInAndOutFormats("xyz", "mol")
+    gen_xyz(xyz_tmp_dir + unit_name + '.xyz', unit)
+    obConversion.ReadFile(mol, xyz_tmp_dir + unit_name + '.xyz')
+    obConversion.WriteFile(mol, xyz_tmp_dir + unit_name + '.mol')
+    return Chem.MolFromMolFile(xyz_tmp_dir + unit_name + '.mol')
+
+# Find single bonds and associated atoms
+# INPUT: unit_name, XYZ coordinates, xyz_tmp_dir
 # OUTPUT: List of atoms with bond_order = 1
-def single_bonds(neigh_atoms_info,unit):
-    single_bond = []
-    for index, row in neigh_atoms_info.iterrows():
-        if len(row['NeiAtom']) < 2:
-            neigh_atoms_info = neigh_atoms_info.drop(index)
-
-    for index, row in neigh_atoms_info.iterrows():
-        for j in row['NeiAtom']:
-            bond_order = find_bondorder(index,j, neigh_atoms_info)
-            if bond_order == 1:
-                single_bond.append([index,j])
-    single_bond = pd.DataFrame(single_bond)
-    H_list = list(unit.loc[unit[0] == 'H'].index)
-    F_list = list(unit.loc[unit[0] == 'F'].index)
-    Cl_list = list(unit.loc[unit[0] == 'Cl'].index)
-    Br_list = list(unit.loc[unit[0] == 'Br'].index)
-    I_list = list(unit.loc[unit[0] == 'I'].index)
-    remove_list = H_list + F_list + Cl_list + Br_list + I_list
-
-    single_bond = single_bond.loc[~single_bond[0].isin(remove_list)]
-    single_bond = single_bond.loc[~single_bond[1].isin(remove_list)]
-    single_bond = pd.DataFrame(np.sort(single_bond.values)).drop_duplicates()
-    return single_bond
+def single_bonds(unit_name, unit, xyz_tmp_dir):
+    mol = xyz2RDKitmol(unit_name, unit, xyz_tmp_dir)
+    RotatableBond = Chem.MolFromSmarts('[!$(*#*)&!D1]-&!@[!$(*#*)&!D1]')
+    return pd.DataFrame(mol.GetSubstructMatches(RotatableBond))
 
 # This function collects row numbers of group of atoms (directly or indirectly) connected to an atom
 # INPUT: Row number of an atom (atom), XYZ-coordinates of a molecule (unit), and connectivity information obtained from Openbabel
@@ -773,7 +762,7 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,xyz_in_dir,xyz_tmp_dir,vasp_out_
         # Simulated Annealing
         if method == 'SA' and SN < num_conf:
             ##  Find single bonds and rotate
-            single_bond = single_bonds(neigh_atoms_info,unit)
+            single_bond = single_bonds(unit_name, unit, xyz_tmp_dir)
 
             results = an.SA(unit_name,unit,single_bond,rot_angles_monomer,neigh_atoms_info,xyz_tmp_dir,dum1,dum2,atom1,atom2,Steps,Substeps)
             results = results.sort_index(ascending=False)
@@ -830,19 +819,10 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,xyz_in_dir,xyz_tmp_dir,vasp_out_
                     # Generate XYZ file
                     gen_xyz(xyz_tmp_dir + unit_name +'_dimer.xyz', unit_dimer)
 
-#                    # test
-#                    gen_xyz('Hari_dimer.xyz', unit_dimer)
-
-
                     # Minimize geometry using steepest descent
                     unit_dimer = localopt(unit_name,xyz_tmp_dir + unit_name +'_dimer.xyz', dum1, dum2, atom1, atom2, xyz_tmp_dir)
 
-#                    # test
-#                    gen_xyz('Hari_dimer_opt.xyz', unit_dimer)
-
                     check_connectivity_dimer = mono2dimer(unit_name, unit_dimer, 'CORRECT', dum1_2nd, dum2_2nd, atom1_2nd, atom2_2nd,unit_dis)
-
-#                    print(check_connectivity_dimer)
 
                     if check_connectivity_dimer == 'CORRECT':
                         decision = 'SUCCESS'
@@ -865,34 +845,26 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,xyz_in_dir,xyz_tmp_dir,vasp_out_
                     # Generate XYZ file and find connectivity
                     gen_xyz(xyz_tmp_dir + unit_name + '_dimer.xyz', unit_dimer)
                     check_valency_dimer, neigh_atoms_info_dimer = connec_info(xyz_tmp_dir + unit_name + '_dimer.xyz')
-#                    print(neigh_atoms_info_dimer)
+
                     ##  Find single bonds and rotate
-                    single_bond_dimer = single_bonds(neigh_atoms_info_dimer,unit_dimer)
+                    single_bond_dimer = single_bonds(unit_name, unit_dimer, xyz_tmp_dir)
 
                     results = an.SA(unit_name,unit_dimer, single_bond_dimer, rot_angles_monomer, neigh_atoms_info_dimer, xyz_tmp_dir, dum1_2nd, dum2_2nd, atom1_2nd, atom2_2nd,Steps, Substeps)
                     results = results.sort_index(ascending=False)
 
                     for index, row in results.iterrows():
-#                        # test
-#                        gen_xyz('Hari_dimer_opt_SA.xyz', final_unit)
 
                         # Minimize geometry using steepest descent
                         final_unit = localopt(unit_name,row['xyzFile'], dum1, dum2, atom1, atom2, xyz_tmp_dir)
 
-#                        # test
-#                        gen_xyz('Hari_dimer_opt_SA_opt.xyz', final_unit)
-
                         check_connectivity_monomer = 'CORRECT'
 
                         check_valency_new, neigh_atoms_info_new = connec_info(row['xyzFile'])
-#                        print(neigh_atoms_info_new)
                         for row in neigh_atoms_info_dimer.index.tolist():
                             if sorted(neigh_atoms_info_dimer.loc[row]['NeiAtom']) != sorted(neigh_atoms_info_new.loc[row]['NeiAtom']):
-#                                print('Me hun Don.')
                                 check_connectivity_monomer = 'WRONG'
 
                         check_connectivity_dimer = mono2dimer(unit_name, final_unit, check_connectivity_monomer, dum1_2nd, dum2_2nd, atom1_2nd, atom2_2nd,unit_dis)
-#                        print(check_connectivity_dimer,'----------')
                         if check_connectivity_dimer == 'CORRECT':
                             decision='SUCCESS'
                             SN += 1
