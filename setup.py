@@ -16,6 +16,6 @@ url='#',
 author='Harikrishna Sahu',
 author_email='harikrishnasahu89@gmail.com',
 license='MIT',
-packages=['PolymerStructurePredictor'],
+packages=['PSP'],
 #install_requires='openbabel',
 zip_safe=False)

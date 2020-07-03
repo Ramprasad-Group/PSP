@@ -1,9 +1,10 @@
 README.md
 setup.py
-PolymerStructurePredictor/PB_lib.py
-PolymerStructurePredictor/PolymerBuilder.py
-PolymerStructurePredictor/__init__.py
-PolymerStructurePredictor/simulated_annealing.py
+PSP/CrystalBuilder.py
+PSP/PB_lib.py
+PSP/PolymerBuilder.py
+PSP/__init__.py
+PSP/simulated_annealing.py
 PolymerStructurePredictor.egg-info/PKG-INFO
 PolymerStructurePredictor.egg-info/SOURCES.txt
 PolymerStructurePredictor.egg-info/dependency_links.txt

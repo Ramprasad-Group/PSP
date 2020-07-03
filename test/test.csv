@@ -1,4 +1,4 @@
-ID,smiles
+PID,smiles_polymer
 P1,[*]CC[*]
 P2,[*]C(=O)C1C(c2ccccc2)C(C(=O)N2CCN([*])CC2)C1c1ccccc1
 P104576,[*]CCCCCCNC(=O)c1ccc(C2(C)CC(C)(C)c3ccc(C(=O)N[*])cc32)cc1

@@ -1,4 +1,4 @@
-import PolymerStructurePredictor.PB_lib as bd
+import PSP.PB_lib as bd
 import numpy as np
 import pandas as pd
 import random

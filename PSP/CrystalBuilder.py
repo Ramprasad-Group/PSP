@@ -7,7 +7,7 @@ import multiprocessing
 from joblib import Parallel, delayed
 import fileinput
 
-class CrystalBuilder:
+class Build:
     def __init__(self, VaspInp_list, Nsamples=5, Input_radius='auto', OutDir='Crystals/', n_cores=0):
         self.VaspInp_list = VaspInp_list
         self.Nsamples = Nsamples

@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import PolymerStructurePredictor.PB_lib as bd
+import PSP.PB_lib as bd
 import fileinput
 import openbabel as ob
 import os
@@ -11,9 +11,11 @@ from joblib import Parallel, delayed
 obConversion = ob.OBConversion()
 obConversion.SetInAndOutFormats("mol", "xyz")
 
-class PolymerBuilder:
-
-    def __init__(self, df_smiles, num_conf=1, length=['n'], input_monomer_angles='medium', input_dimer_angles='low', Steps=20, Substeps=10, n_cores=0, method='SA'):
+class Build:
+    def __init__(self, df_smiles, num_conf=1, length=['n'], input_monomer_angles='medium', input_dimer_angles='low', Steps=20, Substeps=10, n_cores=0, method='SA', ID_col='ID', SMILES_col='smiles', OutDir='Single-Chains'):
+        self.ID_col = ID_col
+        self.SMILES_col = SMILES_col
+        self.OutDir = OutDir
         self.df_smiles = df_smiles
         self.num_conf = num_conf
         self.length = length
@@ -51,14 +53,14 @@ class PolymerBuilder:
         bd.build_dir(xyz_tmp_dir)
 
         # location of directory for VASP inputs (polymers) and build a directory
-        vasp_out_dir = 'output/'
+        vasp_out_dir = self.OutDir + '/'
         bd.build_dir(vasp_out_dir)
 
         start_1 = time.time()
         list_out_xyz = 'out.csv'
         chk_tri=[]
-        ID='ID'
-        SMILES='smiles'
+        ID=self.ID_col
+        SMILES=self.SMILES_col
         df=self.df_smiles.copy()
         df[ID] = df[ID].apply(str)
 
@@ -68,7 +70,7 @@ class PolymerBuilder:
         if self.n_cores == 0:
             self.n_cores = multiprocessing.cpu_count() - 1
 
-        result=Parallel(n_jobs=self.n_cores)(delayed(bd.build_polymer)(unit_name, df, ID, xyz_in_dir, xyz_tmp_dir,
+        result=Parallel(n_jobs=self.n_cores)(delayed(bd.build_polymer)(unit_name, df, ID, SMILES, xyz_in_dir, xyz_tmp_dir,
             vasp_out_dir, rot_angles_monomer, rot_angles_dimer, self.Steps, self.Substeps, self.num_conf, self.length, self.method)
             for unit_name in df[ID].values)
         for i in result:

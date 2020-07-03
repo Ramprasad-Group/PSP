@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import PolymerStructurePredictor.simulated_annealing as an
+import PSP.simulated_annealing as an
 import math
 import os
 from rdkit import Chem
@@ -47,8 +47,17 @@ def localopt(unit_name,file_name,dum1,dum2,atom1,atom2,xyz_tmp_dir):
     ff.UpdateCoordinates(mol)
     obConversion.WriteFile(mol, xyz_tmp_dir + unit_name + '_opt.xyz')
 
-    # read XYZ file: skip the first two rows
-    unit_opt = pd.read_csv(xyz_tmp_dir + unit_name + '_opt.xyz', header=None, skiprows=2, delim_whitespace=True)
+    # Check Connectivity
+    check_valency_old, neigh_atoms_info_old = connec_info(file_name)
+    check_valency_new, neigh_atoms_info_new = connec_info(xyz_tmp_dir + unit_name + '_opt.xyz')
+    for row in neigh_atoms_info_old.index.tolist():
+        if sorted(neigh_atoms_info_old.loc[row]['NeiAtom']) != sorted(neigh_atoms_info_new.loc[row]['NeiAtom']):
+            unit_opt = pd.read_csv(file_name, header=None, skiprows=2, delim_whitespace=True)
+            print(unit_name, ": Not optimized using steepest descent.")
+        else:
+            # read XYZ file: skip the first two rows
+            unit_opt = pd.read_csv(xyz_tmp_dir + unit_name + '_opt.xyz', header=None, skiprows=2, delim_whitespace=True)
+
     return unit_opt
 
 # This function create XYZ files from SMILES
@@ -465,7 +474,7 @@ def rotateYZ(unit, theta):  # XYZ coordinates and angle
     unit[[2,3]]=newXYZ[[0,1]]
     return unit
 
-# Check connectivity between atoms in a dimer
+# Check connectivity between atoms in a dimer (Only for unit1 == unit2)
 # INPUT: ID, XYZ-coordinates of unit1, unit2 and dimer.
 # OUTPUT: Check connectivity (CORRECT or WRONG)
 def CheckConnectivity(unit_name,unit1,unit2,dimer):
@@ -477,6 +486,14 @@ def CheckConnectivity(unit_name,unit1,unit2,dimer):
     check_valency_unit2, neigh_atoms_info_unit2 = connec_info('work_dir/unit2_' + unit_name + '.xyz')
     check_valency_dimer, neigh_atoms_info_dimer = connec_info('work_dir/dimer_' + unit_name + '.xyz')
 
+#    print(neigh_atoms_info_unit1)
+#    print(neigh_atoms_info_unit2)
+#    for row in neigh_atoms_info_unit1.index.tolist():
+#        if sorted(neigh_atoms_info_unit1.loc[row]['NeiAtom']) != sorted(neigh_atoms_info_unit2.loc[row]['NeiAtom']):
+#            print(row,sorted(neigh_atoms_info_unit1.loc[row]['NeiAtom']),sorted(neigh_atoms_info_unit2.loc[row]['NeiAtom']))
+#            print('HARI *********************')
+#            return 'WRONG'
+
     Num_atoms_unit1=len(neigh_atoms_info_unit1.index.tolist())
     for index, row in neigh_atoms_info_unit2.iterrows():
         row['NeiAtom'] = [x + Num_atoms_unit1 for x in row['NeiAtom']]
@@ -484,8 +501,11 @@ def CheckConnectivity(unit_name,unit1,unit2,dimer):
 
     count=0
     check_connectivity = 'CORRECT'
+
     for row in range(len(neigh_atoms_info_ideal_dimer.index.tolist())):
         if sorted(neigh_atoms_info_ideal_dimer.iloc[row]['NeiAtom']) != sorted(neigh_atoms_info_dimer.iloc[row]['NeiAtom']):
+#            print(unit_name,count)
+#            print(unit_name,neigh_atoms_info_dimer.iloc[row]['NeiAtom'],neigh_atoms_info_ideal_dimer.iloc[row]['NeiAtom'])
             count += 1
             # If a atom in first unit is connected to more than one atom of the second unit; reject the structure
             if len(neigh_atoms_info_dimer.iloc[row]['NeiAtom'])-len(neigh_atoms_info_ideal_dimer.iloc[row]['NeiAtom']) > 1:
@@ -495,6 +515,7 @@ def CheckConnectivity(unit_name,unit1,unit2,dimer):
             elif count > 2:
                 check_connectivity = 'WRONG'
                 break
+#    print(check_connectivity)
     return check_connectivity
 
 # This function rotate a molecule; translate to origin, align on the Z-axis, rotate around Z-axis
@@ -652,7 +673,7 @@ def oligomer_build(unit,unit_name,dum1, dum2, atom1, atom2,oligo_len,unit_dis,ne
 # 6. Always check connectivity between atoms to verify if a monomer/dimer is not acceptable or not.
 # 7. Minimize final geometry using Steepest Descent
 
-def build_polymer(unit_name,df_smiles,ID,xyz_in_dir,xyz_tmp_dir,vasp_out_dir,rot_angles_monomer,rot_angles_dimer,Steps, Substeps,num_conf,length,method):
+def build_polymer(unit_name,df_smiles,ID,SMILES,xyz_in_dir,xyz_tmp_dir,vasp_out_dir,rot_angles_monomer,rot_angles_dimer,Steps, Substeps,num_conf,length,method):
     vasp_out_dir_indi=vasp_out_dir+unit_name+'/'
     build_dir(vasp_out_dir_indi)
 
@@ -662,7 +683,7 @@ def build_polymer(unit_name,df_smiles,ID,xyz_in_dir,xyz_tmp_dir,vasp_out_dir,rot
     SN = 0
 
     # Get SMILES
-    smiles_each = df_smiles[df_smiles[ID] == unit_name]['smiles'].values[0]
+    smiles_each = df_smiles[df_smiles[ID] == unit_name][SMILES].values[0]
 
     # Get index of dummy atoms and bond type associated with it
     try:
@@ -809,10 +830,19 @@ def build_polymer(unit_name,df_smiles,ID,xyz_in_dir,xyz_tmp_dir,vasp_out_dir,rot
                     # Generate XYZ file
                     gen_xyz(xyz_tmp_dir + unit_name +'_dimer.xyz', unit_dimer)
 
+#                    # test
+#                    gen_xyz('Hari_dimer.xyz', unit_dimer)
+
+
                     # Minimize geometry using steepest descent
                     unit_dimer = localopt(unit_name,xyz_tmp_dir + unit_name +'_dimer.xyz', dum1, dum2, atom1, atom2, xyz_tmp_dir)
 
+#                    # test
+#                    gen_xyz('Hari_dimer_opt.xyz', unit_dimer)
+
                     check_connectivity_dimer = mono2dimer(unit_name, unit_dimer, 'CORRECT', dum1_2nd, dum2_2nd, atom1_2nd, atom2_2nd,unit_dis)
+
+#                    print(check_connectivity_dimer)
 
                     if check_connectivity_dimer == 'CORRECT':
                         decision = 'SUCCESS'
@@ -831,6 +861,11 @@ def build_polymer(unit_name,df_smiles,ID,xyz_in_dir,xyz_tmp_dir,vasp_out_dir,rot
 
                         if SN == num_conf:
                             break
+
+                    # Generate XYZ file and find connectivity
+                    gen_xyz(xyz_tmp_dir + unit_name + '_dimer.xyz', unit_dimer)
+                    check_valency_dimer, neigh_atoms_info_dimer = connec_info(xyz_tmp_dir + unit_name + '_dimer.xyz')
+#                    print(neigh_atoms_info_dimer)
                     ##  Find single bonds and rotate
                     single_bond_dimer = single_bonds(neigh_atoms_info_dimer,unit_dimer)
 
@@ -838,18 +873,26 @@ def build_polymer(unit_name,df_smiles,ID,xyz_in_dir,xyz_tmp_dir,vasp_out_dir,rot
                     results = results.sort_index(ascending=False)
 
                     for index, row in results.iterrows():
+#                        # test
+#                        gen_xyz('Hari_dimer_opt_SA.xyz', final_unit)
+
                         # Minimize geometry using steepest descent
                         final_unit = localopt(unit_name,row['xyzFile'], dum1, dum2, atom1, atom2, xyz_tmp_dir)
+
+#                        # test
+#                        gen_xyz('Hari_dimer_opt_SA_opt.xyz', final_unit)
 
                         check_connectivity_monomer = 'CORRECT'
 
                         check_valency_new, neigh_atoms_info_new = connec_info(row['xyzFile'])
-                        for row in neigh_atoms_info.index.tolist():
+#                        print(neigh_atoms_info_new)
+                        for row in neigh_atoms_info_dimer.index.tolist():
                             if sorted(neigh_atoms_info_dimer.loc[row]['NeiAtom']) != sorted(neigh_atoms_info_new.loc[row]['NeiAtom']):
+#                                print('Me hun Don.')
                                 check_connectivity_monomer = 'WRONG'
 
                         check_connectivity_dimer = mono2dimer(unit_name, final_unit, check_connectivity_monomer, dum1_2nd, dum2_2nd, atom1_2nd, atom2_2nd,unit_dis)
-
+#                        print(check_connectivity_dimer,'----------')
                         if check_connectivity_dimer == 'CORRECT':
                             decision='SUCCESS'
                             SN += 1
