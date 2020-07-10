@@ -24,7 +24,6 @@ class Builder:
         if self.n_cores == 0:
             self.n_cores = multiprocessing.cpu_count() - 1
 
-        #if __name__ == "__main__":
         result = Parallel(n_jobs=self.n_cores)(delayed(CrystalBuilderMain)(VaspInp, self.Nsamples, self.Input_radius, self.OutDir) for VaspInp in self.VaspInp_list)
 
         output = []
@@ -86,7 +85,7 @@ def create_crystal_vasp(filename,first_poly,second_poly,Num_atom,basis_vec,file_
 
     Crystal_Num_atom = Num_atom.copy()
     Crystal_Num_atom.loc[1] = 2 * Crystal_Num_atom.loc[1].astype(int)
-    keep_space = 2.0  # in angstrom
+    keep_space = 12.0  # in angstrom
 
     crystal_struc[0] = crystal_struc[0] - crystal_struc[0].min() + keep_space/2
     crystal_struc[1] = crystal_struc[1] - crystal_struc[1].min() + keep_space/2
@@ -148,11 +147,9 @@ def rotateXY(xyz_coordinates, theta):  # XYZ coordinates and angle
 def CrystalBuilderMain(VaspInp,Nsamples,Input_radius,OutDir):
     file_info, basis_vec, Num_atom, xyz_coordinates = readvasp(VaspInp.replace('.vasp', '') + '.vasp')
     VaspInp = VaspInp.split('/')[-1].replace('.vasp','')
-#    print(VaspInp)
-    build_dir(OutDir+VaspInp)#.split('/')[-1])
-#    print(VaspInp)
 
-#    VaspInp = VaspInp.split('/')[-1]
+    build_dir(OutDir+VaspInp)#.split('/')[-1])
+
     samples=Nsamples-1
     tm=np.around(np.arange(0,max(xyz_coordinates[2].values)-min(xyz_coordinates[2].values)+(max(xyz_coordinates[2].values)-min(xyz_coordinates[2].values))/samples,(max(xyz_coordinates[2].values)-min(xyz_coordinates[2].values))/samples), decimals=2)
     rm1=np.around(np.arange(0,180+(180/samples),180/samples), decimals=1)

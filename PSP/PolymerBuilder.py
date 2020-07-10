@@ -44,11 +44,10 @@ class Builder:
         # Working directory
         bd.build_dir('work_dir/')
 
-        # location of input mol and XYZ files
-    #        dir_mol = 'work_dir/mol-in/'
+        # location of input XYZ files
         xyz_in_dir = 'work_dir/xyz-in/'
+
         xyz_tmp_dir = 'work_dir/xyz-temp/'
-    #        bd.build_dir(dir_mol)
         bd.build_dir(xyz_in_dir)
         bd.build_dir(xyz_tmp_dir)
 

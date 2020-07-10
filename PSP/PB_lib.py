@@ -5,13 +5,10 @@ import math
 import os
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from rdkit.Chem import ChemicalForceFields
 
-#from rdkit import rdBase
-#rdBase.DisableLog('rdApp.error')
 from rdkit import RDLogger
 RDLogger.DisableLog('rdApp.*')
-import re
+
 
 # OpenBabel
 import openbabel as ob
@@ -58,6 +55,16 @@ def localopt(unit_name,file_name,dum1,dum2,atom1,atom2,xyz_tmp_dir):
 
     return unit_opt
 
+def rdkitmol2xyz(unit_name, m, dir_xyz, IDNum):
+    try:
+        Chem.MolToXYZFile(m, dir_xyz + unit_name + '.xyz', confId=IDNum)
+    except:
+        obConversion.SetInAndOutFormats("mol", "xyz")
+        Chem.MolToMolFile(m, dir_xyz + unit_name + '.mol', confId=IDNum)
+        mol = ob.OBMol()
+        obConversion.ReadFile(mol, dir_xyz + unit_name + '.mol')
+        obConversion.WriteFile(mol, dir_xyz + unit_name + '.xyz')
+
 # This function create XYZ files from SMILES
 # INPUT: ID, SMILES, directory name
 # OUTPUT: xyz files in 'work_dir', result = DONE/NOT DONE, mol without Hydrogen atom
@@ -80,7 +87,7 @@ def smiles_xyz(unit_name,SMILES,dir_xyz):
 
         # Optimize 3D str
         AllChem.UFFOptimizeMolecule(m2,maxIters=200)
-        Chem.rdmolfiles.MolToXYZFile(m2, dir_xyz + unit_name + '.xyz')
+        rdkitmol2xyz(unit_name, m2, dir_xyz, -1)
 
         result='DONE'
     except:
@@ -105,7 +112,7 @@ def find_best_conf(unit_name,m1,dum1,dum2,atom1,atom2,xyz_in_dir):
     cid_list = cid_list.sort_values(by=['Dang'], ascending=False)
     cid_list = cid_list[cid_list['Dang'] > int(cid_list.head(1)['Dang'].values[0]) - 8.0]
     cid_list = cid_list.sort_values(by=['Energy'], ascending=True)
-    Chem.rdmolfiles.MolToXYZFile(m2, xyz_in_dir + str(unit_name) + '.xyz', confId=int(cid_list.head(1)['cid'].values[0]))
+    rdkitmol2xyz(unit_name, m2, xyz_in_dir, int(cid_list.head(1)['cid'].values[0]))
 
 # This function indentifies row numbers of dummy atoms
 # INPUT: SMILES
@@ -120,7 +127,6 @@ def FetchDum(smiles):
         for bond in m.GetBonds():
             if bond.GetBeginAtom().GetSymbol() == '*' or bond.GetEndAtom().GetSymbol() =='*':
                 bond_type = bond.GetBondType()
- #               print(bond_type)
                 break
     return dummy_index, str(bond_type)
 
@@ -262,9 +268,36 @@ def xyz2RDKitmol(unit_name,unit,xyz_tmp_dir):
 # INPUT: unit_name, XYZ coordinates, xyz_tmp_dir
 # OUTPUT: List of atoms with bond_order = 1
 def single_bonds(unit_name, unit, xyz_tmp_dir):
-    mol = xyz2RDKitmol(unit_name, unit, xyz_tmp_dir)
-    RotatableBond = Chem.MolFromSmarts('[!$(*#*)&!D1]-&!@[!$(*#*)&!D1]')
-    return pd.DataFrame(mol.GetSubstructMatches(RotatableBond))
+    try:
+        mol = xyz2RDKitmol(unit_name, unit, xyz_tmp_dir)
+        RotatableBond = Chem.MolFromSmarts('[!$(*#*)&!D1]-&!@[!$(*#*)&!D1]')
+        single_bond = pd.DataFrame(mol.GetSubstructMatches(RotatableBond))
+
+    except:
+        single_bond = []
+        gen_xyz(xyz_tmp_dir + unit_name + '.xyz', unit)
+        check_valency, neigh_atoms_info = connec_info(xyz_tmp_dir + unit_name + '.xyz')
+        for index, row in neigh_atoms_info.iterrows():
+            if len(row['NeiAtom']) < 2:
+                neigh_atoms_info = neigh_atoms_info.drop(index)
+
+        for index, row in neigh_atoms_info.iterrows():
+            for j in row['NeiAtom']:
+                bond_order = find_bondorder(index, j, neigh_atoms_info)
+                if bond_order == 1:
+                    single_bond.append([index, j])
+        single_bond = pd.DataFrame(single_bond)
+        H_list = list(unit.loc[unit[0] == 'H'].index)
+        F_list = list(unit.loc[unit[0] == 'F'].index)
+        Cl_list = list(unit.loc[unit[0] == 'Cl'].index)
+        Br_list = list(unit.loc[unit[0] == 'Br'].index)
+        I_list = list(unit.loc[unit[0] == 'I'].index)
+        remove_list = H_list + F_list + Cl_list + Br_list + I_list
+
+        single_bond = single_bond.loc[~single_bond[0].isin(remove_list)]
+        single_bond = single_bond.loc[~single_bond[1].isin(remove_list)]
+        single_bond = pd.DataFrame(np.sort(single_bond.values)).drop_duplicates()
+    return single_bond
 
 # This function collects row numbers of group of atoms (directly or indirectly) connected to an atom
 # INPUT: Row number of an atom (atom), XYZ-coordinates of a molecule (unit), and connectivity information obtained from Openbabel
@@ -339,7 +372,7 @@ def gen_vasp(vasp_dir,unit_name,unit,dum1,dum2,atom1,atom2,dum,unit_dis,SN):
     unit = alignZ(unit, atom2, dum1)
     unit = unit.sort_values(by=[0])
 
-    keep_space = 6
+    keep_space = 12
     file = open(vasp_dir + unit_name.replace('.xyz', '') + '_' + SN + '.vasp', 'w+')
     file.write('### ' + str(unit_name) + ' ###\n')
     file.write('1\n')
@@ -349,6 +382,8 @@ def gen_vasp(vasp_dir,unit_name,unit,dum1,dum2,atom1,atom2,dum,unit_dis,SN):
     c_vec = unit.loc[dum1][3] + unit_dis + add_dis#
 
     # move unit to the center of a box
+    unit[1] = unit[1] - unit[1].min() + keep_space/2
+    unit[2] = unit[2] - unit[2].min() + keep_space/2
     unit[3] = unit[3] + (1.68 + unit_dis + add_dis)/2
 
     unit = unit.drop([dum1,dum2])
@@ -371,9 +406,7 @@ def gen_vasp(vasp_dir,unit_name,unit,dum1,dum2,atom1,atom2,dum,unit_dis,SN):
 
     file.write('\nCartesian\n')
 
-    for index, row in unit.iterrows():
-        file.write(' ' + str(row[1] + (a_vec / 2)) + ' ' + str(row[2] + (b_vec / 2)) + ' ' + str(row[3]) + '\n')
-
+    file.write(unit[[1,2,3]].to_string(header=False, index=False))
     file.close()
 
 
@@ -475,14 +508,6 @@ def CheckConnectivity(unit_name,unit1,unit2,dimer):
     check_valency_unit2, neigh_atoms_info_unit2 = connec_info('work_dir/unit2_' + unit_name + '.xyz')
     check_valency_dimer, neigh_atoms_info_dimer = connec_info('work_dir/dimer_' + unit_name + '.xyz')
 
-#    print(neigh_atoms_info_unit1)
-#    print(neigh_atoms_info_unit2)
-#    for row in neigh_atoms_info_unit1.index.tolist():
-#        if sorted(neigh_atoms_info_unit1.loc[row]['NeiAtom']) != sorted(neigh_atoms_info_unit2.loc[row]['NeiAtom']):
-#            print(row,sorted(neigh_atoms_info_unit1.loc[row]['NeiAtom']),sorted(neigh_atoms_info_unit2.loc[row]['NeiAtom']))
-#            print('HARI *********************')
-#            return 'WRONG'
-
     Num_atoms_unit1=len(neigh_atoms_info_unit1.index.tolist())
     for index, row in neigh_atoms_info_unit2.iterrows():
         row['NeiAtom'] = [x + Num_atoms_unit1 for x in row['NeiAtom']]
@@ -493,8 +518,7 @@ def CheckConnectivity(unit_name,unit1,unit2,dimer):
 
     for row in range(len(neigh_atoms_info_ideal_dimer.index.tolist())):
         if sorted(neigh_atoms_info_ideal_dimer.iloc[row]['NeiAtom']) != sorted(neigh_atoms_info_dimer.iloc[row]['NeiAtom']):
-#            print(unit_name,count)
-#            print(unit_name,neigh_atoms_info_dimer.iloc[row]['NeiAtom'],neigh_atoms_info_ideal_dimer.iloc[row]['NeiAtom'])
+
             count += 1
             # If a atom in first unit is connected to more than one atom of the second unit; reject the structure
             if len(neigh_atoms_info_dimer.iloc[row]['NeiAtom'])-len(neigh_atoms_info_ideal_dimer.iloc[row]['NeiAtom']) > 1:
@@ -504,7 +528,7 @@ def CheckConnectivity(unit_name,unit1,unit2,dimer):
             elif count > 2:
                 check_connectivity = 'WRONG'
                 break
-#    print(check_connectivity)
+
     return check_connectivity
 
 # This function rotate a molecule; translate to origin, align on the Z-axis, rotate around Z-axis
@@ -710,9 +734,6 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,xyz_in_dir,xyz_tmp_dir,vasp_out_
     if convert_smiles2xyz == 'NOT_DONE':
         print(unit_name, ": Couldn't get XYZ coordinates from SMILES string. Hints: (1) Check SMILES string, (2) Check RDKit installation.")
         return unit_name, 'REJECT', 0
-
-#    # read XYZ file: skip the first two rows
-#    unit=pd.read_csv(xyz_in_dir + unit_name + '.xyz', header=None, skiprows=2, delim_whitespace=True)
 
     # Collect valency and connecting information for each atom
     check_valency, neigh_atoms_info = connec_info(xyz_in_dir + unit_name + '.xyz')
