@@ -711,8 +711,8 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,xyz_in_dir,xyz_tmp_dir,vasp_out_
         print(unit_name, ": Couldn't get XYZ coordinates from SMILES string. Hints: (1) Check SMILES string, (2) Check RDKit installation.")
         return unit_name, 'REJECT', 0
 
-    # read XYZ file: skip the first two rows
-    unit=pd.read_csv(xyz_in_dir + unit_name + '.xyz', header=None, skiprows=2, delim_whitespace=True)
+#    # read XYZ file: skip the first two rows
+#    unit=pd.read_csv(xyz_in_dir + unit_name + '.xyz', header=None, skiprows=2, delim_whitespace=True)
 
     # Collect valency and connecting information for each atom
     check_valency, neigh_atoms_info = connec_info(xyz_in_dir + unit_name + '.xyz')
@@ -764,6 +764,13 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,xyz_in_dir,xyz_tmp_dir,vasp_out_
             ##  Find single bonds and rotate
             single_bond = single_bonds(unit_name, unit, xyz_tmp_dir)
 
+            isempty = single_bond.empty
+            if isempty == True and SN == 0:
+                print(unit_name, "No rotatable single bonds")
+                return unit_name, 'FAILURE', 0
+            elif isempty == True and SN > 0:
+                return unit_name, 'SUCCESS', 1
+
             results = an.SA(unit_name,unit,single_bond,rot_angles_monomer,neigh_atoms_info,xyz_tmp_dir,dum1,dum2,atom1,atom2,Steps,Substeps)
             results = results.sort_index(ascending=False)
 
@@ -812,9 +819,11 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,xyz_in_dir,xyz_tmp_dir,vasp_out_
                     unit_dimer, neigh_atoms_info_dimer, dum1_2nd, dum2_2nd, atom1_2nd, atom2_2nd = build_dimer_rotate(unit_name, rot_angles_dimer, unit, unit, dum,dum1, dum2, atom1, atom2, unit_dis)
                     isempty = unit_dimer.empty
 
-                    if isempty == True:
-                        # print(unit_name, ": Couldn't find an acceptable dimer. Please check the structure.")
+                    if isempty == True and SN == 0:
+                        print(unit_name, "Couldn't find an acceptable dimer.")
                         return unit_name, 'FAILURE', 0
+                    elif isempty == True and SN > 0:
+                        return unit_name, 'SUCCESS', 1
 
                     # Generate XYZ file
                     gen_xyz(xyz_tmp_dir + unit_name +'_dimer.xyz', unit_dimer)
@@ -848,6 +857,13 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,xyz_in_dir,xyz_tmp_dir,vasp_out_
 
                     ##  Find single bonds and rotate
                     single_bond_dimer = single_bonds(unit_name, unit_dimer, xyz_tmp_dir)
+
+                    isempty = single_bond_dimer.empty
+                    if isempty == True and SN == 0:
+                        print(unit_name, "No rotatable single bonds in dimer")
+                        return unit_name, 'FAILURE', 0
+                    elif isempty == True and SN > 0:
+                        return unit_name, 'SUCCESS', 1
 
                     results = an.SA(unit_name,unit_dimer, single_bond_dimer, rot_angles_monomer, neigh_atoms_info_dimer, xyz_tmp_dir, dum1_2nd, dum2_2nd, atom1_2nd, atom2_2nd,Steps, Substeps)
                     results = results.sort_index(ascending=False)
