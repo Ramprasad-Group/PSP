@@ -601,6 +601,15 @@ def build_dimer_rotate(unit_name,rot_angles,unit1,unit2,dum,dum1,dum2,atom1,atom
         list_conf = list_conf.sort_values(by=['Dang','dis'], ascending=False)
 
         unit_dimer = unit_2nd[list_conf['count'].head(1).values[0]].copy()
+
+        # Rearrange rows
+        rows = unit_dimer.index.tolist()
+        for i in [dum1_2nd, atom1_2nd, atom2_2nd, dum2_2nd]:
+            rows.remove(i)
+        new_rows = [dum1_2nd, atom1_2nd, atom2_2nd, dum2_2nd] + rows
+        unit_dimer = unit_dimer.loc[new_rows].reset_index(drop=True)
+        dum1_2nd, atom1_2nd, atom2_2nd, dum2_2nd = 0, 1, 2, 3
+
     except:
         pass
 
@@ -652,7 +661,6 @@ def oligomer_build(unit,unit_name,dum1, dum2, atom1, atom2,oligo_len,unit_dis,ne
     unit_copy = unit.copy()
     unit_copy = trans_origin(unit_copy, dum1)
     unit_copy = alignZ(unit_copy, dum1, dum2)
-
     if oligo_len == 1:
         oligomer = unit_copy
         dum2_oligo = dum2
@@ -753,11 +761,20 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,xyz_in_dir,xyz_tmp_dir,vasp_out_
         return unit_name, 'REJECT', 0
 
     else:
+
         # create 100 conformers and select which has the largest dihedral angle (within 8 degree) and lowest energy
         find_best_conf(unit_name,m1,dum1,dum2,atom1,atom2,xyz_in_dir)
 
         # Minimize geometry using steepest descent
         unit = localopt(unit_name,xyz_in_dir + unit_name + '.xyz', dum1, dum2, atom1, atom2, xyz_tmp_dir)
+
+        # Rearrange rows
+        rows = unit.index.tolist()
+        for i in [dum1, atom1, atom2, dum2]:
+            rows.remove(i)
+        new_rows = [dum1, atom1, atom2, dum2] + rows
+        unit = unit.loc[new_rows].reset_index(drop=True)
+        dum1, atom1, atom2, dum2 = 0,1,2,3
 
         check_connectivity_dimer = mono2dimer(unit_name, unit, 'CORRECT', dum1, dum2, atom1, atom2, unit_dis)
 
@@ -770,7 +787,7 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,xyz_in_dir,xyz_tmp_dir,vasp_out_
 
             if len(oligo_list) > 0:
                 for oligo_len in oligo_list:
-                    oligomer, dum1_oligo, atom1_oligo, dum2_oligo, atom2_oligo = oligomer_build(unit, unit_name, dum1, dum2, atom1, atom2, oligo_len, unit_dis,neigh_atoms_info)
+                    oligomer, dum1_oligo, atom1_oligo, dum2_oligo, atom2_oligo = oligomer_build(unit, unit_name, dum1, dum2, atom1, atom2, oligo_len, unit_dis, neigh_atoms_info)
                     gen_vasp(vasp_out_dir_indi, unit_name, oligomer, dum1_oligo, dum2_oligo, atom1_oligo, atom2_oligo, dum, unit_dis+5.0, str(SN)+'_N'+str(oligo_len))
 
                     # Remove dummy atoms
@@ -821,8 +838,8 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,xyz_in_dir,xyz_tmp_dir,vasp_out_
 
                     if len(oligo_list) > 0:
                         for oligo_len in oligo_list:
-                            oligomer, dum1_oligo, atom1_oligo, dum2_oligo, atom2_oligo = oligomer_build(unit, unit_name,dum1, dum2,atom1, atom2,oligo_len,unit_dis,neigh_atoms_info)
-                            gen_vasp(vasp_out_dir_indi, unit_name, oligomer, dum1_oligo, dum2_oligo, atom1_oligo,atom2_oligo, dum, unit_dis + 5.0, str(SN) + '_N' + str(oligo_len))
+                            oligomer, dum1_oligo, atom1_oligo, dum2_oligo, atom2_oligo = oligomer_build(final_unit,unit_name,dum1,dum2,atom1,atom2,oligo_len,unit_dis,neigh_atoms_info_new)
+                            gen_vasp(vasp_out_dir_indi,unit_name,oligomer,dum1_oligo,dum2_oligo,atom1_oligo,atom2_oligo,dum,unit_dis + 5.0, str(SN) + '_N' + str(oligo_len))
 
                             # Remove dummy atoms
                             oligomer = oligomer.drop([dum1_oligo,dum2_oligo])
@@ -862,7 +879,7 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,xyz_in_dir,xyz_tmp_dir,vasp_out_
 
                         if len(oligo_list) > 0:
                             for oligo_len in oligo_list:
-                                oligomer, dum1_oligo, atom1_oligo, dum2_oligo, atom2_oligo = oligomer_build(unit,unit_name,dum1, dum2,atom1,atom2,oligo_len,unit_dis,neigh_atoms_info)
+                                oligomer, dum1_oligo, atom1_oligo, dum2_oligo, atom2_oligo = oligomer_build(unit_dimer,unit_name,dum1_2nd,dum2_2nd,atom1_2nd,atom2_2nd,oligo_len,unit_dis,neigh_atoms_info_dimer)
                                 gen_vasp(vasp_out_dir_indi, unit_name, oligomer, dum1_oligo, dum2_oligo, atom1_oligo,atom2_oligo, dum, unit_dis + 5.0, str(SN) + '_N' + str(oligo_len))
 
                                 # Remove dummy atoms
@@ -910,13 +927,12 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,xyz_in_dir,xyz_tmp_dir,vasp_out_
 
                             if len(oligo_list) > 0:
                                 for oligo_len in oligo_list:
-                                    oligomer, dum1_oligo, atom1_oligo, dum2_oligo, atom2_oligo = oligomer_build(unit,unit_name,dum1,dum2,atom1,atom2,oligo_len,unit_dis,neigh_atoms_info)
+                                    oligomer, dum1_oligo, atom1_oligo, dum2_oligo, atom2_oligo = oligomer_build(final_unit,unit_name,dum1_2nd,dum2_2nd,atom1_2nd,atom2_2nd,oligo_len,unit_dis,neigh_atoms_info_new)
                                     gen_vasp(vasp_out_dir_indi, unit_name, oligomer, dum1_oligo, dum2_oligo,atom1_oligo, atom2_oligo, dum, unit_dis + 5.0,str(SN) + '_N' + str(oligo_len))
 
                                     # Remove dummy atoms
                                     oligomer = oligomer.drop([dum1_oligo,dum2_oligo])
-                                    gen_xyz(
-                                        vasp_out_dir_indi + unit_name + '_' + str(SN) + '_N' + str(oligo_len) + '.xyz',oligomer)
+                                    gen_xyz(vasp_out_dir_indi + unit_name + '_' + str(SN) + '_N' + str(oligo_len) + '.xyz',oligomer)
 
                             if SN == num_conf:
                                 break
@@ -946,15 +962,15 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,xyz_in_dir,xyz_tmp_dir,vasp_out_
                             if 'n' in length:
                                 gen_vasp(vasp_out_dir_indi, unit_name, dimer, dum1_2nd, dum2_2nd, atom1_2nd, atom2_2nd, dum,unit_dis,str(SN))
 
-                            if len(oligo_list) > 0:
-                                for oligo_len in oligo_list:
-                                    oligomer, dum1_oligo, atom1_oligo, dum2_oligo, atom2_oligo = oligomer_build(unit,unit_name,dum1,dum2,atom1,atom2,oligo_len,unit_dis,neigh_atoms_info)
-                                    gen_vasp(vasp_out_dir_indi, unit_name, oligomer, dum1_oligo, dum2_oligo,atom1_oligo, atom2_oligo, dum, unit_dis + 5.0,str(SN) + '_N' + str(oligo_len))
-
-                                    # Remove dummy atoms
-                                    oligomer = oligomer.drop([dum1_oligo,dum2_oligo])
-                                    gen_xyz(
-                                        vasp_out_dir_indi + unit_name + '_' + str(SN) + '_N' + str(oligo_len) + '.xyz',oligomer)
+#                            if len(oligo_list) > 0:
+#                                for oligo_len in oligo_list:
+#                                    oligomer, dum1_oligo, atom1_oligo, dum2_oligo, atom2_oligo = oligomer_build(dimer,unit_name,dum1_2nd,dum2_2nd,atom1_2nd,atom2_2nd,oligo_len,unit_dis,neigh_atoms_info)
+#                                    gen_vasp(vasp_out_dir_indi, unit_name, oligomer, dum1_oligo, dum2_oligo,atom1_oligo, atom2_oligo, dum, unit_dis + 5.0,str(SN) + '_N' + str(oligo_len))
+#
+#                                    # Remove dummy atoms
+#                                    oligomer = oligomer.drop([dum1_oligo,dum2_oligo])
+#                                    gen_xyz(
+#                                        vasp_out_dir_indi + unit_name + '_' + str(SN) + '_N' + str(oligo_len) + '.xyz',oligomer)
 
                             if SN == num_conf:
                                 break

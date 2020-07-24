@@ -68,7 +68,6 @@ def readvasp(inputvasp):
             xyz_coordinates=pd.DataFrame(np.transpose(xcart)).astype(float)
         elif str(content[7]).startswith('C'):
             xyz_coordinates=pd.DataFrame(xyz_coordinates).astype(float)
-
     return file_info, basis_vec, Num_atom, xyz_coordinates
 
 # Center of origin + peri_circle
@@ -80,7 +79,7 @@ def Center_XY_r(xyz_coordinates,angle,r_cricle):
     xyz_copy[1]=xyz_copy[1]-Y_avg+np.sin(np.deg2rad(angle))*r_cricle
     return xyz_copy
 
-def create_crystal_vasp(filename,first_poly,second_poly,Num_atom,basis_vec,file_info):
+def create_crystal_vasp(filename,first_poly,second_poly,Num_atom,basis_vec,file_info,cry_info):
     crystal_struc = pd.DataFrame()
     row1 = 0
     for col in Num_atom.columns:
@@ -106,7 +105,7 @@ def create_crystal_vasp(filename,first_poly,second_poly,Num_atom,basis_vec,file_
     crystal_struc[1] = crystal_struc[1] - crystal_struc[1].min() + keep_space/2
 
     with open(filename, 'w') as f:
-        f.write(file_info+'\n')
+        f.write(file_info+ ' (' + cry_info + ')\n')
         f.write('1'+'\n')
 #        print('a',crystal_struc[0].max(),crystal_struc[0].min())
 #        print('b',crystal_struc[1].max(), crystal_struc[1].min())
@@ -199,8 +198,9 @@ def CrystalBuilderMain(VaspInp,Nsamples,Input_radius,OutDir):
                 dist = cdist(first_poly[[0,1,2]].values, second_poly_dimer[[0,1,2]].values)
                 dist = dist[~np.isnan(dist)]
                 if (dist > 2.0).all():
-                    create_crystal_vasp(OutDir + VaspInp + '/' + str(i) + '_' + str(j) + '_' + str(k) + '.vasp', first_poly, second_poly_rm2, Num_atom,
-                        basis_vec, file_info)
-                    count+=1
+                    count += 1
+                    create_crystal_vasp(OutDir + VaspInp + '/' + 'C'+ str(count) + '.vasp',
+                                        first_poly, second_poly_rm2, Num_atom,
+                                        basis_vec, file_info, 'CrystalBuilder Info:: Translation: '+ str(i) + '; ' + 'Rotation 1' + str(j) + '; ' + 'Rotation 2' + str(k))
 
     return VaspInp, count, radius
