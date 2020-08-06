@@ -1,21 +1,27 @@
-from setuptools import setup
-
-# read the contents of your README file
 from os import path
-this_directory = path.abspath(path.dirname(__file__))
-with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
-    long_description = f.read()
+from setuptools import setup, find_packages
+
+# Read the contents of your README file
+PACKAGE_DIR = path.abspath(path.dirname(__file__))
+with open(path.join(PACKAGE_DIR, 'README.md'), encoding='utf-8') as f:
+    LONG_DESCRIPTION = f.read()
+
 
 setup(name='PolymerStructurePredictor',
-version='0.1.0',
-long_description=long_description,
-long_description_content_type='text/markdown',
-description='Build single chains and crystal structures of polymers',
-keywords=['SMILES', 'polymer', 'single chain', 'crystal structure'],
-url='#',
-author='Harikrishna Sahu',
-author_email='harikrishnasahu89@gmail.com',
-license='MIT',
-packages=['PSP'],
-#install_requires='openbabel',
-zip_safe=False)
+      version='0.1.0',
+      long_description=LONG_DESCRIPTION,
+      long_description_content_type='text/markdown',
+      description='Build single chains and crystal structures of polymers',
+      keywords=['SMILES', 'polymer', 'single chain', 'crystal structure'],
+      # TODO: add github repo url here
+      url='#',
+      author='Harikrishna Sahu',
+      author_email='harikrishnasahu89@gmail.com',
+      license='MIT',
+      packages=find_packages(),
+      install_requires=['openbabel==3.1.1.1',
+                        'scipy==1.5.2',
+                        'pandas==1.1.0',
+                        'rdkit==2020.03.1'],
+      zip_safe=False
+      )

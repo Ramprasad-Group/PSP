@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import PSP.simulated_annealing as an
+import psp.simulated_annealing as an
 import math
 import os
 from rdkit import Chem
@@ -713,7 +713,7 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,xyz_in_dir,xyz_tmp_dir,vasp_out_
             dum1 = dum_index[0]
             dum2 = dum_index[1]
         else:
-            print(unit_name, ": There are more than two dummy atoms in the SMILES string; Hint: The PSP works only for one-dimensional polymers.")
+            print(unit_name, ": There are more than two dummy atoms in the SMILES string; Hint: The psp works only for one-dimensional polymers.")
             return unit_name, 'REJECT', 0
     except:
         print(unit_name, ": Couldn't fetch the position of dummy atoms. Hints: (1) In SMILES strings, use '*' for a dummy atom, (2) Check RDKit installation.")
@@ -757,7 +757,7 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,xyz_in_dir,xyz_tmp_dir,vasp_out_
         return unit_name, 'REJECT', 0
 
     if atom1 == atom2:
-        print(unit_name, ": Both dummy atoms connect to the same connecting atom. Hint: (1) the PSP can't handle this")
+        print(unit_name, ": Both dummy atoms connect to the same connecting atom. Hint: (1) the psp can't handle this")
         return unit_name, 'REJECT', 0
 
     else:
