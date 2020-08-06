@@ -15,8 +15,8 @@ ID='PE'
 import glob
 try:
     list = glob.glob("chains/"+ID+'/'+"*.vasp")
-    crystal = CB.Builder(VaspInp_list=list, Nsamples=5, Input_radius='auto', OutDir='crystals/')
-    results = crystal.BuildCrystal()
+    crystal = CB.polymer_crystal(VaspInp_list=list, Nsamples = 3, Input_radius='auto', OutDir='crystals/')
+    results = crystal.build_model()
     print(results)
 except:
     print("Check: output/"+ID, " directory")

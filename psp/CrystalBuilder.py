@@ -7,7 +7,7 @@ import multiprocessing
 from joblib import Parallel, delayed
 
 
-class Builder:
+class polymer_crystal:
     def __init__(self, VaspInp_list, Nsamples=5, Input_radius='auto', OutDir='crystals/', n_cores=0):
         self.VaspInp_list = VaspInp_list
         self.Nsamples = Nsamples
@@ -15,7 +15,7 @@ class Builder:
         self.OutDir = OutDir
         self.n_cores = n_cores
 
-    def BuildCrystal(self):
+    def build_model(self):
         start_1 = time.time()
 
         build_dir(self.OutDir)
@@ -173,7 +173,9 @@ def CrystalBuilderMain(VaspInp,Nsamples,Input_radius,OutDir):
     build_dir(OutDir+VaspInp)#.split('/')[-1])
 
     samples=Nsamples-1
-    tm=np.around(np.arange(0,max(xyz_coordinates[2].values)-min(xyz_coordinates[2].values)+(max(xyz_coordinates[2].values)-min(xyz_coordinates[2].values))/samples,(max(xyz_coordinates[2].values)-min(xyz_coordinates[2].values))/samples), decimals=2)
+    tm = np.around(np.arange(0,max(xyz_coordinates[2].values) - min(xyz_coordinates[2].values) + 
+        (max(xyz_coordinates[2].values)-min(xyz_coordinates[2].values))/samples, 
+        (max(xyz_coordinates[2].values)-min(xyz_coordinates[2].values))/samples), decimals=2)
     rm1=np.around(np.arange(0,180+(180/samples),180/samples), decimals=1)
     rm2=np.around(np.arange(0,180+(180/samples),180/samples), decimals=1) # 0 and 180 degree creates problems
 
@@ -207,8 +209,8 @@ def CrystalBuilderMain(VaspInp,Nsamples,Input_radius,OutDir):
                 dist = dist[~np.isnan(dist)]
                 if (dist > 2.0).all():
                     count += 1
-                    create_crystal_vasp(OutDir + VaspInp + '/' + 'C'+ str(count) + '.vasp',
-                                        first_poly, second_poly_rm2, Num_atom,
-                                        basis_vec, file_info, 'CrystalBuilder Info:: Translation: '+ str(i) + '; ' + 'Rotation 1' + str(j) + '; ' + 'Rotation 2' + str(k))
+                    create_crystal_vasp(OutDir + VaspInp + '/' + 'cryst_out-'+ str(count).zfill(4) + '.vasp',
+                        first_poly, second_poly_rm2, Num_atom, basis_vec, file_info, 
+                        'CrystalBuilder Info:: Translation: '+ str(i) + '; ' + 'Rotation 1' + str(j) + '; ' + 'Rotation 2' + str(k))
 
     return VaspInp, count, radius
