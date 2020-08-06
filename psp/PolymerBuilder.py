@@ -11,7 +11,7 @@ obConversion = ob.OBConversion()
 obConversion.SetInAndOutFormats("mol", "xyz")
 
 class Builder:
-    def __init__(self, df_smiles, num_conf=1, length=['n'], input_monomer_angles='medium', input_dimer_angles='low', Steps=20, Substeps=10, n_cores=0, method='SA', ID_col='ID', SMILES_col='smiles', OutDir='Single-Chains'):
+    def __init__(self, df_smiles, num_conf=1, length=['n'], input_monomer_angles='medium', input_dimer_angles='low', Steps=20, Substeps=10, n_cores=0, method='SA', ID_col='ID', SMILES_col='smiles', OutDir='chains'):
         self.ID_col = ID_col
         self.SMILES_col = SMILES_col
         self.OutDir = OutDir

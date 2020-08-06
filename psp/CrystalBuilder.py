@@ -8,7 +8,7 @@ from joblib import Parallel, delayed
 
 
 class Builder:
-    def __init__(self, VaspInp_list, Nsamples=5, Input_radius='auto', OutDir='Crystals/', n_cores=0):
+    def __init__(self, VaspInp_list, Nsamples=5, Input_radius='auto', OutDir='crystals/', n_cores=0):
         self.VaspInp_list = VaspInp_list
         self.Nsamples = Nsamples
         self.Input_radius = Input_radius
@@ -102,7 +102,7 @@ def create_crystal_vasp(filename,first_poly,second_poly,Num_atom,basis_vec,file_
 
     Crystal_Num_atom = Num_atom.copy()
     Crystal_Num_atom.loc[1] = 2 * Crystal_Num_atom.loc[1].astype(int)
-    keep_space = 12.0  # in angstrom
+    keep_space = 2.5  # in angstrom
 
     crystal_struc[0] = crystal_struc[0] - crystal_struc[0].min() + keep_space/2
     crystal_struc[1] = crystal_struc[1] - crystal_struc[1].min() + keep_space/2

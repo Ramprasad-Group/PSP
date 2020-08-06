@@ -20,10 +20,10 @@ class PspGeneralTest(unittest.TestCase):
         results = chain_builder.BuildPolymer()
         print(results)
         ID = 'PE'
-        vasp_input_list = glob.glob("Single-Chains/"+ID+'/'+"*.vasp")
+        vasp_input_list = glob.glob("chains/"+ID+'/'+"*.vasp")
         crystal = CB.Builder(
             VaspInp_list=vasp_input_list, Nsamples=5,
-            Input_radius='auto', OutDir='Crystals/')
+            Input_radius='auto', OutDir='crystals/')
         results = crystal.BuildCrystal()
         self.assertIsNotNone(results)
         print(results)
