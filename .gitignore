@@ -101,3 +101,6 @@ ENV/
 
 # IntelliJ environment files
 .idea
+
+# DS Store
+.DS_store
