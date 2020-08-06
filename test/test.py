@@ -1,19 +1,29 @@
 import pandas as pd
-import PSP.PolymerBuilder as PB
-import PSP.CrystalBuilder as CB
-
-df_smiles = pd.read_csv('chain.csv', low_memory=False)   # fingerprinted data
-
-chain_builder = PB.Builder(df_smiles,ID_col='PID',SMILES_col='smiles_polymer', length=['n'], Steps=25, Substeps=10, input_monomer_angles='medium', input_dimer_angles='medium', method='SA')
-results = chain_builder.BuildPolymer()
-print(results)
-#exit()
-ID='PE'
+import unittest
 import glob
-try:
-    list = glob.glob("Single-Chains/"+ID+'/'+"*.vasp")
-    crystal = CB.Builder(VaspInp_list=list, Nsamples=5, Input_radius='auto', OutDir='Crystals/')
-    results = crystal.BuildCrystal()
-    print(results)
-except:
-    print("Check: output/"+ID, " directory")
+import os
+import psp.PolymerBuilder as PB
+import psp.CrystalBuilder as CB
+
+
+TEST_DIR = os.path.abspath(os.path.dirname(__file__))
+
+
+class PspGeneralTest(unittest.TestCase):
+    def test_crystal_build(self):
+        df_smiles = pd.read_csv(os.path.join(TEST_DIR, 'chain.csv'), low_memory=False)   # fingerprinted data
+
+        chain_builder = PB.Builder(
+            df_smiles, ID_col='PID', SMILES_col='smiles_polymer', length=['n'],
+            Steps=25, Substeps=10, input_monomer_angles='medium',
+            input_dimer_angles='medium', method='SA')
+        results = chain_builder.BuildPolymer()
+        print(results)
+        ID = 'PE'
+        vasp_input_list = glob.glob("Single-Chains/"+ID+'/'+"*.vasp")
+        crystal = CB.Builder(
+            VaspInp_list=vasp_input_list, Nsamples=5,
+            Input_radius='auto', OutDir='Crystals/')
+        results = crystal.BuildCrystal()
+        self.assertIsNotNone(results)
+        print(results)

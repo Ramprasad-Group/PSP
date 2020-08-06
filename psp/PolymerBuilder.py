@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
-import PSP.PB_lib as bd
-import fileinput
+import psp.PB_lib as bd
 import openbabel as ob
 import os
 import shutil

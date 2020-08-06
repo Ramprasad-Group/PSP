@@ -5,7 +5,7 @@ from scipy.spatial.distance import cdist
 import time
 import multiprocessing
 from joblib import Parallel, delayed
-import fileinput
+
 
 class Builder:
     def __init__(self, VaspInp_list, Nsamples=5, Input_radius='auto', OutDir='Crystals/', n_cores=0):
@@ -37,6 +37,7 @@ class Builder:
         print('      crystal building completed.')
         print('      crystal builing time: ', np.round((end_1 - start_1) / 60, 2), ' minutes')
         return output
+
 
 def readvasp(inputvasp):
     basis_vec=[]
@@ -70,6 +71,7 @@ def readvasp(inputvasp):
             xyz_coordinates=pd.DataFrame(xyz_coordinates).astype(float)
     return file_info, basis_vec, Num_atom, xyz_coordinates
 
+
 # Center of origin + peri_circle
 def Center_XY_r(xyz_coordinates,angle,r_cricle):
     xyz_copy=xyz_coordinates.copy()
@@ -78,6 +80,7 @@ def Center_XY_r(xyz_coordinates,angle,r_cricle):
     xyz_copy[0]=xyz_copy[0]-X_avg+np.cos(np.deg2rad(angle))*r_cricle
     xyz_copy[1]=xyz_copy[1]-Y_avg+np.sin(np.deg2rad(angle))*r_cricle
     return xyz_copy
+
 
 def create_crystal_vasp(filename,first_poly,second_poly,Num_atom,basis_vec,file_info,cry_info):
     crystal_struc = pd.DataFrame()
@@ -121,6 +124,7 @@ def create_crystal_vasp(filename,first_poly,second_poly,Num_atom,basis_vec,file_
         f.write('\nCartesian\n')
         f.write(crystal_struc.to_string(header = False, index = False))
 
+
 # Translation
 # INPUT: XYZ-coordinates and distance
 # OUTPUT: A new sets of XYZ-coordinates
@@ -129,9 +133,11 @@ def tl(unit,dis):
     unit_copy[2]=unit_copy[2]+dis # Z direction
     return unit_copy
 
+
 # Distance between two points
 def CalDis(x1,x2,x3,y1,y2,y3):
     return np.sqrt((x1-y1)**2+(x2-y2)**2+(x3-y3)**2)
+
 
 # This function try to create a directory
 # If it fails, the program will be terminated.
@@ -141,6 +147,7 @@ def build_dir(path):
         os.makedirs(path)
     except OSError:
         pass
+
 
 # Rotate on XY plane
 # INPUT: XYZ-coordinates and angle in Degree
@@ -156,6 +163,7 @@ def rotateXY(xyz_coordinates, theta):  # XYZ coordinates and angle
     newXYZ=pd.DataFrame(XYZcollect)
     unit[[0,1]]=newXYZ[[0,1]]
     return unit
+
 
 #for VaspInp in VaspInp_list:
 def CrystalBuilderMain(VaspInp,Nsamples,Input_radius,OutDir):
