@@ -23,8 +23,13 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
+          echo "checking dirs"
+          ls
+          ls ..
+          pwd
           conda install -c conda-forge rdkit openbabel
           python -m pip install --upgrade pip
+
           pip install -e .
       - name: pytest
         run: |
