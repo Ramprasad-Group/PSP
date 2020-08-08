@@ -24,7 +24,8 @@ class polymer_crystal:
         if self.n_cores == 0:
             self.n_cores = multiprocessing.cpu_count() - 1
 
-        result = Parallel(n_jobs=self.n_cores)(delayed(CrystalBuilderMain)(VaspInp, self.Nsamples, self.Input_radius, self.OutDir) for VaspInp in self.VaspInp_list)
+        result = Parallel(n_jobs = self.n_cores)(delayed(CrystalBuilderMain)(VaspInp, self.Nsamples, 
+                 self.Input_radius, self.OutDir) for VaspInp in self.VaspInp_list)
 
         output = []
         for i in result:
@@ -81,8 +82,7 @@ def Center_XY_r(xyz_coordinates,angle,r_cricle):
     xyz_copy[1]=xyz_copy[1]-Y_avg+np.sin(np.deg2rad(angle))*r_cricle
     return xyz_copy
 
-
-def create_crystal_vasp(filename,first_poly,second_poly,Num_atom,basis_vec,file_info,cry_info):
+def create_crystal_vasp(filename, first_poly, second_poly, Num_atom, basis_vec, file_info, cry_info):
     crystal_struc = pd.DataFrame()
     row1 = 0
     for col in Num_atom.columns:
@@ -109,7 +109,7 @@ def create_crystal_vasp(filename,first_poly,second_poly,Num_atom,basis_vec,file_
 
     with open(filename, 'w') as f:
         f.write(file_info+ ' (' + cry_info + ')\n')
-        f.write('1'+'\n')
+        f.write('1.0'+'\n')
 #        print('a',crystal_struc[0].max(),crystal_struc[0].min())
 #        print('b',crystal_struc[1].max(), crystal_struc[1].min())
         a_vec = crystal_struc[0].max() - crystal_struc[0].min() + keep_space
@@ -128,16 +128,14 @@ def create_crystal_vasp(filename,first_poly,second_poly,Num_atom,basis_vec,file_
 # Translation
 # INPUT: XYZ-coordinates and distance
 # OUTPUT: A new sets of XYZ-coordinates
-def tl(unit,dis):
-    unit_copy=unit.copy()
-    unit_copy[2]=unit_copy[2]+dis # Z direction
+def tl(unit, dis):
+    unit_copy = unit.copy()
+    unit_copy[2] = unit_copy[2] + dis # Z direction
     return unit_copy
-
 
 # Distance between two points
 def CalDis(x1,x2,x3,y1,y2,y3):
     return np.sqrt((x1-y1)**2+(x2-y2)**2+(x3-y3)**2)
-
 
 # This function try to create a directory
 # If it fails, the program will be terminated.
@@ -147,7 +145,6 @@ def build_dir(path):
         os.makedirs(path)
     except OSError:
         pass
-
 
 # Rotate on XY plane
 # INPUT: XYZ-coordinates and angle in Degree
