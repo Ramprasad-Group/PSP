@@ -32,7 +32,7 @@ class polymer_crystal:
             output.append([i[0].replace('.vasp',''), i[1], i[2]])
 
         print("")
-        print('    - crystal builder started ...')
+        print('    - crystal builder started for %s ' %i[0])
         print('      maximum number of possible crustals for each polymer chain: ', self.Nsamples * self.Nsamples * (self.Nsamples))
         output = pd.DataFrame(output, columns=['ID', 'Count', 'radius'])
         end_1 = time.time()
