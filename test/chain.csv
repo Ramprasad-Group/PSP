@@ -1,9 +1,2 @@
 PID,smiles_polymer
-PE,[*]CC[*]
-PVC,C(C([*])Cl)[*]
-PVC2,C(C(CC([*])Cl)Cl)[*]
-ABPBO,c1c2c(cc(c1)c1oc3c(n1)cc(cc3)[*])nc(o2)[*]
-beta-PVDF,C(C(F)(F)[*])[*]
-delta-PVDF,C(C[*])(CC([*])(F)F)(F)F
-PAN,C(CC(C[*])C#N)([*])C#N
-PPS,C1=CC(=CC=C1SC2=CC=C(C=C2)S[*])[*]
+R1013782,[*]=c1cc2ccc3cc(=c4c5ccccc5c(=[*])c5ccccc45)cc4ccc(c1)c2c34
