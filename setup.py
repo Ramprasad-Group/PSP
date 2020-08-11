@@ -20,7 +20,7 @@ with open(path.join(PACKAGE_DIR, 'README.md'), encoding='utf-8') as f:
 
 
 setup(name='PolymerStructurePredictor',
-      version='0.1.0',
+      version='1.0.0',
       long_description=LONG_DESCRIPTION,
       long_description_content_type='text/markdown',
       description='Build single chains and crystal structures of polymers',
