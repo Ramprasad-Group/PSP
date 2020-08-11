@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import random
 import math
-import openbabel as ob
+from openbabel import openbabel as ob
 obConversion = ob.OBConversion()
 obConversion.SetInAndOutFormats("xyz","xyz")
 ff = ob.OBForceField.FindForceField('UFF')

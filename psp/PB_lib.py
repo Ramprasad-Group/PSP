@@ -11,7 +11,7 @@ RDLogger.DisableLog('rdApp.*')
 
 
 # OpenBabel
-import openbabel as ob
+from openbabel import openbabel as ob
 obConversion = ob.OBConversion()
 ff = ob.OBForceField.FindForceField('UFF')
 mol = ob.OBMol()
@@ -43,8 +43,8 @@ def localopt(unit_name,file_name,dum1,dum2,atom1,atom2,xyz_tmp_dir):
     obConversion.WriteFile(mol, xyz_tmp_dir + unit_name + '_opt.xyz')
 
     # Check Connectivity
-    check_valency_old, neigh_atoms_info_old = connec_info(file_name)
-    check_valency_new, neigh_atoms_info_new = connec_info(xyz_tmp_dir + unit_name + '_opt.xyz')
+    neigh_atoms_info_old = connec_info(file_name)
+    neigh_atoms_info_new = connec_info(xyz_tmp_dir + unit_name + '_opt.xyz')
     for row in neigh_atoms_info_old.index.tolist():
         if sorted(neigh_atoms_info_old.loc[row]['NeiAtom']) != sorted(neigh_atoms_info_new.loc[row]['NeiAtom']):
             unit_opt = pd.read_csv(file_name, header=None, skiprows=2, delim_whitespace=True)
@@ -276,7 +276,7 @@ def single_bonds(unit_name, unit, xyz_tmp_dir):
     except:
         single_bond = []
         gen_xyz(xyz_tmp_dir + unit_name + '.xyz', unit)
-        check_valency, neigh_atoms_info = connec_info(xyz_tmp_dir + unit_name + '.xyz')
+        neigh_atoms_info = connec_info(xyz_tmp_dir + unit_name + '.xyz')
         for index, row in neigh_atoms_info.iterrows():
             if len(row['NeiAtom']) < 2:
                 neigh_atoms_info = neigh_atoms_info.drop(index)
@@ -332,18 +332,15 @@ def search_rot_atoms(atom1,rot_atom1,rot_groups):
 
 # Connection information obtained by OpenBabel
 # INPUT: XYZ file
-# OUTPUT: Valency and connectivity information
+# OUTPUT: Connectivity information
 def connec_info(unit_name):
     obConversion = ob.OBConversion()
     obConversion.SetInFormat("xyz")
     mol = ob.OBMol()
     obConversion.ReadFile(mol, unit_name)
-    checkvalency=[]
     neigh_atoms_info=[]
 
     for atom in ob.OBMolAtomIter(mol):
-        if atom.GetValence() != atom.GetImplicitValence():
-            checkvalency.append(atom.GetIndex())
         neigh_atoms = []
         bond_orders = []
         for allatom in ob.OBAtomAtomIter(atom):
@@ -351,7 +348,7 @@ def connec_info(unit_name):
             bond_orders.append(atom.GetBond(allatom).GetBondOrder())
         neigh_atoms_info.append([neigh_atoms,bond_orders])
     neigh_atoms_info = pd.DataFrame(neigh_atoms_info, columns = ['NeiAtom','BO'])
-    return checkvalency, neigh_atoms_info
+    return neigh_atoms_info
 
 # This function generates a xyz file
 # INPUT: Name of a output file and a DataFrame of element names and respective XYZ-coordinates
@@ -504,9 +501,9 @@ def CheckConnectivity(unit_name,unit1,unit2,dimer):
     gen_xyz('work_dir/unit2_' + unit_name +'.xyz', unit2)
     gen_xyz('work_dir/dimer_' + unit_name + '.xyz', dimer)
 
-    check_valency_unit1, neigh_atoms_info_unit1 = connec_info('work_dir/unit1_' + unit_name + '.xyz')
-    check_valency_unit2, neigh_atoms_info_unit2 = connec_info('work_dir/unit2_' + unit_name + '.xyz')
-    check_valency_dimer, neigh_atoms_info_dimer = connec_info('work_dir/dimer_' + unit_name + '.xyz')
+    neigh_atoms_info_unit1 = connec_info('work_dir/unit1_' + unit_name + '.xyz')
+    neigh_atoms_info_unit2 = connec_info('work_dir/unit2_' + unit_name + '.xyz')
+    neigh_atoms_info_dimer = connec_info('work_dir/dimer_' + unit_name + '.xyz')
 
     Num_atoms_unit1=len(neigh_atoms_info_unit1.index.tolist())
     for index, row in neigh_atoms_info_unit2.iterrows():
@@ -580,7 +577,7 @@ def build_dimer_rotate(unit_name,rot_angles,unit1,unit2,dum,dum1,dum2,atom1,atom
         unit_2nd[count] = unit_2nd[count].append(unit1.drop([dum1]), ignore_index=True)
 
         gen_xyz('work_dir/' + unit_name + '.xyz', unit_2nd[count])
-        check_valency, neigh_atoms_info_dimer = connec_info('work_dir/' + unit_name + '.xyz')
+        neigh_atoms_info_dimer = connec_info('work_dir/' + unit_name + '.xyz')
 
         dum1_2nd, atom1_2nd, dum2_2nd, atom2_2nd = dum2+unit1.shape[0]-2, atom2+unit1.shape[0]-2, dum1, atom1
 
@@ -632,7 +629,7 @@ def create_conformer(unit_name,sl,unit,bond,neigh_atoms_info,angle,xyz_tmp_dir,d
 
     check_connectivity = 'CORRECT'
     penalty=0
-    check_valency_new, neigh_atoms_info_new = connec_info(file_name)
+    neigh_atoms_info_new = connec_info(file_name)
     for row in neigh_atoms_info.index.tolist():
         if sorted(neigh_atoms_info.loc[row]['NeiAtom']) != sorted(neigh_atoms_info_new.loc[row]['NeiAtom']):
             check_connectivity = 'WRONG'
@@ -744,7 +741,7 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,xyz_in_dir,xyz_tmp_dir,vasp_out_
         return unit_name, 'REJECT', 0
 
     # Collect valency and connecting information for each atom
-    check_valency, neigh_atoms_info = connec_info(xyz_in_dir + unit_name + '.xyz')
+    neigh_atoms_info = connec_info(xyz_in_dir + unit_name + '.xyz')
 
     try:
     # Find connecting atoms associated with dummy atoms.
@@ -823,7 +820,7 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,xyz_in_dir,xyz_tmp_dir,vasp_out_
 
                 check_connectivity_monomer = 'CORRECT'
 
-                check_valency_new, neigh_atoms_info_new = connec_info(row['xyzFile'])
+                neigh_atoms_info_new = connec_info(row['xyzFile'])
                 for row in neigh_atoms_info.index.tolist():
                     if sorted(neigh_atoms_info.loc[row]['NeiAtom']) != sorted(neigh_atoms_info_new.loc[row]['NeiAtom']):
                         check_connectivity_monomer = 'WRONG'
@@ -891,7 +888,7 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,xyz_in_dir,xyz_tmp_dir,vasp_out_
 
                     # Generate XYZ file and find connectivity
                     gen_xyz(xyz_tmp_dir + unit_name + '_dimer.xyz', unit_dimer)
-                    check_valency_dimer, neigh_atoms_info_dimer = connec_info(xyz_tmp_dir + unit_name + '_dimer.xyz')
+                    neigh_atoms_info_dimer = connec_info(xyz_tmp_dir + unit_name + '_dimer.xyz')
 
                     ##  Find single bonds and rotate
                     single_bond_dimer = single_bonds(unit_name, unit_dimer, xyz_tmp_dir)
@@ -913,7 +910,7 @@ def build_polymer(unit_name,df_smiles,ID,SMILES,xyz_in_dir,xyz_tmp_dir,vasp_out_
 
                         check_connectivity_monomer = 'CORRECT'
 
-                        check_valency_new, neigh_atoms_info_new = connec_info(row['xyzFile'])
+                        neigh_atoms_info_new = connec_info(row['xyzFile'])
                         for row in neigh_atoms_info_dimer.index.tolist():
                             if sorted(neigh_atoms_info_dimer.loc[row]['NeiAtom']) != sorted(neigh_atoms_info_new.loc[row]['NeiAtom']):
                                 check_connectivity_monomer = 'WRONG'

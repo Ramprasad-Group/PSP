@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import psp.PB_lib as bd
-import openbabel as ob
+from openbabel import openbabel as ob
 import os
 import shutil
 import time
