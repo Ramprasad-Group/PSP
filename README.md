@@ -4,6 +4,13 @@ In the case of organic oligomers/polymers, preparing 3D-geometries is the first 
 
 >The PSP generates monomer, oligomers and polymer chains as well as crystal structures from a SMILES string.
 
+## Contributors
+
+## License & copyright
+Ramprasad Group, Georgia Tech, USA
+
+Licensed under the [MIT License](LICENSE). 
+
 ## Documentation, Discussion and Contribution
 * PSP documents are available on [Ramprasad Group website](http://ramprasad.mse.gatech.edu/).
 * Mailing list:
