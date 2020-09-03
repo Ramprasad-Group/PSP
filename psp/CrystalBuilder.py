@@ -231,11 +231,15 @@ def CrystalBuilderMain(VaspInp, Nsamples, Input_radius, OutDir):
     # Max (X,Y) + 2.0
     if Input_radius == 'auto':
         radius = (
-            max(
-                [
-                    int((first_poly[0].max() - first_poly[0].min()) + 0.5),
-                    int((first_poly[1].max() - first_poly[1].min()) + 0.5),
-                ]
+            np.sqrt(
+                (
+                    (first_poly[0].max() - first_poly[0].min())
+                    * (first_poly[0].max() - first_poly[0].min())
+                )
+                + (
+                    (first_poly[1].max() - first_poly[1].min())
+                    * (first_poly[1].max() - first_poly[1].min())
+                )
             )
             + 2.0
         )

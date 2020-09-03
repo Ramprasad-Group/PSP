@@ -28,7 +28,7 @@ class PspGeneralTest(unittest.TestCase):
         )
         results = chain_builder.BuildPolymer()
         print(results)
-        ID = "PE"
+        ID = "PVC2"
         vasp_input_list = glob.glob("chains/" + ID + "/" + "*.vasp")
         crystal = CB.polymer_crystal(
             VaspInp_list=vasp_input_list,
