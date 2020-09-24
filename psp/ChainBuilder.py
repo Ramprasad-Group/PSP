@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import psp.PB_lib as bd
+import psp.ChB_lib as bd
 from openbabel import openbabel as ob
 import os
 import shutil
@@ -50,7 +50,7 @@ class Builder:
             exit()
 
     # list of molecules name and CORRECT/WRONG
-    def BuildPolymer(self):
+    def BuildChain(self):
         # Input Parameters
         intense = np.arange(-180, 180, 10)
         medium = [30, -30, 45, -45, 60, -60, 90, 120, -120, 135, -135, 150, -150, 180]

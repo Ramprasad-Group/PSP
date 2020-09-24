@@ -2,8 +2,8 @@ import pandas as pd
 import unittest
 import glob
 import os
-import psp.PolymerBuilder as PB
-import psp.CrystalBuilder as CB
+import psp.ChainBuilder as ChB
+import psp.CrystalBuilder as CrB
 
 
 TEST_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -15,7 +15,7 @@ class PspGeneralTest(unittest.TestCase):
             os.path.join(TEST_DIR, "chain.csv"), low_memory=False
         )  # fingerprinted data
 
-        chain_builder = PB.Builder(
+        chain_builder = ChB.Builder(
             df_smiles,
             ID_col="PID",
             SMILES_col="smiles_polymer",
@@ -26,16 +26,16 @@ class PspGeneralTest(unittest.TestCase):
             input_dimer_angles="medium",
             method="SA",
         )
-        results = chain_builder.BuildPolymer()
+        results = chain_builder.BuildChain()
         print(results)
         ID = "PVC2"
         vasp_input_list = glob.glob("chains/" + ID + "/" + "*.vasp")
-        crystal = CB.polymer_crystal(
+        crystal_builder = CrB.Builder(
             VaspInp_list=vasp_input_list,
             Nsamples=5,
             Input_radius="auto",
             OutDir="crystals/",
         )
-        results = crystal.build_model()
+        results = crystal_builder.BuildCrystal()
         self.assertIsNotNone(results)
         print(results)

@@ -7,7 +7,7 @@ import multiprocessing
 from joblib import Parallel, delayed
 
 
-class polymer_crystal:
+class Builder:
     def __init__(
         self,
         VaspInp_list,
@@ -22,7 +22,7 @@ class polymer_crystal:
         self.OutDir = OutDir
         self.n_cores = n_cores
 
-    def build_model(self):
+    def BuildCrystal(self):
         start_1 = time.time()
 
         build_dir(self.OutDir)
