@@ -1510,3 +1510,16 @@ def build_polymer(
                                 break
 
     return unit_name, decision, SN
+
+
+def build_3D(unit_name, df_smiles, ID, SMILES, out_dir):
+    # Get SMILES
+    smiles_each = df_smiles[df_smiles[ID] == unit_name][SMILES].values[0]
+
+    # Convert SMILES to XYZ coordinates
+    convert_smiles2xyz, m1 = smiles_xyz(unit_name, smiles_each, out_dir)
+
+    if convert_smiles2xyz == 'NOT_DONE':
+        return unit_name, 'FAILURE'
+
+    return unit_name, 'SUCCESS'
