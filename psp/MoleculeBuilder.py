@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import psp.ChB_lib as bd
+import psp.PSP_lib as bd
 import time
 import multiprocessing
 from joblib import Parallel, delayed

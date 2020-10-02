@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 # Test for openbabel/rdkit conda installs
 try:
-    import openbabel
+    from openbabel import openbabel
 except ImportError:
     raise ModuleNotFoundError("openbabel not found, install openbabel via conda-forge.")
 
