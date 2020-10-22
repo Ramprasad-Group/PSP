@@ -15,15 +15,15 @@ obConversion.SetInAndOutFormats("mol", "xyz")
 class Builder:
     def __init__(
         self,
-        df_smiles,
-        num_conf=1,
-        length=['n'],
-        input_monomer_angles='medium',
-        input_dimer_angles='low',
+        Dataframe,
+        NumConf=1,
+        Length=['n'],
+        Monomer_angles='medium',
+        Dimer_angles='low',
         Steps=20,
         Substeps=10,
-        n_cores=0,
-        method='SA',
+        NCores=0,
+        Method='SA',
         ID_col='ID',
         SMILES_col='smiles',
         OutDir='chains',
@@ -31,17 +31,17 @@ class Builder:
         self.ID_col = ID_col
         self.SMILES_col = SMILES_col
         self.OutDir = OutDir
-        self.df_smiles = df_smiles
-        self.num_conf = num_conf
-        self.length = length
-        self.input_monomer_angles = input_monomer_angles
-        self.input_dimer_angles = input_dimer_angles
+        self.Dataframe = Dataframe
+        self.NumConf = NumConf
+        self.Length = Length
+        self.Monomer_angles = Monomer_angles
+        self.Dimer_angles = Dimer_angles
         self.Steps = Steps
         self.Substeps = Substeps
-        self.n_cores = n_cores
-        self.method = method
-        if self.method in ['SA', 'Dimer']:
-            print('     polymer chain building started (', self.method, ') ...')
+        self.NCores = NCores
+        self.Method = Method
+        if self.Method in ['SA', 'Dimer']:
+            print('     polymer chain building started (', self.Method, ') ...')
         else:
             print("Error: please check keyword for method")
             print("SA == simulated annealing")
@@ -53,8 +53,24 @@ class Builder:
     def BuildChain(self):
         # Input Parameters
         intense = np.arange(-180, 180, 10)
-        medium = [30, -30, 45, -45, 60, -60, 90, 120, -120, 135, -135, 150, -150, 180]
-        low = [45, -45, 60, -60, 90, 120, -120, 180]
+        medium = [
+            0,
+            30,
+            -30,
+            45,
+            -45,
+            60,
+            -60,
+            90,
+            120,
+            -120,
+            135,
+            -135,
+            150,
+            -150,
+            180,
+        ]
+        low = [0, 45, -45, 60, -60, 90, 120, -120, 180]
 
         # Directories
         # Working directory
@@ -76,16 +92,16 @@ class Builder:
         chk_tri = []
         ID = self.ID_col
         SMILES = self.SMILES_col
-        df = self.df_smiles.copy()
+        df = self.Dataframe.copy()
         df[ID] = df[ID].apply(str)
 
-        rot_angles_monomer = vars()[self.input_monomer_angles]
-        rot_angles_dimer = vars()[self.input_dimer_angles]
+        rot_angles_monomer = vars()[self.Monomer_angles]
+        rot_angles_dimer = vars()[self.Dimer_angles]
 
-        if self.n_cores == 0:
-            self.n_cores = multiprocessing.cpu_count() - 1
+        if self.NCores == 0:
+            self.NCores = multiprocessing.cpu_count() - 1
 
-        result = Parallel(n_jobs=self.n_cores)(
+        result = Parallel(n_jobs=self.NCores)(
             delayed(bd.build_polymer)(
                 unit_name,
                 df,
@@ -98,9 +114,9 @@ class Builder:
                 rot_angles_dimer,
                 self.Steps,
                 self.Substeps,
-                self.num_conf,
-                self.length,
-                self.method,
+                self.NumConf,
+                self.Length,
+                self.Method,
             )
             for unit_name in df[ID].values
         )

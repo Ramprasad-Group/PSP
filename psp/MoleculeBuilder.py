@@ -8,13 +8,18 @@ from joblib import Parallel, delayed
 
 class Builder:
     def __init__(
-        self, df_smiles, n_cores=0, ID_col='ID', SMILES_col='smiles', OutDir='molecule',
+        self,
+        Dataframe,
+        NCores=0,
+        ID_col='ID',
+        SMILES_col='smiles',
+        OutDir='molecule',
     ):
         self.ID_col = ID_col
         self.SMILES_col = SMILES_col
         self.OutDir = OutDir
-        self.df_smiles = df_smiles
-        self.n_cores = n_cores
+        self.Dataframe = Dataframe
+        self.NCores = NCores
 
     # list of molecules name and CORRECT/WRONG
     def Build3D(self):
@@ -28,13 +33,13 @@ class Builder:
         chk_tri = []
         ID = self.ID_col
         SMILES = self.SMILES_col
-        df = self.df_smiles.copy()
+        df = self.Dataframe.copy()
         df[ID] = df[ID].apply(str)
 
-        if self.n_cores == 0:
-            self.n_cores = multiprocessing.cpu_count() - 1
+        if self.NCores == 0:
+            self.NCores = multiprocessing.cpu_count() - 1
 
-        result = Parallel(n_jobs=self.n_cores)(
+        result = Parallel(n_jobs=self.NCores)(
             delayed(bd.build_3D)(unit_name, df, ID, SMILES, out_dir)
             for unit_name in df[ID].values
         )

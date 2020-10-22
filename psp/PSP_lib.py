@@ -53,7 +53,8 @@ def localopt(unit_name, file_name, dum1, dum2, atom1, atom2, xyz_tmp_dir):
             unit_opt = pd.read_csv(
                 file_name, header=None, skiprows=2, delim_whitespace=True
             )
-            print(unit_name, ": Not optimized using steepest descent.")
+            return unit_opt
+            # print(unit_name, ": Not optimized using steepest descent.")
         else:
             # read XYZ file: skip the first two rows
             unit_opt = pd.read_csv(
@@ -62,8 +63,9 @@ def localopt(unit_name, file_name, dum1, dum2, atom1, atom2, xyz_tmp_dir):
                 skiprows=2,
                 delim_whitespace=True,
             )
+            return unit_opt
 
-    return unit_opt
+    # return unit_opt
 
 
 def rdkitmol2xyz(unit_name, m, dir_xyz, IDNum):
@@ -186,7 +188,7 @@ def build(unit_name, length, unit, dum1, dum2, atom1, atom2, unit_dis):
             second_unit = unit.drop([dum1]).copy()
             build = build.append(unit.drop([dum1]), ignore_index=True)
             check_connectivity = CheckConnectivity(
-                unit_name, first_unit, second_unit, build
+                unit_name, first_unit, second_unit, build, atom2
             )
             if check_connectivity == 'CORRECT':
                 # Calculate distance between atoms in first_unit and second_unit
@@ -244,7 +246,9 @@ def TwoMonomers_Dimer(unit_name, unit1, unit2, dum1, dum2, atom1, atom2, dum, un
     first_unit = build.copy()
     second_unit = unit2.drop([dum1]).copy()
     build = build.append(unit2.drop([dum1]), ignore_index=True)
-    check_connectivity = CheckConnectivity(unit_name, first_unit, second_unit, build)
+    check_connectivity = CheckConnectivity(
+        unit_name, first_unit, second_unit, build, atom2
+    )
     if check_connectivity == 'CORRECT':
         # Calculate distance between atoms in first_unit and second_unit
         dist = cdist(first_unit[[1, 2, 3]].values, second_unit[[1, 2, 3]].values)
@@ -580,7 +584,7 @@ def rotateYZ(unit, theta):  # XYZ coordinates and angle
 # Check connectivity between atoms in a dimer (Only for unit1 == unit2)
 # INPUT: ID, XYZ-coordinates of unit1, unit2 and dimer.
 # OUTPUT: Check connectivity (CORRECT or WRONG)
-def CheckConnectivity(unit_name, unit1, unit2, dimer):
+def CheckConnectivity(unit_name, unit1, unit2, dimer, connected_atom):
     gen_xyz('work_dir/unit1_' + unit_name + '.xyz', unit1)
     gen_xyz('work_dir/unit2_' + unit_name + '.xyz', unit2)
     gen_xyz('work_dir/dimer_' + unit_name + '.xyz', dimer)
@@ -596,27 +600,60 @@ def CheckConnectivity(unit_name, unit1, unit2, dimer):
         [neigh_atoms_info_unit1, neigh_atoms_info_unit2]
     )
 
-    count = 0
     check_connectivity = 'CORRECT'
 
-    for row in range(len(neigh_atoms_info_ideal_dimer.index.tolist())):
-        if sorted(neigh_atoms_info_ideal_dimer.iloc[row]['NeiAtom']) != sorted(
-            neigh_atoms_info_dimer.iloc[row]['NeiAtom']
-        ):
+    list1_atoms = neigh_atoms_info_dimer.iloc[connected_atom]['NeiAtom']
+    list1_atoms_ideal = neigh_atoms_info_ideal_dimer.iloc[connected_atom]['NeiAtom']
 
-            count += 1
-            # If a atom in first unit is connected to more than one atom of the second unit; reject the structure
-            if (
-                len(neigh_atoms_info_dimer.iloc[row]['NeiAtom'])
-                - len(neigh_atoms_info_ideal_dimer.iloc[row]['NeiAtom'])
-                > 1
+    # Connected more atoms: WRONG
+    if len(list1_atoms) - len(list1_atoms_ideal) != 1:
+        return 'WRONG'
+
+    # Connected to different atoms: WRONG
+    if (
+        len(
+            list(
+                set(list1_atoms)
+                .intersection(set(list1_atoms_ideal))
+                .symmetric_difference(set(list1_atoms_ideal))
+            )
+        )
+        != 0
+    ):
+        return 'WRONG'
+
+    second_connected_atom = list(
+        set(list1_atoms).symmetric_difference(set(list1_atoms_ideal))
+    )[0]
+    list2_atoms = neigh_atoms_info_dimer.iloc[second_connected_atom]['NeiAtom']
+    list2_atoms_ideal = neigh_atoms_info_ideal_dimer.iloc[second_connected_atom][
+        'NeiAtom'
+    ]
+
+    # Connected more atoms: WRONG
+    if len(list2_atoms) - len(list2_atoms_ideal) != 1:
+        return 'WRONG'
+
+    # Connected to different atoms: WRONG
+    if (
+        len(
+            list(
+                set(list2_atoms)
+                .intersection(set(list2_atoms_ideal))
+                .symmetric_difference(set(list2_atoms_ideal))
+            )
+        )
+        != 0
+    ):
+        return 'WRONG'
+
+    # Other atoms are connected: WRONG
+    for row in range(len(neigh_atoms_info_ideal_dimer.index.tolist())):
+        if row not in [connected_atom, second_connected_atom]:
+            if sorted(neigh_atoms_info_ideal_dimer.iloc[row]['NeiAtom']) != sorted(
+                neigh_atoms_info_dimer.iloc[row]['NeiAtom']
             ):
-                check_connectivity = 'WRONG'
-                break
-            # if connectivity information is changed for more than two atoms, reject the structure
-            elif count > 2:
-                check_connectivity = 'WRONG'
-                break
+                return 'WRONG'
 
     return check_connectivity
 
@@ -639,7 +676,7 @@ def add_dis_func(unit, atom1, atom2):
     if unit.loc[atom1][0] == 'C' and unit.loc[atom2][0] == 'N':
         add_dis = -0.207
     elif unit.loc[atom1][0] == 'N' and unit.loc[atom2][0] == 'N':
-        add_dis = -0.3
+        add_dis = -0.4
     elif unit.loc[atom1][0] == 'C' and unit.loc[atom2][0] == 'O':
         add_dis = -0.223
     elif unit.loc[atom1][0] == 'O' and unit.loc[atom2][0] == 'O':
@@ -691,7 +728,9 @@ def build_dimer_rotate(
             unit_2nd[count].iloc[0: int(Num_atoms_unit / 2)],
             unit_2nd[count].iloc[int(Num_atoms_unit / 2): Num_atoms_unit],
             unit_2nd[count],
+            atom2,
         )
+
         if check_connectivity == 'CORRECT':
             # Distance between two dummy atoms and angle between two vectors originated from dummy and connecting atoms
             dis_dum1_dum2 = distance(
@@ -1010,6 +1049,9 @@ def build_polymer(
             unit_name, unit, 'CORRECT', dum1, dum2, atom1, atom2, unit_dis
         )
 
+        # building unit is copied and may be used in building flexible dimers
+        unit_copied = unit.copy()
+
         if check_connectivity_dimer == 'CORRECT':
             decision = 'SUCCESS'
             SN += 1
@@ -1106,7 +1148,7 @@ def build_polymer(
 
             # Keep num_conf+10 rows to reduce computational costs
             results = results.head(num_conf + 10)
-            TotalSN = 0
+            TotalSN, first_conf_saved = 0, 0
             for index, row in results.iterrows():
                 TotalSN += 1
 
@@ -1123,6 +1165,11 @@ def build_polymer(
                         neigh_atoms_info_new.loc[row]['NeiAtom']
                     ):
                         check_connectivity_monomer = 'WRONG'
+
+                if check_connectivity_monomer == 'CORRECT' and first_conf_saved == 0:
+                    # building unit is copied and may be used in building flexible dimers
+                    unit_copied = final_unit.copy()
+                    first_conf_saved = 1
 
                 check_connectivity_dimer = mono2dimer(
                     unit_name,
@@ -1203,7 +1250,7 @@ def build_polymer(
                 # If we do not get a proper monomer unit, then consider a dimer as a monomer unit and
                 # build a dimer of the same
                 if SN < num_conf and TotalSN == results.index.size:
-                    unit = final_unit.copy()
+                    unit = unit_copied.copy()
                     unit = trans_origin(unit, atom1)
                     unit = alignZ(unit, atom1, atom2)
 
@@ -1508,7 +1555,6 @@ def build_polymer(
 
                             if SN == num_conf:
                                 break
-
     return unit_name, decision, SN
 
 
