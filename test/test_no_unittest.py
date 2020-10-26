@@ -29,7 +29,6 @@ crystal_builder = CrB.Builder(
     NSamples=5,
     InputRadius="auto",
     MinAtomicDis=2.0,
-    OutDir="crystals/",
     NCores=0,
 )
 results = crystal_builder.BuildCrystal()

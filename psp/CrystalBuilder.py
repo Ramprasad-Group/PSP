@@ -14,14 +14,14 @@ class Builder:
         NSamples=5,
         InputRadius='auto',
         MinAtomicDis=2.0,
-        OutDir='crystals/',
+        OutDir='crystals',
         NCores=0,
     ):
         self.VaspInp_list = VaspInp_list
         self.NSamples = NSamples
         self.InputRadius = InputRadius
         self.MinAtomicDis = MinAtomicDis
-        self.OutDir = OutDir
+        self.OutDir = OutDir + '/'
         self.NCores = NCores
 
     def BuildCrystal(self):

@@ -25,6 +25,7 @@ class PspGeneralTest(unittest.TestCase):
             MonomerAng="medium",
             DimerAng="medium",
             Method="SA",
+            OutDir="chains",
         )
         results = chain_builder.BuildChain()
         print(results)
@@ -35,7 +36,7 @@ class PspGeneralTest(unittest.TestCase):
             NSamples=5,
             InputRadius="auto",
             MinAtomicDis=2.0,
-            OutDir="crystals/",
+            OutDir="crystals",
         )
         results = crystal_builder.BuildCrystal()
         self.assertIsNotNone(results)
