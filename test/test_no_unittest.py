@@ -7,14 +7,14 @@ import psp.CrystalBuilder as CrB
 df_smiles = pd.read_csv("chain.csv", low_memory=False)  # fingerprinted data
 
 chain_builder = ChB.Builder(
-    df_smiles,
+    Dataframe=df_smiles,
     ID_col="PID",
     SMILES_col="smiles_polymer",
     Length=["n"],
     Steps=25,
     Substeps=10,
-    Monomer_angles="medium",
-    Dimer_angles="medium",
+    MonomerAng="medium",
+    DimerAng="medium",
     Method="SA",
     NCores=0,
     OutDir='chains',
@@ -27,9 +27,10 @@ vasp_input_list = glob.glob("chains/" + ID + "/" + "*.vasp")
 crystal_builder = CrB.Builder(
     VaspInp_list=vasp_input_list,
     NSamples=5,
-    Input_radius="auto",
+    InputRadius="auto",
+    MinAtomicDis=2.0,
     OutDir="crystals/",
-    NCores=4,
+    NCores=0,
 )
 results = crystal_builder.BuildCrystal()
 print(results)

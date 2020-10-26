@@ -22,8 +22,8 @@ class PspGeneralTest(unittest.TestCase):
             Length=["n"],
             Steps=25,
             Substeps=10,
-            Monomer_angles="medium",
-            Dimer_angles="medium",
+            MonomerAng="medium",
+            DimerAng="medium",
             Method="SA",
         )
         results = chain_builder.BuildChain()
@@ -33,7 +33,8 @@ class PspGeneralTest(unittest.TestCase):
         crystal_builder = CrB.Builder(
             VaspInp_list=vasp_input_list,
             NSamples=5,
-            Input_radius="auto",
+            InputRadius="auto",
+            MinAtomicDis=2.0,
             OutDir="crystals/",
         )
         results = crystal_builder.BuildCrystal()

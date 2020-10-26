@@ -18,8 +18,8 @@ class Builder:
         Dataframe,
         NumConf=1,
         Length=['n'],
-        Monomer_angles='medium',
-        Dimer_angles='low',
+        MonomerAng='medium',
+        DimerAng='low',
         Steps=20,
         Substeps=10,
         NCores=0,
@@ -34,8 +34,8 @@ class Builder:
         self.Dataframe = Dataframe
         self.NumConf = NumConf
         self.Length = Length
-        self.Monomer_angles = Monomer_angles
-        self.Dimer_angles = Dimer_angles
+        self.MonomerAng = MonomerAng
+        self.DimerAng = DimerAng
         self.Steps = Steps
         self.Substeps = Substeps
         self.NCores = NCores
@@ -95,8 +95,8 @@ class Builder:
         df = self.Dataframe.copy()
         df[ID] = df[ID].apply(str)
 
-        rot_angles_monomer = vars()[self.Monomer_angles]
-        rot_angles_dimer = vars()[self.Dimer_angles]
+        rot_angles_monomer = vars()[self.MonomerAng]
+        rot_angles_dimer = vars()[self.DimerAng]
 
         if self.NCores == 0:
             self.NCores = multiprocessing.cpu_count() - 1

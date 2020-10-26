@@ -12,13 +12,15 @@ class Builder:
         self,
         VaspInp_list,
         NSamples=5,
-        Input_radius='auto',
+        InputRadius='auto',
+        MinAtomicDis=2.0,
         OutDir='crystals/',
         NCores=0,
     ):
         self.VaspInp_list = VaspInp_list
         self.NSamples = NSamples
-        self.Input_radius = Input_radius
+        self.InputRadius = InputRadius
+        self.MinAtomicDis = MinAtomicDis
         self.OutDir = OutDir
         self.NCores = NCores
 
@@ -26,14 +28,14 @@ class Builder:
         start_1 = time.time()
 
         build_dir(self.OutDir)
-        result = []
+        # result = []
 
         if self.NCores == 0:
             self.NCores = multiprocessing.cpu_count() - 1
 
         result = Parallel(n_jobs=self.NCores)(
             delayed(CrystalBuilderMain)(
-                VaspInp, self.NSamples, self.Input_radius, self.OutDir
+                VaspInp, self.NSamples, self.InputRadius, self.MinAtomicDis, self.OutDir
             )
             for VaspInp in self.VaspInp_list
         )
@@ -200,7 +202,7 @@ def rotateXY(xyz_coordinates, theta):  # XYZ coordinates and angle
 
 
 # for VaspInp in VaspInp_list:
-def CrystalBuilderMain(VaspInp, NSamples, Input_radius, OutDir):
+def CrystalBuilderMain(VaspInp, NSamples, Input_radius, MinAtomicDis, OutDir):
     file_info, basis_vec, Num_atom, xyz_coordinates = readvasp(
         VaspInp.replace('.vasp', '') + '.vasp'
     )
@@ -241,7 +243,7 @@ def CrystalBuilderMain(VaspInp, NSamples, Input_radius, OutDir):
                     * (first_poly[1].max() - first_poly[1].min())
                 )
             )
-            + 2.0
+            + MinAtomicDis
         )
 
     else:
