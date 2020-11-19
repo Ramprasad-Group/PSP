@@ -906,6 +906,143 @@ def oligomer_build(
     return oligomer, dum1, atom1, dum2_oligo, atom2_oligo
 
 
+# This function updates XYZ coordinates in OBmol
+# INPUT: XYZ file names of original (reference) and new one
+# Updated OBmol (Connectivity info from reference file and XYZ coordinates from new file)
+def OBmolUpdateXYZcoordinates(ori_xyz, new_xyz):
+    new_unit = pd.read_csv(new_xyz, header=None, skiprows=2, delim_whitespace=True)
+    obConversion.ReadFile(mol, ori_xyz)
+    for atm in np.arange(new_unit.shape[0]):
+        a = mol.GetAtom(int(atm) + 1)
+        a.SetVector(new_unit.loc[atm, 1], new_unit.loc[atm, 2], new_unit.loc[atm, 3])
+    return mol
+
+
+# This function compare connectivity between two molecules; If they are same it returns CORRECT otherwise WRONG.
+# INPUT: PATH + file name of the first and second XYZ files
+# OUTPUT: CORRECT or WRONG
+def CompareConnectInfo(first_file, second_file):
+    result = 'CORRECT'
+    neigh_atoms_info = connec_info(first_file)
+    neigh_atoms_info_new = connec_info(second_file)
+    for row in neigh_atoms_info.index.tolist():
+        if sorted(neigh_atoms_info.loc[row]['NeiAtom']) != sorted(
+            neigh_atoms_info_new.loc[row]['NeiAtom']
+        ):
+            result = 'WRONG'
+    return result
+
+
+# This function stretches a repeating unit by moving a linking atom (+ corresponding dummy atom). It performs constraint
+# optimization by fixing positions of linking and dummy atoms using the UFF forcefield and Steepest Descent method
+# INPUT: ID, unit (XYZ coordinates), row numbers of dummy and linking atoms, folder name
+# OUTPUT: new_unit (XYZ coordinates), PATH + new XYZ file name
+def MakePolymerStraight(
+    unit_name, ref_xyz, unit_inp, dum1_inp, dum2_inp, atom1_inp, atom2_inp, xyz_tmp_dir
+):
+    # move building unit to the origin and align on z axis
+    unit_inp = trans_origin(unit_inp, atom1_inp)
+    unit_inp = alignZ(unit_inp, atom1_inp, atom2_inp)
+
+    obConversion.SetInAndOutFormats("xyz", "xyz")
+    gen_xyz(xyz_tmp_dir + unit_name + '_mol.xyz', unit_inp)
+    mol = OBmolUpdateXYZcoordinates(ref_xyz, xyz_tmp_dir + unit_name + '_mol.xyz')
+
+    # Set the constraints
+    ff.Setup(mol, constraints)
+
+    count = 0
+    list_energy = []
+    while count >= 0:  # Infinite loop
+        a = mol.GetAtom(atom1_inp + 1)
+        a.SetVector(
+            unit_inp.loc[atom1_inp, 1],
+            unit_inp.loc[atom1_inp, 2],
+            unit_inp.loc[atom1_inp, 3] - count * 0.25,
+        )
+
+        b = mol.GetAtom(dum1_inp + 1)
+        b.SetVector(
+            unit_inp.loc[dum1_inp, 1],
+            unit_inp.loc[dum1_inp, 2],
+            unit_inp.loc[dum1_inp, 3] - count * 0.25,
+        )
+
+        c = mol.GetAtom(atom2_inp + 1)
+        c.SetVector(
+            unit_inp.loc[atom2_inp, 1],
+            unit_inp.loc[atom2_inp, 2],
+            unit_inp.loc[atom2_inp, 3] + count * 0.25,
+        )
+
+        d = mol.GetAtom(dum2_inp + 1)
+        d.SetVector(
+            unit_inp.loc[dum2_inp, 1],
+            unit_inp.loc[dum2_inp, 2],
+            unit_inp.loc[dum2_inp, 3] + count * 0.25,
+        )
+
+        for atom_id in [dum1_inp + 1, dum2_inp + 1, atom1_inp + 1, atom2_inp + 1]:
+            constraints.AddAtomConstraint(atom_id)
+
+        ff.Setup(mol, constraints)
+        ff.SteepestDescent(1000)
+        # ff.ConjugateGradients(1000)
+
+        ff.UpdateCoordinates(mol)
+
+        if count == 0:
+            slope = 0
+        else:
+            slope = (ff.Energy() - list_energy[-1][1]) / (count - list_energy[-1][0])
+
+        list_energy.append([count, ff.Energy(), slope])
+        obConversion.WriteFile(
+            mol, xyz_tmp_dir + unit_name + '_output' + str(count) + '.xyz'
+        )
+
+        if (
+            CompareConnectInfo(
+                xyz_tmp_dir + unit_name + '_mol.xyz',
+                xyz_tmp_dir + unit_name + '_output' + str(count) + '.xyz',
+            )
+            == 'WRONG'
+        ):
+            return (
+                pd.read_csv(
+                    xyz_tmp_dir + unit_name + '_mol.xyz',
+                    header=None,
+                    skiprows=2,
+                    delim_whitespace=True,
+                ),
+                xyz_tmp_dir + unit_name + '_mol.xyz',
+            )
+
+        elif slope > 150 and count <= 6:
+            return (
+                pd.read_csv(
+                    xyz_tmp_dir + unit_name + '_mol.xyz',
+                    header=None,
+                    skiprows=2,
+                    delim_whitespace=True,
+                ),
+                xyz_tmp_dir + unit_name + '_mol.xyz',
+            )
+        elif slope > 150 and count > 6:
+            return (
+                pd.read_csv(
+                    xyz_tmp_dir + unit_name + '_output' + str(count) + '.xyz',
+                    header=None,
+                    skiprows=2,
+                    delim_whitespace=True,
+                ),
+                xyz_tmp_dir + unit_name + '_output' + str(count) + '.xyz',
+            )
+
+        else:
+            count += 1
+
+
 # Build a polymer from a monomer unit. (main function)
 # 1. Rotate all single bonds and find out the best monomer by maximizing angle between two possible vectors between two
 # sets of connecting and dummy atoms.
@@ -932,6 +1069,7 @@ def build_polymer(
     num_conf,
     length,
     method,
+    VDWTreatment,
 ):
     vasp_out_dir_indi = vasp_out_dir + unit_name + '/'
     build_dir(vasp_out_dir_indi)
@@ -1157,9 +1295,25 @@ def build_polymer(
                     unit_name, row['xyzFile'], dum1, dum2, atom1, atom2, xyz_tmp_dir
                 )
 
+                # Stretch the repeating unit
+                if VDWTreatment == 1:
+                    final_unit, final_unit_xyz = MakePolymerStraight(
+                        unit_name,
+                        xyz_in_dir + unit_name + '.xyz',
+                        final_unit,
+                        dum1,
+                        dum2,
+                        atom1,
+                        atom2,
+                        xyz_tmp_dir,
+                    )
+                else:
+                    final_unit_xyz = row['xyzFile']
+
+                # Check connectivity
                 check_connectivity_monomer = 'CORRECT'
 
-                neigh_atoms_info_new = connec_info(row['xyzFile'])
+                neigh_atoms_info_new = connec_info(final_unit_xyz)
                 for row in neigh_atoms_info.index.tolist():
                     if sorted(neigh_atoms_info.loc[row]['NeiAtom']) != sorted(
                         neigh_atoms_info_new.loc[row]['NeiAtom']
@@ -1288,12 +1442,25 @@ def build_polymer(
                     unit_dimer = localopt(
                         unit_name,
                         xyz_tmp_dir + unit_name + '_dimer.xyz',
-                        dum1,
-                        dum2,
-                        atom1,
-                        atom2,
+                        dum1_2nd,
+                        dum2_2nd,
+                        atom1_2nd,
+                        atom2_2nd,
                         xyz_tmp_dir,
                     )
+
+                    # Stretch the repeating unit
+                    if VDWTreatment == 1:
+                        unit_dimer, unit_dimer_xyz = MakePolymerStraight(
+                            unit_name,
+                            xyz_tmp_dir + unit_name + '_dimer.xyz',
+                            unit_dimer,
+                            dum1_2nd,
+                            dum2_2nd,
+                            atom1_2nd,
+                            atom2_2nd,
+                            xyz_tmp_dir,
+                        )
 
                     check_connectivity_dimer = mono2dimer(
                         unit_name,
@@ -1372,7 +1539,7 @@ def build_polymer(
                             break
 
                     # Generate XYZ file and find connectivity
-                    gen_xyz(xyz_tmp_dir + unit_name + '_dimer.xyz', unit_dimer)
+                    # gen_xyz(xyz_tmp_dir + unit_name + '_dimer.xyz', unit_dimer)
                     neigh_atoms_info_dimer = connec_info(
                         xyz_tmp_dir + unit_name + '_dimer.xyz'
                     )
@@ -1409,16 +1576,32 @@ def build_polymer(
                         final_unit = localopt(
                             unit_name,
                             row['xyzFile'],
-                            dum1,
-                            dum2,
-                            atom1,
-                            atom2,
+                            dum1_2nd,
+                            dum2_2nd,
+                            atom1_2nd,
+                            atom2_2nd,
                             xyz_tmp_dir,
                         )
 
+                        # Stretch the repeating unit
+                        if VDWTreatment == 1:
+                            final_unit, final_unit_xyz = MakePolymerStraight(
+                                unit_name,
+                                xyz_tmp_dir + unit_name + '_dimer.xyz',
+                                final_unit,
+                                dum1_2nd,
+                                dum2_2nd,
+                                atom1_2nd,
+                                atom2_2nd,
+                                xyz_tmp_dir,
+                            )
+                        else:
+                            final_unit_xyz = row['xyzFile']
+
+                        # Check Connectivity
                         check_connectivity_monomer = 'CORRECT'
 
-                        neigh_atoms_info_new = connec_info(row['xyzFile'])
+                        neigh_atoms_info_new = connec_info(final_unit_xyz)
                         for row in neigh_atoms_info_dimer.index.tolist():
                             if sorted(
                                 neigh_atoms_info_dimer.loc[row]['NeiAtom']

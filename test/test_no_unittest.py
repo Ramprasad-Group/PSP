@@ -11,13 +11,15 @@ chain_builder = ChB.Builder(
     ID_col="PID",
     SMILES_col="smiles_polymer",
     Length=[1,2,5,"n"],
-    Steps=25,
-    Substeps=10,
+    Steps=30,
+    Substeps=20,
     MonomerAng="medium",
     DimerAng="medium",
     Method="SA",
-    NCores=0,
+    NCores=4,
     OutDir='chains',
+    NumConf=1,
+    VDWTreatment=1
 )
 results = chain_builder.BuildChain()
 print(results)

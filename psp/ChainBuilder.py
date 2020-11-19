@@ -26,6 +26,7 @@ class Builder:
         Method='SA',
         ID_col='ID',
         SMILES_col='smiles',
+        VDWTreatment=0,
         OutDir='chains',
     ):
         self.ID_col = ID_col
@@ -40,6 +41,12 @@ class Builder:
         self.Substeps = Substeps
         self.NCores = NCores
         self.Method = Method
+        self.VDWTreatment = VDWTreatment
+
+        # if self.VDWTreatment not in [0, 1]:
+        #    print("Check VDWTreatment")
+        #    exit()
+
         if self.Method in ['SA', 'Dimer']:
             print('     polymer chain building started (', self.Method, ') ...')
         else:
@@ -117,6 +124,7 @@ class Builder:
                 self.NumConf,
                 self.Length,
                 self.Method,
+                self.VDWTreatment,
             )
             for unit_name in df[ID].values
         )
