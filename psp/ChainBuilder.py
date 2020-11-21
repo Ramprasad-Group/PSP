@@ -26,7 +26,7 @@ class Builder:
         Method='SA',
         ID_col='ID',
         SMILES_col='smiles',
-        VDWTreatment=0,
+        IntraChainCorr=1,
         OutDir='chains',
     ):
         self.ID_col = ID_col
@@ -41,14 +41,10 @@ class Builder:
         self.Substeps = Substeps
         self.NCores = NCores
         self.Method = Method
-        self.VDWTreatment = VDWTreatment
-
-        # if self.VDWTreatment not in [0, 1]:
-        #    print("Check VDWTreatment")
-        #    exit()
+        self.IntraChainCorr = IntraChainCorr
 
         if self.Method in ['SA', 'Dimer']:
-            print('     polymer chain building started (', self.Method, ') ...')
+            print('    - polymer chain building started (', self.Method, ') ...')
         else:
             print("Error: please check keyword for method")
             print("SA == simulated annealing")
@@ -124,7 +120,7 @@ class Builder:
                 self.NumConf,
                 self.Length,
                 self.Method,
-                self.VDWTreatment,
+                self.IntraChainCorr,
             )
             for unit_name in df[ID].values
         )
@@ -133,9 +129,9 @@ class Builder:
 
         end_1 = time.time()
         print("")
-        print('      polymer chain building completed.')
+        print('    - polymer chain building completed.')
         print(
-            '      polymer chain building time: ',
+            '    - polymer chain building time: ',
             np.round((end_1 - start_1) / 60, 2),
             ' minutes',
         )

@@ -11,13 +11,11 @@ from scipy.spatial.distance import cdist
 
 RDLogger.DisableLog('rdApp.*')
 
-
 # OpenBabel setup
 obConversion = ob.OBConversion()
 ff = ob.OBForceField.FindForceField('UFF')
 mol = ob.OBMol()
 np.set_printoptions(precision=20)
-constraints = ob.OBFFConstraints()
 
 
 # This function try to create a directory
@@ -32,6 +30,7 @@ def build_dir(path):
 # INPUT: ID, path and name of XYZ file, row indices of dummy and connecting atoms, name of working directory
 # OUTPUT: XYZ coordinates of the optimized molecule
 def localopt(unit_name, file_name, dum1, dum2, atom1, atom2, xyz_tmp_dir):
+    constraints = ob.OBFFConstraints()
     obConversion.SetInAndOutFormats("xyz", "xyz")
     obConversion.ReadFile(mol, file_name)
     for atom_id in [dum1 + 1, dum2 + 1, atom1 + 1, atom2 + 1]:
@@ -64,8 +63,6 @@ def localopt(unit_name, file_name, dum1, dum2, atom1, atom2, xyz_tmp_dir):
                 delim_whitespace=True,
             )
             return unit_opt
-
-    # return unit_opt
 
 
 def rdkitmol2xyz(unit_name, m, dir_xyz, IDNum):
@@ -940,6 +937,10 @@ def CompareConnectInfo(first_file, second_file):
 def MakePolymerStraight(
     unit_name, ref_xyz, unit_inp, dum1_inp, dum2_inp, atom1_inp, atom2_inp, xyz_tmp_dir
 ):
+    constraints = (
+        ob.OBFFConstraints()
+    )
+
     # move building unit to the origin and align on z axis
     unit_inp = trans_origin(unit_inp, atom1_inp)
     unit_inp = alignZ(unit_inp, atom1_inp, atom2_inp)
@@ -948,8 +949,7 @@ def MakePolymerStraight(
     gen_xyz(xyz_tmp_dir + unit_name + '_mol.xyz', unit_inp)
     mol = OBmolUpdateXYZcoordinates(ref_xyz, xyz_tmp_dir + unit_name + '_mol.xyz')
 
-    # Set the constraints
-    ff.Setup(mol, constraints)
+    dis = 0.25
 
     count = 0
     list_energy = []
@@ -958,28 +958,28 @@ def MakePolymerStraight(
         a.SetVector(
             unit_inp.loc[atom1_inp, 1],
             unit_inp.loc[atom1_inp, 2],
-            unit_inp.loc[atom1_inp, 3] - count * 0.25,
+            unit_inp.loc[atom1_inp, 3] - count * dis,
         )
 
         b = mol.GetAtom(dum1_inp + 1)
         b.SetVector(
             unit_inp.loc[dum1_inp, 1],
             unit_inp.loc[dum1_inp, 2],
-            unit_inp.loc[dum1_inp, 3] - count * 0.25,
+            unit_inp.loc[dum1_inp, 3] - count * dis,
         )
 
         c = mol.GetAtom(atom2_inp + 1)
         c.SetVector(
             unit_inp.loc[atom2_inp, 1],
             unit_inp.loc[atom2_inp, 2],
-            unit_inp.loc[atom2_inp, 3] + count * 0.25,
+            unit_inp.loc[atom2_inp, 3] + count * dis,
         )
 
         d = mol.GetAtom(dum2_inp + 1)
         d.SetVector(
             unit_inp.loc[dum2_inp, 1],
             unit_inp.loc[dum2_inp, 2],
-            unit_inp.loc[dum2_inp, 3] + count * 0.25,
+            unit_inp.loc[dum2_inp, 3] + count * dis,
         )
 
         for atom_id in [dum1_inp + 1, dum2_inp + 1, atom1_inp + 1, atom2_inp + 1]:
@@ -987,7 +987,6 @@ def MakePolymerStraight(
 
         ff.Setup(mol, constraints)
         ff.SteepestDescent(1000)
-        # ff.ConjugateGradients(1000)
 
         ff.UpdateCoordinates(mol)
 
@@ -1008,6 +1007,7 @@ def MakePolymerStraight(
             )
             == 'WRONG'
         ):
+
             return (
                 pd.read_csv(
                     xyz_tmp_dir + unit_name + '_mol.xyz',
@@ -1018,7 +1018,8 @@ def MakePolymerStraight(
                 xyz_tmp_dir + unit_name + '_mol.xyz',
             )
 
-        elif slope > 150 and count <= 6:
+        elif slope > 50 and count <= 3:
+
             return (
                 pd.read_csv(
                     xyz_tmp_dir + unit_name + '_mol.xyz',
@@ -1028,15 +1029,23 @@ def MakePolymerStraight(
                 ),
                 xyz_tmp_dir + unit_name + '_mol.xyz',
             )
-        elif slope > 150 and count > 6:
+        elif slope > 50 and count > 3:
+
+            # optimize molecule again with large number of steps
+            ff.SteepestDescent(1000000, 0.0000001)
+            ff.UpdateCoordinates(mol)
+            obConversion.WriteFile(
+                mol, xyz_tmp_dir + unit_name + '_final' + str(count) + '.xyz'
+            )
+
             return (
                 pd.read_csv(
-                    xyz_tmp_dir + unit_name + '_output' + str(count) + '.xyz',
+                    xyz_tmp_dir + unit_name + '_final' + str(count) + '.xyz',
                     header=None,
                     skiprows=2,
                     delim_whitespace=True,
                 ),
-                xyz_tmp_dir + unit_name + '_output' + str(count) + '.xyz',
+                xyz_tmp_dir + unit_name + '_final' + str(count) + '.xyz',
             )
 
         else:
@@ -1069,7 +1078,7 @@ def build_polymer(
     num_conf,
     length,
     method,
-    VDWTreatment,
+    IntraChainCorr,
 ):
     vasp_out_dir_indi = vasp_out_dir + unit_name + '/'
     build_dir(vasp_out_dir_indi)
@@ -1182,6 +1191,20 @@ def build_polymer(
         new_rows = [dum1, atom1, atom2, dum2] + rows
         unit = unit.loc[new_rows].reset_index(drop=True)
         dum1, atom1, atom2, dum2 = 0, 1, 2, 3
+
+        gen_xyz(xyz_tmp_dir + unit_name + '_rearranged.xyz', unit)
+        # Stretch the repeating unit
+        if IntraChainCorr == 1:
+            unit, unit_init_xyz = MakePolymerStraight(
+                unit_name,
+                xyz_tmp_dir + unit_name + '_rearranged.xyz',
+                unit,
+                dum1,
+                dum2,
+                atom1,
+                atom2,
+                xyz_tmp_dir,
+            )
 
         check_connectivity_dimer = mono2dimer(
             unit_name, unit, 'CORRECT', dum1, dum2, atom1, atom2, unit_dis
@@ -1296,10 +1319,10 @@ def build_polymer(
                 )
 
                 # Stretch the repeating unit
-                if VDWTreatment == 1:
+                if IntraChainCorr == 1:
                     final_unit, final_unit_xyz = MakePolymerStraight(
                         unit_name,
-                        xyz_in_dir + unit_name + '.xyz',
+                        xyz_tmp_dir + unit_name + '_rearranged.xyz',
                         final_unit,
                         dum1,
                         dum2,
@@ -1450,7 +1473,7 @@ def build_polymer(
                     )
 
                     # Stretch the repeating unit
-                    if VDWTreatment == 1:
+                    if IntraChainCorr == 1:
                         unit_dimer, unit_dimer_xyz = MakePolymerStraight(
                             unit_name,
                             xyz_tmp_dir + unit_name + '_dimer.xyz',
@@ -1584,7 +1607,7 @@ def build_polymer(
                         )
 
                         # Stretch the repeating unit
-                        if VDWTreatment == 1:
+                        if IntraChainCorr == 1:
                             final_unit, final_unit_xyz = MakePolymerStraight(
                                 unit_name,
                                 xyz_tmp_dir + unit_name + '_dimer.xyz',
