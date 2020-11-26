@@ -27,6 +27,7 @@ class Builder:
         ID_col='ID',
         SMILES_col='smiles',
         IntraChainCorr=1,
+        Tol_ChainCorr=50,
         OutDir='chains',
     ):
         self.ID_col = ID_col
@@ -42,6 +43,7 @@ class Builder:
         self.NCores = NCores
         self.Method = Method
         self.IntraChainCorr = IntraChainCorr
+        self.Tol_ChainCorr = Tol_ChainCorr
 
         if self.Method in ['SA', 'Dimer']:
             print('    - polymer chain building started (', self.Method, ') ...')
@@ -121,6 +123,7 @@ class Builder:
                 self.Length,
                 self.Method,
                 self.IntraChainCorr,
+                self.Tol_ChainCorr,
             )
             for unit_name in df[ID].values
         )

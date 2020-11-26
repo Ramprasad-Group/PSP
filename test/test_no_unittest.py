@@ -10,14 +10,15 @@ chain_builder = ChB.Builder(
     Dataframe=df_smiles,
     ID_col="PID",
     SMILES_col="smiles_polymer",
-    Length=["n"],
-    Steps=20,
-    Substeps=10,
+    Length=[1,3,"n"],
+    Steps=10,
+    Substeps=2,
     MonomerAng="medium",
     DimerAng="medium",
     Method="SA",
     NCores=0,
-    OutDir='chains'
+    OutDir='chains',
+    Tol_ChainCorr=50
 )
 results = chain_builder.BuildChain()
 print(results)

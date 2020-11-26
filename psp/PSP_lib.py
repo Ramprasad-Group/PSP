@@ -935,11 +935,17 @@ def CompareConnectInfo(first_file, second_file):
 # INPUT: ID, unit (XYZ coordinates), row numbers of dummy and linking atoms, folder name
 # OUTPUT: new_unit (XYZ coordinates), PATH + new XYZ file name
 def MakePolymerStraight(
-    unit_name, ref_xyz, unit_inp, dum1_inp, dum2_inp, atom1_inp, atom2_inp, xyz_tmp_dir
+    unit_name,
+    ref_xyz,
+    unit_inp,
+    dum1_inp,
+    dum2_inp,
+    atom1_inp,
+    atom2_inp,
+    xyz_tmp_dir,
+    Tol_ChainCorr,
 ):
-    constraints = (
-        ob.OBFFConstraints()
-    )
+    constraints = ob.OBFFConstraints()
 
     # move building unit to the origin and align on z axis
     unit_inp = trans_origin(unit_inp, atom1_inp)
@@ -1018,7 +1024,7 @@ def MakePolymerStraight(
                 xyz_tmp_dir + unit_name + '_mol.xyz',
             )
 
-        elif slope > 50 and count <= 3:
+        elif slope > Tol_ChainCorr and count <= 3:
 
             return (
                 pd.read_csv(
@@ -1029,7 +1035,7 @@ def MakePolymerStraight(
                 ),
                 xyz_tmp_dir + unit_name + '_mol.xyz',
             )
-        elif slope > 50 and count > 3:
+        elif slope > Tol_ChainCorr and count > 3:
 
             # optimize molecule again with large number of steps
             ff.SteepestDescent(1000000, 0.0000001)
@@ -1079,6 +1085,7 @@ def build_polymer(
     length,
     method,
     IntraChainCorr,
+    Tol_ChainCorr,
 ):
     vasp_out_dir_indi = vasp_out_dir + unit_name + '/'
     build_dir(vasp_out_dir_indi)
@@ -1204,6 +1211,7 @@ def build_polymer(
                 atom1,
                 atom2,
                 xyz_tmp_dir,
+                Tol_ChainCorr,
             )
 
         check_connectivity_dimer = mono2dimer(
@@ -1329,6 +1337,7 @@ def build_polymer(
                         atom1,
                         atom2,
                         xyz_tmp_dir,
+                        Tol_ChainCorr,
                     )
                 else:
                     final_unit_xyz = row['xyzFile']
@@ -1483,6 +1492,7 @@ def build_polymer(
                             atom1_2nd,
                             atom2_2nd,
                             xyz_tmp_dir,
+                            Tol_ChainCorr,
                         )
 
                     check_connectivity_dimer = mono2dimer(
@@ -1617,6 +1627,7 @@ def build_polymer(
                                 atom1_2nd,
                                 atom2_2nd,
                                 xyz_tmp_dir,
+                                Tol_ChainCorr,
                             )
                         else:
                             final_unit_xyz = row['xyzFile']
