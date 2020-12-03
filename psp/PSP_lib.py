@@ -1106,8 +1106,8 @@ def build_polymer(
         else:
             print(
                 unit_name,
-                ": There are more than two dummy atoms in the SMILES string;"
-                "Hint: The psp works only for one-dimensional polymers.",
+                ": There are more or less than two dummy atoms in the SMILES string; "
+                "Hint: PSP works only for one-dimensional polymers.",
             )
             return unit_name, 'REJECT', 0
     except Exception:
