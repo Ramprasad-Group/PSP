@@ -1,5 +1,4 @@
 PID,smiles_polymer
-test, [*]OCCCCCC([*])=O
 PE,[*]CC[*]
 PVC,C(C([*])Cl)[*]
 PVC2,C(C(CC([*])Cl)Cl)[*]

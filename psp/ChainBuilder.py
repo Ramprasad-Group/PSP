@@ -142,6 +142,11 @@ class Builder:
         chk_tri = pd.DataFrame(chk_tri, columns=['ID', 'Result', 'Conformers'])
         chk_tri.to_csv(list_out_xyz)
 
+        # Delete empty directory
+        for index, row in chk_tri.iterrows():
+            if row['Result'] != 'SUCCESS':
+                os.rmdir(vasp_out_dir + row['ID'] + '/')
+
         # Delete work directory
         if os.path.isdir('work_dir/'):
             shutil.rmtree('work_dir/')

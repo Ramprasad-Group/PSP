@@ -8,12 +8,7 @@ from joblib import Parallel, delayed
 
 class Builder:
     def __init__(
-        self,
-        Dataframe,
-        NCores=0,
-        ID_col='ID',
-        SMILES_col='smiles',
-        OutDir='molecule',
+        self, Dataframe, NCores=0, ID_col='ID', SMILES_col='smiles', OutDir='molecule',
     ):
         self.ID_col = ID_col
         self.SMILES_col = SMILES_col
