@@ -15,8 +15,8 @@ class Builder:
         NCores=0,
         ID_col='ID',
         SMILES_col='smiles',
-        OutDir='molecule',
-        Inter_Mol_Dis=12,
+        OutDir='molecules',
+        Inter_Mol_Dis=6,
         Length=[1],
         NumConf=1,
     ):

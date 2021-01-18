@@ -2004,7 +2004,9 @@ def build_3D(
     count = 0
     for len in Length:
         if len == 1:
-            smiles_each = smiles_each.replace(r'*', "").replace(r'[]', "")
+            mol = Chem.MolFromSmiles(smiles_each)
+            mol_new = Chem.DeleteSubstructs(mol, Chem.MolFromSmarts('[#0]'))
+            smiles_each = Chem.MolToSmiles(mol_new)
 
         elif len > 1:
             smiles_each = copy.copy(smiles_each_copy)
