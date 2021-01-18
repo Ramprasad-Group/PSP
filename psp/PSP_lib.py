@@ -3,6 +3,7 @@ import pandas as pd
 import psp.simulated_annealing as an
 import math
 import os
+import copy
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from openbabel import openbabel as ob
@@ -1985,14 +1986,183 @@ def build_polymer(
     return unit_name, decision, SN
 
 
-def build_3D(unit_name, df_smiles, ID, SMILES, out_dir):
+def build_3D(
+    unit_name,
+    df_smiles,
+    ID,
+    SMILES,
+    out_dir,
+    Inter_Mol_Dis,
+    Length,
+    xyz_in_dir,
+    NumConf,
+):
     # Get SMILES
     smiles_each = df_smiles[df_smiles[ID] == unit_name][SMILES].values[0]
+    smiles_each_copy = copy.copy(smiles_each)
 
-    # Convert SMILES to XYZ coordinates
-    convert_smiles2xyz, m1 = smiles_xyz(unit_name, smiles_each, out_dir)
+    count = 0
+    for len in Length:
+        if len == 1:
+            smiles_each = smiles_each.replace(r'*', "").replace(r'[]', "")
 
-    if convert_smiles2xyz == 'NOT_DONE':
-        return unit_name, 'FAILURE'
+        elif len > 1:
+            smiles_each = copy.copy(smiles_each_copy)
 
+            (
+                unit_name,
+                dum1,
+                dum2,
+                atom1,
+                atom2,
+                m1,
+                neigh_atoms_info,
+                oligo_list,
+                dum,
+                unit_dis,
+                flag,
+            ) = Init_info(unit_name, smiles_each, xyz_in_dir, Length)
+
+            if flag == 'REJECT' and count == 0:
+                return unit_name, 'REJECT', 0
+            elif flag == 'REJECT' and count > 0:
+                return unit_name, 'PARTIAl SUCCESS'
+
+            smiles_each = gen_oligomer_smiles(
+                dum1, dum2, atom1, atom2, smiles_each, len
+            )
+
+        m1 = Chem.MolFromSmiles(smiles_each)
+        if m1 is None and count == 0:
+            return unit_name, 'FAILURE'
+        elif m1 is None and count > 0:
+            return unit_name, 'PARTIAl SUCCESS'
+        else:
+            count += 1
+        gen_conf_xyz_vasp(unit_name, m1, out_dir, len, NumConf, Inter_Mol_Dis)
     return unit_name, 'SUCCESS'
+
+
+def gen_oligomer_smiles(dum1, dum2, atom1, atom2, input_smiles, len):
+    input_mol = Chem.MolFromSmiles(input_smiles)
+    edit_m1 = Chem.EditableMol(input_mol)
+
+    edit_m1.RemoveAtom(dum1)
+
+    if dum1 < dum2:
+        edit_m1.RemoveAtom(dum2 - 1)
+    else:
+        edit_m1.RemoveAtom(dum2)
+
+    monomer_mol = edit_m1.GetMol()
+    inti_mol = monomer_mol
+
+    if atom1 > atom2:
+        atom1, atom2 = atom2, atom1
+
+    if dum1 < atom1 and dum2 < atom1:
+        second_atom = atom1 - 2
+    elif (dum1 < atom1 and dum2 > atom1) or (dum1 > atom1 and dum2 < atom1):
+        second_atom = atom1 - 1
+    else:
+        second_atom = atom1
+
+    if dum1 < atom2 and dum2 < atom2:
+        first_atom = atom2 - 2
+    elif (dum1 < atom2 and dum2 > atom2) or (dum1 > atom2 and dum2 < atom2):
+        first_atom = atom2 - 1
+    else:
+        first_atom = atom2
+
+    for i in range(1, len):
+        combo = Chem.CombineMols(inti_mol, monomer_mol)
+        edcombo = Chem.EditableMol(combo)
+        edcombo.AddBond(
+            second_atom + (i - 1) * monomer_mol.GetNumAtoms(),
+            first_atom + i * monomer_mol.GetNumAtoms(),
+            order=Chem.rdchem.BondType.SINGLE,
+        )
+        inti_mol = edcombo.GetMol()
+    return Chem.MolToSmiles(inti_mol)
+
+
+# Search a good conformer
+# INPUT: ID, mol without Hydrogen atom, row indices of dummy and connecting atoms, directory
+# OUTPUT: XYZ coordinates of the optimized molecule
+def gen_conf_xyz_vasp(unit_name, m1, out_dir, len, Nconf, Inter_Mol_Dis):
+    m2 = Chem.AddHs(m1)
+    cids = AllChem.EmbedMultipleConfs(m2, numConfs=Nconf + 5)
+    n = 0
+    for cid in cids:
+        n += 1
+        AllChem.UFFOptimizeMolecule(m2, confId=cid)
+        Chem.MolToXYZFile(
+            m2,
+            out_dir + unit_name + '_N' + str(len) + '_C' + str(n) + '.xyz',
+            confId=cid,
+        )
+        unit = pd.read_csv(
+            out_dir + unit_name + '_N' + str(len) + '_C' + str(n) + '.xyz',
+            header=None,
+            skiprows=2,
+            delim_whitespace=True,
+        )
+        gen_molecule_vasp(
+            unit_name,
+            unit,
+            0,
+            0,
+            Inter_Mol_Dis,
+            out_dir + unit_name + '_N' + str(len) + '_C' + str(n) + '.vasp',
+        )
+        if n == Nconf:
+            break
+
+
+# This function generates a VASP input (polymer) file
+# INPUT: name of VASP directory, name of a monomer, XYZ-coordinates, row numbers for dummy and
+# connecting atoms , chemical name of dummy atom, Serial number
+# OUTPUT: Generates a VASP input file
+def gen_molecule_vasp(unit_name, unit, atom1, atom2, Inter_Mol_Dis, outVASP):
+
+    if atom1 != 0:
+        unit = trans_origin(unit, atom1)
+        if atom2 != 0:
+            unit = alignZ(unit, atom1, atom2)
+
+    unit = unit.sort_values(by=[0])
+
+    # keep_space = 12
+    file = open(outVASP, 'w+')
+    file.write('### ' + str(unit_name) + ' ###\n')
+    file.write('1\n')
+    a_vec = unit[1].max() - unit[1].min() + Inter_Mol_Dis
+    b_vec = unit[2].max() - unit[2].min() + Inter_Mol_Dis
+    c_vec = unit[3].max() - unit[3].min() + Inter_Mol_Dis
+
+    # move unit to the center of a box
+    unit[1] = unit[1] - unit[1].min() + Inter_Mol_Dis / 2
+    unit[2] = unit[2] - unit[2].min() + Inter_Mol_Dis / 2
+    unit[3] = unit[3] - unit[3].min() + Inter_Mol_Dis / 2
+
+    file.write(' ' + str(a_vec) + ' ' + str(0.0) + ' ' + str(0.0) + '\n')
+    file.write(' ' + str(0.0) + ' ' + str(b_vec) + ' ' + str(0.0) + '\n')
+    file.write(' ' + str(0.0) + ' ' + str(0.0) + ' ' + str(c_vec) + '\n')
+
+    ele_list = []
+    count_ele_list = []
+    for element in sorted(set(unit[0].values)):
+        ele_list.append(element)
+        count_ele_list.append(list(unit[0].values).count(element))
+
+    for item in ele_list:
+        file.write(str(item) + '  ')
+
+    file.write('\n ')
+    for item in count_ele_list:
+        file.write(str(item) + ' ')
+
+    file.write('\nCartesian\n')
+
+    file.write(unit[[1, 2, 3]].to_string(header=False, index=False))
+    file.close()

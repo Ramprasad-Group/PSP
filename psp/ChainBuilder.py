@@ -83,9 +83,9 @@ class Builder:
 
         # location of input XYZ files
         xyz_in_dir = 'work_dir/xyz-in/'
+        bd.build_dir(xyz_in_dir)
 
         xyz_tmp_dir = 'work_dir/xyz-temp/'
-        bd.build_dir(xyz_in_dir)
         bd.build_dir(xyz_tmp_dir)
 
         # location of directory for VASP inputs (polymers) and build a directory

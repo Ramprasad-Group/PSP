@@ -1,9 +1,2 @@
 ID,smiles
-PE,CC
-PVC,CCCl
-PVC2,C(C(CCCl)Cl)
-ABPBO,c1c2c(cc(c1)c1oc3c(n1)cc(cc3))nc(o2)
-beta-PVDF,C(C(F)(F))
-delta-PVDF,C(C)(CC(F)F)(F)F
-PAN,C(CC(C)C#N)C#N
-PPS,C1=CC(=CC=C1SC2=CC=C(C=C2)S)
+ABPBO,c1c2c(cc(c1)c1oc3c(n1)cc(cc3)[*])nc(o2)[*]
