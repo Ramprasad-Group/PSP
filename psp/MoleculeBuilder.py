@@ -19,6 +19,7 @@ class Builder:
         Inter_Mol_Dis=6,
         Length=[1],
         NumConf=1,
+        loop=False,
     ):
         self.ID_col = ID_col
         self.SMILES_col = SMILES_col
@@ -28,6 +29,7 @@ class Builder:
         self.Inter_Mol_Dis = Inter_Mol_Dis
         self.Length = Length
         self.NumConf = NumConf
+        self.loop = loop
 
     # list of molecules name and CORRECT/WRONG
     def Build3D(self):
@@ -66,6 +68,7 @@ class Builder:
                 self.Length,
                 xyz_in_dir,
                 self.NumConf,
+                self.loop,
             )
             for unit_name in df[ID].values
         )

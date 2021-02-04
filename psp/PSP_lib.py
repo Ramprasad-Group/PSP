@@ -1996,6 +1996,7 @@ def build_3D(
     Length,
     xyz_in_dir,
     NumConf,
+    loop,
 ):
     # Get SMILES
     smiles_each = df_smiles[df_smiles[ID] == unit_name][SMILES].values[0]
@@ -2031,7 +2032,7 @@ def build_3D(
                 return unit_name, 'PARTIAl SUCCESS'
 
             smiles_each = gen_oligomer_smiles(
-                dum1, dum2, atom1, atom2, smiles_each, len
+                dum1, dum2, atom1, atom2, smiles_each, len, loop
             )
 
         m1 = Chem.MolFromSmiles(smiles_each)
@@ -2045,7 +2046,7 @@ def build_3D(
     return unit_name, 'SUCCESS'
 
 
-def gen_oligomer_smiles(dum1, dum2, atom1, atom2, input_smiles, len):
+def gen_oligomer_smiles(dum1, dum2, atom1, atom2, input_smiles, len, loop):
     input_mol = Chem.MolFromSmiles(input_smiles)
     edit_m1 = Chem.EditableMol(input_mol)
 
@@ -2085,6 +2086,15 @@ def gen_oligomer_smiles(dum1, dum2, atom1, atom2, input_smiles, len):
             order=Chem.rdchem.BondType.SINGLE,
         )
         inti_mol = edcombo.GetMol()
+
+    if loop is True:
+        edcombo.AddBond(
+            first_atom,
+            second_atom + i * monomer_mol.GetNumAtoms(),
+            order=Chem.rdchem.BondType.SINGLE,
+        )
+        inti_mol = edcombo.GetMol()
+
     return Chem.MolToSmiles(inti_mol)
 
 
@@ -2101,6 +2111,11 @@ def gen_conf_xyz_vasp(unit_name, m1, out_dir, len, Nconf, Inter_Mol_Dis):
         Chem.MolToXYZFile(
             m2,
             out_dir + unit_name + '_N' + str(len) + '_C' + str(n) + '.xyz',
+            confId=cid,
+        )
+        Chem.MolToMolFile(
+            m2,
+            out_dir + unit_name + '_N' + str(len) + '_C' + str(n) + '.mol',
             confId=cid,
         )
         unit = pd.read_csv(
