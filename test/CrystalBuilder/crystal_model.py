@@ -1,6 +1,5 @@
 import pandas as pd
 import glob
-import os
 import psp.ChainBuilder as ChB
 import psp.CrystalBuilder as CrB
 
@@ -10,7 +9,7 @@ chain_builder = ChB.Builder(
     Dataframe=df_smiles,
     ID_col="PID",
     SMILES_col="smiles_polymer",
-    NumConf=1,
+    NumConf=2,
     Length=["n"],
     Steps=20,
     Substeps=20,
@@ -19,7 +18,7 @@ chain_builder = ChB.Builder(
     Method="SA",
     NCores=0,
     OutDir='chains',
-    Tol_ChainCorr=50
+    Tol_ChainCorr=50,
 )
 results = chain_builder.BuildChain()
 print(results)

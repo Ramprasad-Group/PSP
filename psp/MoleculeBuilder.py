@@ -47,7 +47,7 @@ class Builder:
         bd.build_dir(xyz_in_dir)
 
         start_1 = time.time()
-        list_out_xyz = 'output.csv'
+        list_out_xyz = 'output_MB.csv'
         chk_tri = []
         ID = self.ID_col
         SMILES = self.SMILES_col

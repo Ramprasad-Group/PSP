@@ -93,7 +93,7 @@ class Builder:
         bd.build_dir(vasp_out_dir)
 
         start_1 = time.time()
-        list_out_xyz = 'output.csv'
+        list_out_xyz = 'output_CB.csv'
         chk_tri = []
         ID = self.ID_col
         SMILES = self.SMILES_col

@@ -67,6 +67,7 @@ class Builder:
             print(
                 "Couldn't generate XYZ coordinates of molecules, check 'molecules.csv'"
             )
+            exit()
 
         XYZ_list, smi_list, NMol_list = [], [], []
         for index, row in self.Dataframe.iterrows():

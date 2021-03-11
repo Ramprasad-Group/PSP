@@ -2,12 +2,22 @@ import pandas as pd
 import psp.MoleculeBuilder as mb
 
 df_smiles = pd.read_csv("molecule.csv", low_memory=False)
-mol = mb.Builder(df_smiles, ID_col="ID", SMILES_col="smiles", OutDir='molecules', Inter_Mol_Dis=6, Length=[3,5], NumConf=2, loop=False)
+mol = mb.Builder(
+    df_smiles,
+    ID_col="ID",
+    SMILES_col="smiles",
+    OutDir='molecules',
+    Inter_Mol_Dis=6,
+    Length=[3, 5],
+    NumConf=2,
+    loop=False,
+)
 results = mol.Build3D()
 print(results)
 exit()
 # MM or MD
 from pysimm import system, lmps, forcefield
+
 s = system.read_mol('molecules/PVC_N10_C1.mol')
 
 # the resulting system has sufficient information to type with a forcefield, here we will use the GAFF2 force field
