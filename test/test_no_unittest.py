@@ -10,20 +10,20 @@ chain_builder = ChB.Builder(
     Dataframe=df_smiles,
     ID_col="PID",
     SMILES_col="smiles_polymer",
-    NumConf=10,
+    NumConf=1,
     Length=["n"],
-    Steps=100,
+    Steps=20,
     Substeps=20,
     MonomerAng="intense",
     DimerAng="intense",
     Method="SA",
     NCores=0,
     OutDir='chains',
-    Tol_ChainCorr=150
+    Tol_ChainCorr=50
 )
 results = chain_builder.BuildChain()
 print(results)
-exit()
+
 ID = "PVC2"
 vasp_input_list = glob.glob("chains/" + ID + "/" + "*.vasp")
 crystal_builder = CrB.Builder(
