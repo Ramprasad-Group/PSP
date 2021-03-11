@@ -2,7 +2,7 @@ import pandas as pd
 import psp.MoleculeBuilder as mb
 
 df_smiles = pd.read_csv("molecule.csv", low_memory=False)
-mol = mb.Builder(df_smiles, ID_col="ID", SMILES_col="smiles", OutDir='molecules', Inter_Mol_Dis=6, Length=[10], NumConf=1, loop=True)
+mol = mb.Builder(df_smiles, ID_col="ID", SMILES_col="smiles", OutDir='molecules', Inter_Mol_Dis=6, Length=[3,5], NumConf=2, loop=False)
 results = mol.Build3D()
 print(results)
 exit()
