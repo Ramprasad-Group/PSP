@@ -4,6 +4,8 @@ import psp.PSP_lib as bd
 import psp.BE_lib as BElib
 from scipy.spatial.distance import cdist
 import psp.MoleculeBuilder as mb
+import os
+import shutil
 
 
 class Builder:
@@ -79,6 +81,10 @@ class Builder:
         # Read XYZ coordinates
         unitA = pd.read_csv(NnameUnitA, header=None, skiprows=2, delim_whitespace=True)
         unitB = pd.read_csv(NnameUnitB, header=None, skiprows=2, delim_whitespace=True)
+
+        # Gen XYZ coordinates for molecules A and B
+        bd.gen_xyz(out_dir + 'A' + ".xyz", unitA)
+        bd.gen_xyz(out_dir + 'B' + ".xyz", unitB)
 
         # Get minimum and maximum in X, Y and Z axes for molecule A
         Xmin, Xmax, Ymin, Ymax, Zmin, Zmax = (
@@ -232,3 +238,7 @@ class Builder:
 
             part_min = part_max
             count += 2
+
+        # Delete INPUT xyz directory
+        if os.path.isdir(OutDir_xyz):
+            shutil.rmtree(OutDir_xyz)

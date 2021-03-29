@@ -545,6 +545,71 @@ def alignZ(unit, atom1, atom2):
     return unit
 
 
+# Move molecule
+def move_barycenter(unit, xyz_shift, origin=True, barycenter=True):
+    unit_copy = unit.copy()
+    if origin is True:
+        if barycenter is False:
+            unit_copy[1] = unit_copy[1] - unit_copy.min()[1]
+            unit_copy[2] = unit_copy[2] - unit_copy.min()[2]
+            unit_copy[3] = unit_copy[3] - unit_copy.min()[3]
+        else:
+            unit_copy[1] = unit_copy[1] - unit_copy.mean()[1]
+            unit_copy[2] = unit_copy[2] - unit_copy.mean()[2]
+            unit_copy[3] = unit_copy[3] - unit_copy.mean()[3]
+    else:
+        unit_copy[1] = unit_copy[1] + xyz_shift[0]
+        unit_copy[2] = unit_copy[2] + xyz_shift[1]
+        unit_copy[3] = unit_copy[3] + xyz_shift[2]
+    return unit_copy
+
+
+# Rotate in X, Y and Z directions simultaneously
+def rotateXYZ(unit, theta1, theta2, theta3):
+    th1 = theta1 * np.pi / 180.0
+    th2 = theta2 * np.pi / 180.0
+    th3 = theta3 * np.pi / 180.0
+    Rot_matrix = np.array(
+        [
+            [
+                (np.cos(th1) * np.cos(th2) * np.cos(th3)) - (np.sin(th1) * np.sin(th3)),
+                -(np.cos(th1) * np.cos(th2) * np.sin(th3))
+                - (np.sin(th1) * np.cos(th3)),
+                (np.cos(th1) * np.sin(th2)),
+            ],
+            [
+                (np.sin(th1) * np.cos(th2) * np.cos(th3)) + (np.cos(th1) * np.sin(th3)),
+                -(np.sin(th1) * np.cos(th2) * np.sin(th3))
+                + (np.cos(th1) * np.cos(th3)),
+                (np.sin(th1) * np.sin(th2)),
+            ],
+            [-(np.sin(th2) * np.cos(th3)), np.sin(th2) * np.sin(th3), np.cos(th2)],
+        ]
+    )
+
+    rot_XYZ = unit.loc[:, [1, 2, 3]].copy()
+    rotated_unit = rot_XYZ.values.dot(Rot_matrix)
+    newXYZ = pd.DataFrame(rotated_unit, columns=[1, 2, 3])
+    newXYZ.index = unit.index
+    unit.loc[:, [1, 2, 3]] = newXYZ.loc[:, [1, 2, 3]]
+    return unit
+
+
+# Rotate in X, Y and Z directions simultaneously
+def rotateXYZOrigin(unit_copy, theta1, theta2, theta3):
+    x_move = unit_copy.mean()[1]
+    y_move = unit_copy.mean()[2]
+    z_move = unit_copy.mean()[3]
+    unit_mod = move_barycenter(
+        unit_copy, [-x_move, -y_move, -z_move], origin=False, barycenter=False
+    )
+    unit_mod = rotateXYZ(unit_mod, theta1, theta2, theta3)
+    unit_mod = move_barycenter(
+        unit_mod, [x_move, y_move, z_move], origin=False, barycenter=False
+    )
+    return unit_mod
+
+
 # Rotate Molecule along Z-axis
 # INPUT: XYZ-coordinates and angle in Degree
 # OUTPUT: A new sets of XYZ-coordinates

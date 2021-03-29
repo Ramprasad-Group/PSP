@@ -8,9 +8,9 @@ mol = mb.Builder(
     SMILES_col="smiles",
     OutDir='molecules',
     Inter_Mol_Dis=6,
-    Length=[3, 5],
-    NumConf=2,
-    loop=False,
+    Length=[5,10,15],
+    NumConf=4,
+    loop=True,
 )
 results = mol.Build3D()
 print(results)

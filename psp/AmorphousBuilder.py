@@ -3,6 +3,7 @@ import pandas as pd
 import psp.MD_lib as MDlib
 import time
 import psp.PSP_lib as bd
+# from scipy.optimize import minimize
 from optimparallel import minimize_parallel
 import psp.MoleculeBuilder as mb
 
@@ -16,14 +17,16 @@ class Builder:
         NumMole='Num',
         Length='Len',
         NumConf='NumConf',
-        loop=False,
+        Loop='Loop',
         OutFile='amor_model',
         OutDir='amorphous_models',
         OutDir_xyz='molecules',
         density=0.65,
         tol_dis=2.0,
         box_type='c',
+        box_size=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
         incr_per=0.4,
+        packmol_path='/home/hari/.soft/packmol/packmol',
     ):
         self.Dataframe = Dataframe
         self.ID_col = ID_col
@@ -31,14 +34,16 @@ class Builder:
         self.NumMole = NumMole
         self.Length = Length
         self.NumConf = NumConf
-        self.loop = loop
+        self.Loop = Loop
         self.OutFile = OutFile
         self.OutDir = OutDir
         self.OutDir_xyz = OutDir_xyz
         self.density = density
         self.tol_dis = tol_dis
         self.box_type = box_type
+        self.box_size = box_size
         self.incr_per = incr_per
+        self.packmol_path = packmol_path
 
     def Build(self):
         # location of directory for VASP inputs (polymers) and build a directory
@@ -46,10 +51,13 @@ class Builder:
         bd.build_dir(out_dir)
         OutDir_xyz = out_dir + self.OutDir_xyz + '/'
         bd.build_dir(OutDir_xyz)
+        OutDir_packmol = out_dir + "packmol" + '/'
+        bd.build_dir(OutDir_packmol)
 
         xyz_gen_pd = pd.DataFrame()
         for i in self.Dataframe.index:
             df = pd.DataFrame(self.Dataframe.loc[i]).T
+
             mol = mb.Builder(
                 df,
                 ID_col=self.ID_col,
@@ -57,7 +65,7 @@ class Builder:
                 OutDir=OutDir_xyz,
                 Length=[int(df[self.Length].values)],
                 NumConf=int(df[self.NumConf].values),
-                loop=self.loop,
+                loop=eval(str(df[self.Loop].values[0])),
             )
             results = mol.Build3D()
             xyz_gen_pd = pd.concat([xyz_gen_pd, results])
@@ -101,7 +109,157 @@ class Builder:
                     atom2,
                     row[self.SMILES_col],
                     row[self.Length],
-                    self.loop,
+                    eval(str(row[self.Loop])),
+                )
+            else:
+                smiles_each = row[self.SMILES_col]
+            smi_list += [smiles_each] * row[self.NumConf]
+
+            # Get a list of filenames for XYZ coordinates
+            for conf in range(1, row[self.NumConf] + 1):
+                XYZ_list.append(
+                    OutDir_xyz
+                    + str(row[self.ID_col])
+                    + '_N'
+                    + str(row[self.Length])
+                    + '_C'
+                    + str(conf)
+                    + '.xyz'
+                )
+
+        # Define boundary conditions
+        if max(self.box_size) == 0.0:  # Box size is not provided
+            NMol_type = len(NMol_list)
+            Total_NMol = sum(NMol_list)
+            total_vol = 0
+            for i in range(NMol_type):
+                molar_mass = MDlib.get_molar_mass(smi_list[i])
+                total_vol += MDlib.get_vol(self.density, NMol_list[i], molar_mass)
+            xmin, xmax, ymin, ymax, zmin, zmax = MDlib.get_box_size(
+                total_vol, box_type=self.box_type, incr_per=self.incr_per
+            )
+        else:
+            xmin, xmax, ymin, ymax, zmin, zmax = (
+                self.box_size[0],
+                self.box_size[1],
+                self.box_size[2],
+                self.box_size[3],
+                self.box_size[4],
+                self.box_size[5],
+            )
+
+        # PACKMOL input file
+        MDlib.gen_packmol_inp(
+            OutDir_packmol,
+            self.tol_dis,
+            XYZ_list,
+            NMol_list,
+            xmin,
+            xmax,
+            ymin,
+            ymax,
+            zmin,
+            zmax,
+        )
+
+        # PACKMOL calculation
+        command = self.packmol_path + " < " + OutDir_packmol + "packmol.inp"
+        errout = MDlib.run_packmol(command, OutDir_packmol + "packmol.out")
+
+        if errout is not None:
+            print(" Error in packmol calculation")
+            exit()
+        packmol_xyz = pd.read_csv(
+            OutDir_packmol + "packmol.xyz",
+            header=None,
+            skiprows=2,
+            delim_whitespace=True,
+        )
+
+        MDlib.gen_sys_vasp(
+            self.OutDir + '/' + self.OutFile + ".vasp",
+            packmol_xyz,
+            xmin,
+            xmax,
+            ymin,
+            ymax,
+            zmin,
+            zmax,
+        )
+        MDlib.gen_sys_data(
+            self.OutDir + '/' + self.OutFile + ".data",
+            packmol_xyz,
+            xmin,
+            xmax,
+            ymin,
+            ymax,
+            zmin,
+            zmax,
+        )
+
+    def Build_psp(self):
+        # location of directory for VASP inputs (polymers) and build a directory
+        out_dir = self.OutDir + '/'
+        bd.build_dir(out_dir)
+        OutDir_xyz = out_dir + self.OutDir_xyz + '/'
+        bd.build_dir(OutDir_xyz)
+
+        xyz_gen_pd = pd.DataFrame()
+        for i in self.Dataframe.index:
+            df = pd.DataFrame(self.Dataframe.loc[i]).T
+
+            mol = mb.Builder(
+                df,
+                ID_col=self.ID_col,
+                SMILES_col=self.SMILES_col,
+                OutDir=OutDir_xyz,
+                Length=[int(df[self.Length].values)],
+                NumConf=int(df[self.NumConf].values),
+                loop=eval(str(df[self.Loop].values[0])),
+            )
+            results = mol.Build3D()
+            xyz_gen_pd = pd.concat([xyz_gen_pd, results])
+
+        if len(list(set(xyz_gen_pd['Result'].values))) != 1:
+            xyz_gen_pd.to_csv("molecules.csv")
+            print(
+                "Couldn't generate XYZ coordinates of molecules, check 'molecules.csv'"
+            )
+            exit()
+
+        XYZ_list, smi_list, NMol_list = [], [], []
+        for index, row in self.Dataframe.iterrows():
+            # Get number of molecules for each conformer of molecules
+            NMol_list += [int(row[self.NumMole] / row[self.NumConf])] * row[
+                self.NumConf
+            ]
+
+            # Get SMILES string for oligomers
+            # Get row number for dummy and linking atoms
+            if row[self.Length] > 1:
+                (
+                    unit_name,
+                    dum1,
+                    dum2,
+                    atom1,
+                    atom2,
+                    m1,
+                    neigh_atoms_info,
+                    oligo_list,
+                    dum,
+                    unit_dis,
+                    flag,
+                ) = bd.Init_info(
+                    row[self.ID_col], row[self.SMILES_col], OutDir_xyz, self.Length
+                )
+                smiles_each = bd.gen_oligomer_smiles(
+                    dum1,
+                    dum2,
+                    atom1,
+                    atom2,
+                    row[self.SMILES_col],
+                    row[self.Length],
+                    eval(str(row[self.Loop])),
                 )
             else:
                 smiles_each = row[self.SMILES_col]
@@ -135,18 +293,17 @@ class Builder:
         proxy_dis = self.tol_dis / 2
 
         # Conditions for initial system
-        disx = [0] * Total_NMol
-        disy = [0] * Total_NMol
-        disz = [0] * Total_NMol
-        theta1 = [0] * Total_NMol  # list(np.random.uniform(0, 10, Total_NMol))
-        theta2 = [0] * Total_NMol  # list(np.random.uniform(0, 10, Total_NMol))
-        theta3 = [0] * Total_NMol  # list(np.random.uniform(0, 10, Total_NMol))
+        disx = list(np.random.uniform(0, 4, Total_NMol))  # [0] * Total_NMol
+        disy = list(np.random.uniform(0, 4, Total_NMol))  # [0] * Total_NMol
+        disz = list(np.random.uniform(0, 4, Total_NMol))  # [0] * Total_NMol
+        theta1 = list(np.random.uniform(0, 180, Total_NMol))
+        theta2 = list(np.random.uniform(0, 180, Total_NMol))
+        theta3 = list(np.random.uniform(0, 180, Total_NMol))
         x0 = disx + disy + disz + theta1 + theta2 + theta3
 
         sys = MDlib.get_initial_model(
             NMol_list, XYZ_list, self.tol_dis, xmin, xmax, ymin, ymax, zmin, zmax
         )
-        # exit()
         # if the value of the objective function > 0.0, then perform optimization
         evaluation = MDlib.main_func(
             x0, sys, self.tol_dis, xmin, xmax, ymin, ymax, zmin, zmax
@@ -157,8 +314,7 @@ class Builder:
                 MDlib.main_func,
                 x0,
                 args=(sys, self.tol_dis, xmin, xmax, ymin, ymax, zmin, zmax),
-                options={'disp': True},
-            )
+                options={'disp': True})
             end_1 = time.time()
             print(
                 ' minimize time: ', np.round((end_1 - start_1) / 60, 2), ' minutes',
@@ -176,6 +332,16 @@ class Builder:
             MDlib.gen_sys_xyz(self.OutDir + '/' + self.OutFile + ".xyz", sys)
             MDlib.gen_sys_vasp(
                 self.OutDir + '/' + self.OutFile + ".vasp",
+                sys,
+                xmin - proxy_dis,
+                xmax + proxy_dis,
+                ymin - proxy_dis,
+                ymax + proxy_dis,
+                zmin - proxy_dis,
+                zmax + proxy_dis,
+            )
+            MDlib.gen_sys_data(
+                self.OutDir + '/' + self.OutFile + ".data",
                 sys,
                 xmin - proxy_dis,
                 xmax + proxy_dis,

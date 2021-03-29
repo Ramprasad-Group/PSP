@@ -1,4 +1,4 @@
-ID,smiles,Len,Num,NumConf
-PVC3,C(C([*])Cl)[*],3,8,2
-PVC5,C(C([*])Cl)[*],5,4,2
-cc5,[*]CC[*],5,8,2
+ID,smiles,Len,Num,NumConf,Loop
+cc3,[*]CC[*],3,10,2,True
+cc6,[*]CC[*],6,8,2,True
+cc8,[*]CC[*],8,6,2,True

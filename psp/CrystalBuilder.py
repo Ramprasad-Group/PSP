@@ -5,6 +5,7 @@ from scipy.spatial.distance import cdist
 import time
 import multiprocessing
 from joblib import Parallel, delayed
+import psp.PSP_lib as bd
 
 
 class Builder:
@@ -15,6 +16,7 @@ class Builder:
         InputRadius='auto',
         MinAtomicDis=2.0,
         OutDir='crystals',
+        Polymer=True,
         NCores=0,
     ):
         self.VaspInp_list = VaspInp_list
@@ -23,6 +25,7 @@ class Builder:
         self.MinAtomicDis = MinAtomicDis
         self.OutDir = OutDir + '/'
         self.NCores = NCores
+        self.Polymer = Polymer
 
     def BuildCrystal(self):
         start_1 = time.time()
@@ -33,12 +36,28 @@ class Builder:
         if self.NCores == 0:
             self.NCores = multiprocessing.cpu_count() - 1
 
-        result = Parallel(n_jobs=self.NCores)(
-            delayed(CrystalBuilderMain)(
-                VaspInp, self.NSamples, self.InputRadius, self.MinAtomicDis, self.OutDir
+        if self.Polymer is True:
+            result = Parallel(n_jobs=self.NCores)(
+                delayed(CrystalBuilderMainPolymer)(
+                    VaspInp,
+                    self.NSamples,
+                    self.InputRadius,
+                    self.MinAtomicDis,
+                    self.OutDir,
+                )
+                for VaspInp in self.VaspInp_list
             )
-            for VaspInp in self.VaspInp_list
-        )
+        else:
+            result = Parallel(n_jobs=self.NCores)(
+                delayed(CrystalBuilderMain)(
+                    VaspInp,
+                    self.NSamples,
+                    self.InputRadius,
+                    self.MinAtomicDis,
+                    self.OutDir,
+                )
+                for VaspInp in self.VaspInp_list
+            )
 
         output = []
         for i in result:
@@ -93,16 +112,17 @@ def readvasp(inputvasp):
             xyz_coordinates = pd.DataFrame(np.transpose(xcart)).astype(float)
         elif str(content[7]).startswith('C'):
             xyz_coordinates = pd.DataFrame(xyz_coordinates).astype(float)
+    xyz_coordinates.columns = [1, 2, 3]
     return file_info, basis_vec, Num_atom, xyz_coordinates
 
 
 # Center of origin + peri_circle
 def Center_XY_r(xyz_coordinates, angle, r_cricle):
     xyz_copy = xyz_coordinates.copy()
-    X_avg = xyz_copy[0].mean()
-    Y_avg = xyz_copy[1].mean()
-    xyz_copy[0] = xyz_copy[0] - X_avg + np.cos(np.deg2rad(angle)) * r_cricle
-    xyz_copy[1] = xyz_copy[1] - Y_avg + np.sin(np.deg2rad(angle)) * r_cricle
+    X_avg = xyz_copy[1].mean()
+    Y_avg = xyz_copy[2].mean()
+    xyz_copy[1] = xyz_copy[1] - X_avg + np.cos(np.deg2rad(angle)) * r_cricle
+    xyz_copy[2] = xyz_copy[2] - Y_avg + np.sin(np.deg2rad(angle)) * r_cricle
     return xyz_copy
 
 
@@ -121,13 +141,14 @@ def create_crystal_vasp(
         )
         row1 += int(Num_atom[col].values[1])
 
-    dist = cdist(crystal_struc[[0, 1, 2]].values, crystal_struc[[0, 1, 2]].values)
+    dist = cdist(crystal_struc[[1, 2, 3]].values, crystal_struc[[1, 2, 3]].values)
+
     for i in np.arange(dist.shape[0]):
         for j in np.arange(dist.shape[1]):
             if i != j:
                 if dist[i, j] < 0.8:
                     print(i, j, dist[i, j])
-    #               print()
+
     #   if (dist < 0.3).any():
     #       print(filename)
 
@@ -135,16 +156,16 @@ def create_crystal_vasp(
     Crystal_Num_atom.loc[1] = 2 * Crystal_Num_atom.loc[1].astype(int)
     keep_space = 2.5  # in angstrom
 
-    crystal_struc[0] = crystal_struc[0] - crystal_struc[0].min() + keep_space / 2
     crystal_struc[1] = crystal_struc[1] - crystal_struc[1].min() + keep_space / 2
+    crystal_struc[2] = crystal_struc[2] - crystal_struc[2].min() + keep_space / 2
 
     with open(filename, 'w') as f:
         f.write(file_info + ' (' + cry_info + ')\n')
         f.write('1.0' + '\n')
         #        print('a',crystal_struc[0].max(),crystal_struc[0].min())
         #        print('b',crystal_struc[1].max(), crystal_struc[1].min())
-        a_vec = crystal_struc[0].max() - crystal_struc[0].min() + keep_space
-        b_vec = crystal_struc[1].max() - crystal_struc[1].min() + keep_space
+        a_vec = crystal_struc[1].max() - crystal_struc[1].min() + keep_space
+        b_vec = crystal_struc[2].max() - crystal_struc[2].min() + keep_space
         c_vec = basis_vec.loc[2, 2]
 
         f.write(' ' + str(a_vec) + ' ' + str(0.0) + ' ' + str(0.0) + '\n')
@@ -161,7 +182,7 @@ def create_crystal_vasp(
 # OUTPUT: A new sets of XYZ-coordinates
 def tl(unit, dis):
     unit_copy = unit.copy()
-    unit_copy[2] = unit_copy[2] + dis  # Z direction
+    unit_copy[3] = unit_copy[3] + dis  # Z direction
     return unit_copy
 
 
@@ -191,18 +212,18 @@ def rotateXY(xyz_coordinates, theta):  # XYZ coordinates and angle
             [np.sin(theta * np.pi / 180.0), np.cos(theta * np.pi / 180.0)],
         ]
     )
-    oldXYZ = unit[[0, 1]].copy()
+    oldXYZ = unit[[1, 2]].copy()
     XYZcollect = []
     for eachatom in np.arange(oldXYZ.values.shape[0]):
         rotate_each = oldXYZ.iloc[eachatom].values.dot(R_z)
         XYZcollect.append(rotate_each)
     newXYZ = pd.DataFrame(XYZcollect)
-    unit[[0, 1]] = newXYZ[[0, 1]]
+    unit[[1, 2]] = newXYZ[[0, 1]]
     return unit
 
 
 # for VaspInp in VaspInp_list:
-def CrystalBuilderMain(VaspInp, NSamples, Input_radius, MinAtomicDis, OutDir):
+def CrystalBuilderMainPolymer(VaspInp, NSamples, Input_radius, MinAtomicDis, OutDir):
     file_info, basis_vec, Num_atom, xyz_coordinates = readvasp(
         VaspInp.replace('.vasp', '') + '.vasp'
     )
@@ -214,11 +235,11 @@ def CrystalBuilderMain(VaspInp, NSamples, Input_radius, MinAtomicDis, OutDir):
     tm = np.around(
         np.arange(
             0,
-            max(xyz_coordinates[2].values)
-            - min(xyz_coordinates[2].values)
-            + (max(xyz_coordinates[2].values) - min(xyz_coordinates[2].values))
+            max(xyz_coordinates[3].values)
+            - min(xyz_coordinates[3].values)
+            + (max(xyz_coordinates[3].values) - min(xyz_coordinates[3].values))
             / samples,
-            (max(xyz_coordinates[2].values) - min(xyz_coordinates[2].values)) / samples,
+            (max(xyz_coordinates[3].values) - min(xyz_coordinates[3].values)) / samples,
         ),
         decimals=2,
     )
@@ -235,12 +256,12 @@ def CrystalBuilderMain(VaspInp, NSamples, Input_radius, MinAtomicDis, OutDir):
         radius = (
             np.sqrt(
                 (
-                    (first_poly[0].max() - first_poly[0].min())
-                    * (first_poly[0].max() - first_poly[0].min())
-                )
-                + (
                     (first_poly[1].max() - first_poly[1].min())
                     * (first_poly[1].max() - first_poly[1].min())
+                )
+                + (
+                    (first_poly[2].max() - first_poly[2].min())
+                    * (first_poly[2].max() - first_poly[2].min())
                 )
             )
             + MinAtomicDis
@@ -260,15 +281,15 @@ def CrystalBuilderMain(VaspInp, NSamples, Input_radius, MinAtomicDis, OutDir):
                 # Build a Trimer
                 second_poly_rm2_2 = second_poly_rm2.copy()
                 second_poly_rm2_3 = second_poly_rm2.copy()
-                second_poly_rm2_2[2] = second_poly_rm2_2[2] + float(basis_vec.loc[2, 2])
-                second_poly_rm2_3[2] = second_poly_rm2_3[2] - float(basis_vec.loc[2, 2])
+                second_poly_rm2_2[3] = second_poly_rm2_2[3] + float(basis_vec.loc[2, 2])
+                second_poly_rm2_3[3] = second_poly_rm2_3[3] - float(basis_vec.loc[2, 2])
                 second_poly_dimer = pd.concat(
                     [second_poly_rm2, second_poly_rm2_2, second_poly_rm2_3]
                 )
 
                 # Calculate distance between atoms in first_unit and second_unit
                 dist = cdist(
-                    first_poly[[0, 1, 2]].values, second_poly_dimer[[0, 1, 2]].values
+                    first_poly[[1, 2, 3]].values, second_poly_dimer[[1, 2, 3]].values
                 )
                 dist = dist[~np.isnan(dist)]
                 if (dist > 2.0).all():
@@ -288,11 +309,131 @@ def CrystalBuilderMain(VaspInp, NSamples, Input_radius, MinAtomicDis, OutDir):
                         'CrystalBuilder Info:: Translation: '
                         + str(i)
                         + '; '
-                        + 'Rotation 1'
+                        + 'Rotation 1 '
                         + str(j)
                         + '; '
-                        + 'Rotation 2'
+                        + 'Rotation 2 '
                         + str(k),
                     )
+
+    return VaspInp, count, radius
+
+
+# for VaspInp in VaspInp_list:
+def CrystalBuilderMain(VaspInp, NSamples, Input_radius, MinAtomicDis, OutDir):
+    file_info, basis_vec, Num_atom, xyz_coordinates = readvasp(
+        VaspInp.replace('.vasp', '') + '.vasp'
+    )
+    VaspInp = VaspInp.split('/')[-1].replace('.vasp', '')
+
+    build_dir(OutDir + VaspInp)  # .split('/')[-1])
+
+    samples = NSamples - 1
+    tm = np.around(
+        np.arange(
+            0,
+            max(xyz_coordinates[3].values)
+            - min(xyz_coordinates[3].values)
+            + (max(xyz_coordinates[3].values) - min(xyz_coordinates[3].values))
+            / samples,
+            (max(xyz_coordinates[3].values) - min(xyz_coordinates[3].values)) / samples,
+        ),
+        decimals=2,
+    )
+    rm1 = np.around(np.arange(0, 180 + (180 / samples), 180 / samples), decimals=1)
+    rm2 = np.around(
+        np.arange(0, 180 + (180 / samples), 180 / samples), decimals=1
+    )  # 0 and 180 degree creates problems
+    rm3 = np.around(
+        np.arange(0, 360 + (360 / samples), 360 / samples), decimals=1
+    )  # Rotation in X and Y axes
+
+    first_poly = Center_XY_r(xyz_coordinates, 0.0, 0.0)
+
+    # Calculate distance between two chains
+    # Max (X,Y) + 2.0
+    if Input_radius == 'auto':
+        radius = (
+            np.sqrt(
+                (
+                    (first_poly[1].max() - first_poly[1].min())
+                    * (first_poly[1].max() - first_poly[1].min())
+                )
+                + (
+                    (first_poly[2].max() - first_poly[2].min())
+                    * (first_poly[2].max() - first_poly[2].min())
+                )
+            )
+            + MinAtomicDis
+        )
+
+    else:
+        radius = float(Input_radius)
+
+    count = 0
+    for i in tm:
+        for j in rm1:
+            for k in rm2:
+                for aX in rm3:
+                    for aY in rm3:
+                        second_poly_tl = tl(xyz_coordinates, i)
+                        second_poly_rm1 = rotateXY(second_poly_tl, j)
+                        second_poly_rm2 = Center_XY_r(second_poly_rm1, k, radius)
+                        second_poly_rm3_aX = bd.rotateXYZOrigin(
+                            second_poly_rm2, aX, 0.0, 0.0
+                        )
+                        second_poly_rm3_aY = bd.rotateXYZOrigin(
+                            second_poly_rm3_aX, 0.0, aY, 0.0
+                        )
+
+                        # Final XYZ coordinates of second molecule
+                        second_poly_moved = second_poly_rm3_aY.copy()
+
+                        # Build a Trimer
+                        second_poly_moved_2 = second_poly_moved.copy()
+                        second_poly_moved_3 = second_poly_moved.copy()
+                        second_poly_moved_2[3] = second_poly_moved_2[3] + float(
+                            basis_vec.loc[2, 2]
+                        )
+                        second_poly_moved_3[3] = second_poly_moved_3[3] - float(
+                            basis_vec.loc[2, 2]
+                        )
+                        second_poly_dimer = pd.concat(
+                            [
+                                second_poly_moved,
+                                second_poly_moved_2,
+                                second_poly_moved_3,
+                            ]
+                        )
+
+                        # Calculate distance between atoms in first_unit and second_unit
+                        dist = cdist(
+                            first_poly[[1, 2, 3]].values,
+                            second_poly_dimer[[1, 2, 3]].values,
+                        )
+                        dist = dist[~np.isnan(dist)]
+                        if (dist > 2.0).all():
+                            count += 1
+                            create_crystal_vasp(
+                                OutDir
+                                + VaspInp
+                                + '/'
+                                + 'cryst_out-'
+                                + str(count).zfill(4)
+                                + '.vasp',
+                                first_poly,
+                                second_poly_moved,
+                                Num_atom,
+                                basis_vec,
+                                file_info,
+                                'CrystalBuilder Info:: Translation: '
+                                + str(i)
+                                + '; '
+                                + 'Rotation 1 '
+                                + str(j)
+                                + '; '
+                                + 'Rotation 2 '
+                                + str(k),
+                            )
 
     return VaspInp, count, radius

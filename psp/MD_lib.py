@@ -4,6 +4,7 @@ from rdkit import Chem
 from rdkit.Chem import Descriptors
 from scipy.spatial.distance import cdist
 from random import shuffle
+import subprocess
 
 
 def barycenter(unit):
@@ -242,32 +243,94 @@ def get_box_size(vol, box_type="cubic", incr_per=0.4):  # c = cubic; r = rectang
         return 0, axis, 0, axis, 0, axis
 
 
+def eval_dis(sys_dis_arr, dis_cutoff, dis_value, a):
+    unit1 = sys_dis_arr[sys_dis_arr[:, 3] == a][:, :-1]
+    unit1_minX, unit1_maxX, unit1_minY, unit1_maxY, unit1_minZ, unit1_maxZ = (
+        np.amin(unit1[:, 0]),
+        np.amax(unit1[:, 0]),
+        np.amin(unit1[:, 1]),
+        np.amax(unit1[:, 1]),
+        np.amin(unit1[:, 2]),
+        np.amax(unit1[:, 2]),
+    )
+
+    unit2 = sys_dis_arr[sys_dis_arr[:, 3] != a][:, :-1]
+    unit2 = unit2[
+        (unit2[:, 0] > unit1_minX - dis_cutoff)
+        & (unit2[:, 0] < unit1_maxX + dis_cutoff)
+        & (unit2[:, 1] > unit1_minY - dis_cutoff)
+        & (unit2[:, 1] < unit1_maxY + dis_cutoff)
+        & (unit2[:, 2] > unit1_minZ - dis_cutoff)
+        & (unit2[:, 2] < unit1_maxZ + dis_cutoff)
+    ]
+
+    dist = cdist(unit1, unit2)
+
+    new_arr = dist[
+        dist < dis_cutoff
+    ]  # If you may need to remove double counted distances (ij and ji)
+    new_arr = dis_cutoff - new_arr
+
+    dis_value = dis_value + np.sum(new_arr)
+
+    sys_dis_arr = sys_dis_arr[sys_dis_arr[:, 3] != a]
+    return sys_dis_arr, dis_value
+
+
 def evaluate_obj(sys, dis_cutoff, xmin, xmax, ymin, ymax, zmin, zmax):
-    sys_dis = sys.copy()
+    sys_dis_arr = sys[[1, 2, 3, 'i']].to_numpy()
 
     dis_value = 0
-    list_mol = list(set(sys.i.values))
-    # Remove last element
-    list_mol.pop()
+    # Last molecule is removed from the list
+    list_mol = np.unique(sys_dis_arr[:, 3])[:-1].astype(int)
 
+    dis_val = list(
+        zip(*[eval_dis(sys_dis_arr, dis_cutoff, dis_value, a) for a in list_mol])
+    )[1]
+    # print(dis_val)
+    # sys_dis_arr, dis_value = [(sys_dis_arr, dis_value) for i,j in
+    # (eval_dis(sys_dis_arr, dis_cutoff, dis_value, a) for a in list_mol)]
+    # dis_value = list(zip(*map(eval_dis, [sys_dis_arr], [dis_cutoff], [dis_value], list_mol)))[1]
+    # dis_value = Counter(True for x in range(1, (12*8)+1))[True]
+    # print(dis_value)
+    # exit()
+    # sys_dis_arr, dis_value
     for a in list_mol:
-        unit1 = sys_dis[sys_dis['i'] == a]  # [[1,2,3]]
-        unit2 = sys_dis[
-            sys_dis['i'] != a
-        ]  # [[1,2,3]] # need to improve. remove molecules far away from the unit1
+        #        sys_dis_arr, dis_value = eval_dis(sys_dis_arr, a, dis_cutoff, dis_value)
+        unit1 = sys_dis_arr[sys_dis_arr[:, 3] == a][:, :-1]
+        unit1_minX, unit1_maxX, unit1_minY, unit1_maxY, unit1_minZ, unit1_maxZ = (
+            np.amin(unit1[:, 0]),
+            np.amax(unit1[:, 0]),
+            np.amin(unit1[:, 1]),
+            np.amax(unit1[:, 1]),
+            np.amin(unit1[:, 2]),
+            np.amax(unit1[:, 2]),
+        )
 
-        dist = cdist(unit1[[1, 2, 3]].values, unit2[[1, 2, 3]].values)
+        unit2 = sys_dis_arr[sys_dis_arr[:, 3] != a][:, :-1]
+        unit2 = unit2[
+            (unit2[:, 0] > unit1_minX - dis_cutoff)
+            & (unit2[:, 0] < unit1_maxX + dis_cutoff)
+            & (unit2[:, 1] > unit1_minY - dis_cutoff)
+            & (unit2[:, 1] < unit1_maxY + dis_cutoff)
+            & (unit2[:, 2] > unit1_minZ - dis_cutoff)
+            & (unit2[:, 2] < unit1_maxZ + dis_cutoff)
+        ]
+
+        dist = cdist(unit1, unit2)
+
         new_arr = dist[
             dist < dis_cutoff
         ]  # If you may need to remove double counted distances (ij and ji)
         new_arr = dis_cutoff - new_arr
 
         dis_value = dis_value + np.sum(new_arr)
-        sys_dis = sys_dis[sys_dis['i'] != a].reset_index(drop=True)
+
+        sys_dis_arr = sys_dis_arr[sys_dis_arr[:, 3] != a]
 
     bound_value = 0.0
     # X axis
-    Arr_x = sys[1].values
+    Arr_x = sys[1].values  # sys_dis_arr[:, 0] #
     newArr_x_min = Arr_x[Arr_x < xmin]
     newArr_x_min = xmin - newArr_x_min
 
@@ -275,7 +338,7 @@ def evaluate_obj(sys, dis_cutoff, xmin, xmax, ymin, ymax, zmin, zmax):
     newArr_x_max = newArr_x_max - xmax
 
     # Y axis
-    Arr_y = sys[2].values
+    Arr_y = sys[2].values  # sys_dis_arr[:, 1] #
     newArr_y_min = Arr_y[Arr_y < ymin]
     newArr_y_min = ymin - newArr_y_min
 
@@ -283,7 +346,7 @@ def evaluate_obj(sys, dis_cutoff, xmin, xmax, ymin, ymax, zmin, zmax):
     newArr_y_max = newArr_y_max - ymax
 
     # Z axis
-    Arr_z = sys[3].values
+    Arr_z = sys[3].values  # sys_dis_arr[:, 2] #
     newArr_z_min = Arr_z[Arr_z < zmin]
     newArr_z_min = zmin - newArr_z_min
 
@@ -331,6 +394,49 @@ def rotateXYZ(unit, theta1, theta2, theta3):
     newXYZ.index = unit.index
     unit.loc[:, [1, 2, 3]] = newXYZ.loc[:, [1, 2, 3]]
     return unit
+
+
+# This function generates an input file for PACKMOL
+# INPUT:
+# OUTPUT: Write an input file for PACKMOL
+def gen_packmol_inp(
+    OutDir_packmol, tolerance, XYZ_list, NMol_list, xmin, xmax, ymin, ymax, zmin, zmax
+):
+    with open(OutDir_packmol + "packmol.inp", 'w') as f:
+        f.write(
+            "tolerance " + str(tolerance) + "\n"
+        )  # Minimum distance between any two molecule
+        f.write("output " + OutDir_packmol + "packmol.xyz\n")
+        f.write("filetype xyz\n\n")
+        for mol in range(len(NMol_list)):
+            f.write("structure " + XYZ_list[mol] + "\n")
+            f.write("  number " + str(NMol_list[mol]) + "\n")
+            f.write(
+                "  inside box "
+                + str(xmin)
+                + " "
+                + str(ymin)
+                + " "
+                + str(zmin)
+                + " "
+                + str(xmax)
+                + " "
+                + str(ymax)
+                + " "
+                + str(zmax)
+                + "\n"
+            )
+            f.write("end structure\n\n")
+
+
+# Run packmol
+def run_packmol(bashCommand, output):
+    f = open(output, "w")
+    process = subprocess.Popen(
+        bashCommand, stdout=f, shell=True
+    )  # stdout=subprocess.PIPE
+    output, error = process.communicate()
+    return error
 
 
 # This function generates a xyz file
@@ -393,20 +499,31 @@ def gen_sys_data(
     filename, unit, xmin, xmax, ymin, ymax, zmin, zmax
 ):  # lammps data file
     unit = unit.sort_values(by=[0])
+    unit_ele = unit.drop_duplicates(subset=0, keep="first").copy()
+
     # add_dis = 0.4 # This additional distance (in Ang) is added to avoid interaction near boundary
     file = open(filename, 'w+')
     file.write('### ' + '# LAMMPS data file written by PSP' + ' ###\n')
     file.write(str(unit.shape[0]) + ' atoms\n')
-    file.write(str(len(list(set(unit[0].values)))) + ' atom types\n')
+    file.write(str(len(list(unit_ele[0].values))) + ' atom types\n')
     file.write(str(xmin) + ' ' + str(xmax) + ' xlo xhi\n')
     file.write(str(ymin) + ' ' + str(ymax) + ' ylo yhi\n')
     file.write(str(zmin) + ' ' + str(zmax) + ' zlo zhi\n\n')
 
     ele_list = []
     ele_mass = []
-    for element in sorted(set(unit[0].values)):
-        ele_list.append(element)
-        ele_mass.append(Chem.GetPeriodicTable().GetAtomicWeight(element))
+    ele_type = []
+    count = 1
+    for index, row in unit_ele.iterrows():
+        ele_list.append(row[0])
+        ele_mass.append(Chem.GetPeriodicTable().GetAtomicWeight(row[0]))
+        ele_type.append(count)
+        count += 1
+
+    unit_ele['ele_type'] = ele_type
+    ele_type_sys = []
+    for index, row in unit.iterrows():
+        ele_type_sys.append(unit_ele[unit_ele[0] == row[0]]['ele_type'].values[0])
 
     file.write('Masses\n\n')
     count = 1
@@ -416,8 +533,12 @@ def gen_sys_data(
 
     SN = np.arange(1, unit.shape[0] + 1)
     unit['SN'] = SN
+    unit['ele_type'] = ele_type_sys
+    unit['charge'] = [0] * unit.shape[0]
     file.write('\nAtoms\n\n')
-    file.write(unit[['SN', 1, 2, 3]].to_string(header=False, index=False))
+    file.write(
+        unit[['SN', 'ele_type', 'charge', 1, 2, 3]].to_string(header=False, index=False)
+    )
     file.close()
 
 

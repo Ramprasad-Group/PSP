@@ -9,7 +9,9 @@ amor = ab.Builder(
     OutDir='amorphous_models',
     Length='Len',
     NumConf='NumConf',
-    density=0.65,
-    loop=False,
+    Loop='Loop',
+    density=0.85,
+    box_type='r',
+    #box_size=[0.0,20,0.0,20,0.0,20]
 )
 amor.Build()

@@ -1,4 +1,5 @@
 from os import path
+from os import system
 from setuptools import setup, find_packages
 
 # Test for openbabel/rdkit conda installs
@@ -12,6 +13,8 @@ try:
 except ImportError:
     raise ModuleNotFoundError("rdkit not found, install openbabel via conda-forge.")
 
+# Set PATH for packmol
+system('export PATH="/home/hari/.soft/packmol:$PATH"')
 
 # Read the contents of your README file
 PACKAGE_DIR = path.abspath(path.dirname(__file__))
