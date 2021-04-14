@@ -148,18 +148,20 @@ class Builder:
                 self.box_size[5],
             )
 
+        fix_dis = self.tol_dis/2
+
         # PACKMOL input file
         MDlib.gen_packmol_inp(
             OutDir_packmol,
             self.tol_dis,
             XYZ_list,
             NMol_list,
-            xmin,
-            xmax,
-            ymin,
-            ymax,
-            zmin,
-            zmax,
+            xmin + fix_dis,
+            xmax - fix_dis,
+            ymin + fix_dis,
+            ymax - fix_dis,
+            zmin + fix_dis,
+            zmax - fix_dis,
         )
 
         # PACKMOL calculation
