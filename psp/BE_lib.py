@@ -37,7 +37,7 @@ def build_dir(path):
 def run_orca(bashCommand, output, openmpi_path, openmpi_lib_path):
     f = open(output, "w")
     process = subprocess.Popen(
-        openmpi_lib_path + ';' + openmpi_path + ';' + bashCommand, stdout=f, shell=True
+        openmpi_lib_path + ";" + openmpi_path + ";" + bashCommand, stdout=f, shell=True
     )  # stdout=subprocess.PIPE
 
     output, error = process.communicate()
@@ -47,18 +47,18 @@ def run_orca(bashCommand, output, openmpi_path, openmpi_lib_path):
 def gen_bsse_xyz_coord(xyz_coord, len_a):
     a1 = xyz_coord[:len_a]
     a1_ = a1.copy()
-    a1_[4] = ':'
+    a1_[4] = ":"
 
     b3 = xyz_coord[len_a:]
     b3_ = b3.copy()
-    b3_[4] = ':'
+    b3_[4] = ":"
 
     a2 = pd.concat([a1, b3_])
-    a2 = a2.replace(np.nan, '', regex=True)
+    a2 = a2.replace(np.nan, "", regex=True)
     a2 = a2[[0, 4, 1, 2, 3]]
 
     b4 = pd.concat([a1_, b3])
-    b4 = b4.replace(np.nan, '', regex=True)
+    b4 = b4.replace(np.nan, "", regex=True)
     b4 = b4[[0, 4, 1, 2, 3]]
     return a1, a2, b3, b4
 
@@ -78,7 +78,7 @@ def gen_orca_inp(
     Geo_const=False,
     atm_const=[],
 ):
-    with open(filename, 'w') as f:
+    with open(filename, "w") as f:
         f.write("!" + func + " " + basis + " " + extra_key + " " + opt + "\n\n")
         f.write("%pal nprocs " + str(nproc) + "\nend\n\n")
         if Geo_const is True:
@@ -91,7 +91,7 @@ def gen_orca_inp(
         f.write("%MaxCore " + str(mem) + "\n\n")
         f.write("*xyz " + str(charg) + " " + str(mult) + "\n")
         unit.to_csv(
-            f, sep=' ', index=False, header=False
+            f, sep=" ", index=False, header=False
         )  # XYZ COORDINATES OF NEW MOLECULE
         f.write("*")
 
@@ -99,12 +99,12 @@ def gen_orca_inp(
 def check_output(file_name, cal_type):
     if os.path.isfile(file_name) is False:
         return "fail"
-    with open(file_name, 'rb', 0) as file, mmap.mmap(
+    with open(file_name, "rb", 0) as file, mmap.mmap(
         file.fileno(), 0, access=mmap.ACCESS_READ
     ) as s:
-        if s.find(b'***ORCA TERMINATED NORMALLY****') != -1:
-            if cal_type == 'opt':
-                if s.find(b'***        THE OPTIMIZATION HAS CONVERGED     ***') != -1:
+        if s.find(b"***ORCA TERMINATED NORMALLY****") != -1:
+            if cal_type == "opt":
+                if s.find(b"***        THE OPTIMIZATION HAS CONVERGED     ***") != -1:
                     return "pass"
                 else:
                     print(file_name, "*** The optimization is not CONVERGED ***")
@@ -123,16 +123,16 @@ def get_final_energy(file_name):
             return float(line.split()[4])
 
 
-def get_bind_ener(cal_dir='', MolA_name='', MolB_name='', N_dimer=''):
+def get_bind_ener(cal_dir="", MolA_name="", MolB_name="", N_dimer=""):
     bind_ener_df = pd.DataFrame()
-    path_file_a = cal_dir + '/' + MolA_name + '/' + MolA_name + '.out'
+    path_file_a = cal_dir + "/" + MolA_name + "/" + MolA_name + ".out"
     check = check_output(path_file_a, "opt")
     if check == "pass":
         ener_a = get_final_energy(path_file_a)
     else:
         return bind_ener_df
 
-    path_file_b = cal_dir + '/' + MolB_name + '/' + MolB_name + '.out'
+    path_file_b = cal_dir + "/" + MolB_name + "/" + MolB_name + ".out"
     check = check_output(path_file_b, "opt")
     if check == "pass":
         ener_b = get_final_energy(path_file_b)
@@ -141,7 +141,7 @@ def get_bind_ener(cal_dir='', MolA_name='', MolB_name='', N_dimer=''):
 
     bind_ener_list = []
     for i in range(1, N_dimer + 1):
-        path_file_dimer = cal_dir + '/dimer/' + str(i) + '/' + str(i) + ".out"
+        path_file_dimer = cal_dir + "/dimer/" + str(i) + "/" + str(i) + ".out"
         check = check_output(path_file_dimer, "opt")
 
         bsse_list = []
@@ -151,7 +151,7 @@ def get_bind_ener(cal_dir='', MolA_name='', MolB_name='', N_dimer=''):
             # Order 1: A; 2: A + ghost orbital; 3: B; 4: B + ghost orbital
             for j in range(1, 5):
                 path_file_bsse = (
-                    cal_dir + '/dimer/' + str(i) + '/BSSE/' + str(j) + ".out"
+                    cal_dir + "/dimer/" + str(i) + "/BSSE/" + str(j) + ".out"
                 )
                 check = check_output(path_file_bsse, "single")
                 if check == "pass":
@@ -164,44 +164,48 @@ def get_bind_ener(cal_dir='', MolA_name='', MolB_name='', N_dimer=''):
                 bind_ener_list.append([i, bind_ener * 627.503])
         # else:
         # break
-    bind_ener_df = pd.DataFrame(bind_ener_list, columns=['SN', 'BE (kcal/mol)'])
+    bind_ener_df = pd.DataFrame(bind_ener_list, columns=["SN", "BE (kcal/mol)"])
     return bind_ener_df
 
 
 def orca_cal(
-    cal_dir='',
-    input_xyz='',
-    MolA_name='',
-    MolB_name='',
-    N_dimer='',
-    functional='',
-    basis_set='',
-    charge='',
-    unpaired_elec='',
-    orca_extra_keywords='',
-    NCore='',
-    orca_path='',
-    openmpi_lib_path='',
-    openmpi_path='',
+    cal_dir="",
+    input_xyz="",
+    MolA_name="",
+    MolB_name="",
+    N_dimer="",
+    functional="",
+    basis_set="",
+    charge="",
+    unpaired_elec="",
+    orca_extra_keywords="",
+    NCore="",
 ):
     # Create directory
     build_dir(cal_dir)
-    build_dir(cal_dir + '/' + MolA_name)
-    build_dir(cal_dir + '/' + MolB_name)
-    build_dir(cal_dir + '/dimer')
+    build_dir(cal_dir + "/" + MolA_name)
+    build_dir(cal_dir + "/" + MolB_name)
+    build_dir(cal_dir + "/dimer")
+
+    # Orca and OpenMPI paths
+    orca_path = os.getenv("ORCA_EXEC")
+    openmpi_path = "export PATH=" + os.getenv("OPENMPI_bin") + ":$PATH"
+    openmpi_lib_path = (
+        "export LD_LIBRARY_PATH=" + os.getenv("OPENMPI_lib") + ":$LD_LIBRARY_PATH"
+    )
 
     # Read xyz coordinates and create orca inputs in respective directories
     # Geometry optimization of molecule A
     xyz_coord_MolA = pd.read_csv(
-        input_xyz + '/' + str(MolA_name) + '.xyz',
+        input_xyz + "/" + str(MolA_name) + ".xyz",
         header=None,
         skiprows=2,
         delim_whitespace=True,
     )
-    output_name_MolA = cal_dir + '/' + str(MolA_name) + '/' + str(MolA_name) + '.out'
+    output_name_MolA = cal_dir + "/" + str(MolA_name) + "/" + str(MolA_name) + ".out"
     check = check_output(output_name_MolA, "opt")
     if check != "pass":
-        input_name_MolA = cal_dir + '/' + str(MolA_name) + '/' + str(MolA_name) + '.inp'
+        input_name_MolA = cal_dir + "/" + str(MolA_name) + "/" + str(MolA_name) + ".inp"
         gen_orca_inp(
             input_name_MolA,
             xyz_coord_MolA,
@@ -219,12 +223,12 @@ def orca_cal(
         err_MolA = run_orca(command, output_name_MolA, openmpi_path, openmpi_lib_path)
 
     # Geometry optimization of molecule B
-    output_name_MolB = cal_dir + '/' + str(MolB_name) + '/' + str(MolB_name) + '.out'
+    output_name_MolB = cal_dir + "/" + str(MolB_name) + "/" + str(MolB_name) + ".out"
     check = check_output(output_name_MolB, "opt")
     if check != "pass":
-        input_name_MolB = cal_dir + '/' + str(MolB_name) + '/' + str(MolB_name) + '.inp'
+        input_name_MolB = cal_dir + "/" + str(MolB_name) + "/" + str(MolB_name) + ".inp"
         xyz_coord_MolB = pd.read_csv(
-            input_xyz + '/' + str(MolB_name) + '.xyz',
+            input_xyz + "/" + str(MolB_name) + ".xyz",
             header=None,
             skiprows=2,
             delim_whitespace=True,
@@ -247,13 +251,13 @@ def orca_cal(
 
     # Geometry optimizations of dimers
     for i in range(1, N_dimer + 1):
-        output_name_dimer = cal_dir + '/dimer' + '/' + str(i) + '/' + str(i) + '.out'
+        output_name_dimer = cal_dir + "/dimer" + "/" + str(i) + "/" + str(i) + ".out"
         check = check_output(output_name_dimer, "opt")
         if check != "pass":
-            input_name_dimer = cal_dir + '/dimer' + '/' + str(i) + '/' + str(i) + '.inp'
-            build_dir(cal_dir + '/dimer' + '/' + str(i))
+            input_name_dimer = cal_dir + "/dimer" + "/" + str(i) + "/" + str(i) + ".inp"
+            build_dir(cal_dir + "/dimer" + "/" + str(i))
             xyz_coord_dimer = pd.read_csv(
-                input_xyz + '/' + str(i) + '.xyz',
+                input_xyz + "/" + str(i) + ".xyz",
                 header=None,
                 skiprows=2,
                 delim_whitespace=True,
@@ -278,11 +282,11 @@ def orca_cal(
 
     # BSSE calculation
     for i in range(1, N_dimer + 1):
-        output_name_dimer = cal_dir + '/dimer' + '/' + str(i) + '/' + str(i) + '.out'
+        output_name_dimer = cal_dir + "/dimer" + "/" + str(i) + "/" + str(i) + ".out"
         check = check_output(output_name_dimer, "opt")
         if check == "pass":
             opt_xyz_name_dimer = (
-                cal_dir + '/dimer' + '/' + str(i) + '/' + str(i) + '.xyz'
+                cal_dir + "/dimer" + "/" + str(i) + "/" + str(i) + ".xyz"
             )
             xyz_coord_opt_dimer = pd.read_csv(
                 opt_xyz_name_dimer, header=None, skiprows=2, delim_whitespace=True
@@ -293,29 +297,29 @@ def orca_cal(
             )
             xyz_coord_bsse = [a1, a2, b3, b4]
             # Create BSSE directory
-            build_dir(cal_dir + '/dimer' + '/' + str(i) + '/' + 'BSSE')
+            build_dir(cal_dir + "/dimer" + "/" + str(i) + "/" + "BSSE")
             for j in range(1, 5):
                 output_name_orca_bsse = (
                     cal_dir
-                    + '/dimer'
-                    + '/'
+                    + "/dimer"
+                    + "/"
                     + str(i)
-                    + '/'
-                    + 'BSSE'
-                    + '/'
+                    + "/"
+                    + "BSSE"
+                    + "/"
                     + str(j)
                     + ".out"
                 )
                 check = check_output(output_name_orca_bsse, "single")
-                if check != 'pass':
+                if check != "pass":
                     input_name_orca_bsse = (
                         cal_dir
-                        + '/dimer'
-                        + '/'
+                        + "/dimer"
+                        + "/"
                         + str(i)
-                        + '/'
-                        + 'BSSE'
-                        + '/'
+                        + "/"
+                        + "BSSE"
+                        + "/"
                         + str(j)
                         + ".inp"
                     )

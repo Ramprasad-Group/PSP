@@ -10,7 +10,7 @@ amor = ab.Builder(
     Length='Len',
     NumConf='NumConf',
     Loop='Loop',
-    density=0.85,
+    density=0.55,
     box_type='r',
     #box_size=[0.0,20,0.0,20,0.0,20]
 )

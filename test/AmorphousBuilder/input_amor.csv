@@ -1,4 +1,2 @@
 ID,smiles,Len,Num,NumConf,Loop
-cc3,[*]CC[*],3,10,2,True
-cc6,[*]CC[*],6,8,2,True
-cc8,[*]CC[*],8,6,2,True
+cc3,[*]CC[*],20,18,1,False

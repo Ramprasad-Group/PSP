@@ -2,7 +2,9 @@ import numpy as np
 import pandas as pd
 import psp.MD_lib as MDlib
 import time
+import os
 import psp.PSP_lib as bd
+
 # from scipy.optimize import minimize
 from optimparallel import minimize_parallel
 import psp.MoleculeBuilder as mb
@@ -12,21 +14,20 @@ class Builder:
     def __init__(
         self,
         Dataframe,
-        ID_col='ID',
-        SMILES_col='smiles',
-        NumMole='Num',
-        Length='Len',
-        NumConf='NumConf',
-        Loop='Loop',
-        OutFile='amor_model',
-        OutDir='amorphous_models',
-        OutDir_xyz='molecules',
+        ID_col="ID",
+        SMILES_col="smiles",
+        NumMole="Num",
+        Length="Len",
+        NumConf="NumConf",
+        Loop="Loop",
+        OutFile="amor_model",
+        OutDir="amorphous_models",
+        OutDir_xyz="molecules",
         density=0.65,
         tol_dis=2.0,
-        box_type='c',
+        box_type="c",
         box_size=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
         incr_per=0.4,
-        packmol_path='/home/hari/.soft/packmol/packmol',
     ):
         self.Dataframe = Dataframe
         self.ID_col = ID_col
@@ -43,16 +44,18 @@ class Builder:
         self.box_type = box_type
         self.box_size = box_size
         self.incr_per = incr_per
-        self.packmol_path = packmol_path
 
     def Build(self):
         # location of directory for VASP inputs (polymers) and build a directory
-        out_dir = self.OutDir + '/'
+        out_dir = self.OutDir + "/"
         bd.build_dir(out_dir)
-        OutDir_xyz = out_dir + self.OutDir_xyz + '/'
+        OutDir_xyz = out_dir + self.OutDir_xyz + "/"
         bd.build_dir(OutDir_xyz)
-        OutDir_packmol = out_dir + "packmol" + '/'
+        OutDir_packmol = out_dir + "packmol" + "/"
         bd.build_dir(OutDir_packmol)
+
+        # PACKMOL
+        packmol_path = os.getenv("PACKMOL_EXEC")
 
         xyz_gen_pd = pd.DataFrame()
         for i in self.Dataframe.index:
@@ -70,7 +73,7 @@ class Builder:
             results = mol.Build3D()
             xyz_gen_pd = pd.concat([xyz_gen_pd, results])
 
-        if len(list(set(xyz_gen_pd['Result'].values))) != 1:
+        if len(list(set(xyz_gen_pd["Result"].values))) != 1:
             xyz_gen_pd.to_csv("molecules.csv")
             print(
                 "Couldn't generate XYZ coordinates of molecules, check 'molecules.csv'"
@@ -120,11 +123,11 @@ class Builder:
                 XYZ_list.append(
                     OutDir_xyz
                     + str(row[self.ID_col])
-                    + '_N'
+                    + "_N"
                     + str(row[self.Length])
-                    + '_C'
+                    + "_C"
                     + str(conf)
-                    + '.xyz'
+                    + ".xyz"
                 )
 
         # Define boundary conditions
@@ -148,7 +151,7 @@ class Builder:
                 self.box_size[5],
             )
 
-        fix_dis = self.tol_dis/2
+        fix_dis = self.tol_dis / 2
 
         # PACKMOL input file
         MDlib.gen_packmol_inp(
@@ -165,7 +168,7 @@ class Builder:
         )
 
         # PACKMOL calculation
-        command = self.packmol_path + " < " + OutDir_packmol + "packmol.inp"
+        command = packmol_path + " < " + OutDir_packmol + "packmol.inp"
         errout = MDlib.run_packmol(command, OutDir_packmol + "packmol.out")
 
         if errout is not None:
@@ -179,7 +182,7 @@ class Builder:
         )
 
         MDlib.gen_sys_vasp(
-            self.OutDir + '/' + self.OutFile + ".vasp",
+            self.OutDir + "/" + self.OutFile + ".vasp",
             packmol_xyz,
             xmin,
             xmax,
@@ -189,7 +192,7 @@ class Builder:
             zmax,
         )
         MDlib.gen_sys_data(
-            self.OutDir + '/' + self.OutFile + ".data",
+            self.OutDir + "/" + self.OutFile + ".data",
             packmol_xyz,
             xmin,
             xmax,
@@ -201,9 +204,9 @@ class Builder:
 
     def Build_psp(self):
         # location of directory for VASP inputs (polymers) and build a directory
-        out_dir = self.OutDir + '/'
+        out_dir = self.OutDir + "/"
         bd.build_dir(out_dir)
-        OutDir_xyz = out_dir + self.OutDir_xyz + '/'
+        OutDir_xyz = out_dir + self.OutDir_xyz + "/"
         bd.build_dir(OutDir_xyz)
 
         xyz_gen_pd = pd.DataFrame()
@@ -222,7 +225,7 @@ class Builder:
             results = mol.Build3D()
             xyz_gen_pd = pd.concat([xyz_gen_pd, results])
 
-        if len(list(set(xyz_gen_pd['Result'].values))) != 1:
+        if len(list(set(xyz_gen_pd["Result"].values))) != 1:
             xyz_gen_pd.to_csv("molecules.csv")
             print(
                 "Couldn't generate XYZ coordinates of molecules, check 'molecules.csv'"
@@ -271,13 +274,13 @@ class Builder:
             for conf in range(1, row[self.NumConf] + 1):
                 XYZ_list.append(
                     OutDir_xyz
-                    + '/'
+                    + "/"
                     + str(row[self.ID_col])
-                    + '_N'
+                    + "_N"
                     + str(row[self.Length])
-                    + '_C'
+                    + "_C"
                     + str(conf)
-                    + '.xyz'
+                    + ".xyz"
                 )
 
         # Define boundary conditions
@@ -316,13 +319,14 @@ class Builder:
                 MDlib.main_func,
                 x0,
                 args=(sys, self.tol_dis, xmin, xmax, ymin, ymax, zmin, zmax),
-                options={'disp': True})
+                options={"disp": True},
+            )
             end_1 = time.time()
             print(
-                ' minimize time: ', np.round((end_1 - start_1) / 60, 2), ' minutes',
+                " minimize time: ", np.round((end_1 - start_1) / 60, 2), " minutes",
             )
 
-            solution = res['x']
+            solution = res["x"]
             evaluation = MDlib.main_func(
                 solution, sys, self.tol_dis, xmin, xmax, ymin, ymax, zmin, zmax
             )
@@ -331,9 +335,9 @@ class Builder:
             sys = MDlib.move_molecules(
                 sys, arr_x[0], arr_x[1], arr_x[2], arr_x[3], arr_x[4], arr_x[5]
             )
-            MDlib.gen_sys_xyz(self.OutDir + '/' + self.OutFile + ".xyz", sys)
+            MDlib.gen_sys_xyz(self.OutDir + "/" + self.OutFile + ".xyz", sys)
             MDlib.gen_sys_vasp(
-                self.OutDir + '/' + self.OutFile + ".vasp",
+                self.OutDir + "/" + self.OutFile + ".vasp",
                 sys,
                 xmin - proxy_dis,
                 xmax + proxy_dis,
@@ -343,7 +347,7 @@ class Builder:
                 zmax + proxy_dis,
             )
             MDlib.gen_sys_data(
-                self.OutDir + '/' + self.OutFile + ".data",
+                self.OutDir + "/" + self.OutFile + ".data",
                 sys,
                 xmin - proxy_dis,
                 xmax + proxy_dis,
@@ -353,11 +357,11 @@ class Builder:
                 zmax + proxy_dis,
             )
         else:
-            print('Value of the Objective function: ', evaluation)
+            print("Value of the Objective function: ", evaluation)
         sys1 = MDlib.move_molecules(sys, disx, disy, disz, theta1, theta2, theta3)
-        MDlib.gen_sys_xyz(self.OutDir + '/' + "initial_geo.xyz", sys1)
+        MDlib.gen_sys_xyz(self.OutDir + "/" + "initial_geo.xyz", sys1)
         MDlib.gen_sys_vasp(
-            self.OutDir + '/' + "initial_geo.vasp",
+            self.OutDir + "/" + "initial_geo.vasp",
             sys1,
             xmin - proxy_dis,
             xmax + proxy_dis,
