@@ -17,6 +17,8 @@ class Builder:
         MinAtomicDis=2.0,
         OutDir='crystals',
         Polymer=True,
+        Optimize=False,
+        NumCandidate=50,
         NCores=0,
     ):
         self.VaspInp_list = VaspInp_list
@@ -26,6 +28,8 @@ class Builder:
         self.OutDir = OutDir + '/'
         self.NCores = NCores
         self.Polymer = Polymer
+        self.Optimize = Optimize
+        self.NumCandidate = NumCandidate
 
     def BuildCrystal(self):
         start_1 = time.time()
@@ -36,25 +40,36 @@ class Builder:
         if self.NCores == 0:
             self.NCores = multiprocessing.cpu_count() - 1
 
+        NCores_opt = 1
+        NCores = self.NCores
+        # if self.Optimize is True:
+        #    NCores, NCores_opt = NCores_opt, NCores
+
         if self.Polymer is True:
-            result = Parallel(n_jobs=self.NCores)(
+            result = Parallel(n_jobs=NCores)(
                 delayed(CrystalBuilderMainPolymer)(
                     VaspInp,
                     self.NSamples,
                     self.InputRadius,
                     self.MinAtomicDis,
                     self.OutDir,
+                    self.Optimize,
+                    self.NumCandidate,
+                    NCores_opt,
                 )
                 for VaspInp in self.VaspInp_list
             )
         else:
-            result = Parallel(n_jobs=self.NCores)(
+            result = Parallel(n_jobs=NCores)(
                 delayed(CrystalBuilderMain)(
                     VaspInp,
                     self.NSamples,
                     self.InputRadius,
                     self.MinAtomicDis,
                     self.OutDir,
+                    self.Optimize,
+                    self.NumCandidate,
+                    NCores_opt,
                 )
                 for VaspInp in self.VaspInp_list
             )
@@ -223,7 +238,16 @@ def rotateXY(xyz_coordinates, theta):  # XYZ coordinates and angle
 
 
 # for VaspInp in VaspInp_list:
-def CrystalBuilderMainPolymer(VaspInp, NSamples, Input_radius, MinAtomicDis, OutDir):
+def CrystalBuilderMainPolymer(
+    VaspInp,
+    NSamples,
+    Input_radius,
+    MinAtomicDis,
+    OutDir,
+    Optimize,
+    NumCandidate,
+    NCores_opt,
+):
     file_info, basis_vec, Num_atom, xyz_coordinates = readvasp(
         VaspInp.replace('.vasp', '') + '.vasp'
     )
@@ -270,6 +294,9 @@ def CrystalBuilderMainPolymer(VaspInp, NSamples, Input_radius, MinAtomicDis, Out
     else:
         radius = float(Input_radius)
 
+    # Number of digits in total number of crystal models
+    digits = bd.len_digit_number(NSamples ** 3)
+
     count = 0
     for i in tm:
         for j in rm1:
@@ -299,7 +326,7 @@ def CrystalBuilderMainPolymer(VaspInp, NSamples, Input_radius, MinAtomicDis, Out
                         + VaspInp
                         + '/'
                         + 'cryst_out-'
-                        + str(count).zfill(4)
+                        + str(count).zfill(digits)
                         + '.vasp',
                         first_poly,
                         second_poly_rm2,
@@ -316,11 +343,25 @@ def CrystalBuilderMainPolymer(VaspInp, NSamples, Input_radius, MinAtomicDis, Out
                         + str(k),
                     )
 
+    if Optimize is True:
+        bd.screen_Candidates(
+            OutDir + VaspInp, NumCandidate=NumCandidate, NCores_opt=NCores_opt
+        )
+
     return VaspInp, count, radius
 
 
 # for VaspInp in VaspInp_list:
-def CrystalBuilderMain(VaspInp, NSamples, Input_radius, MinAtomicDis, OutDir):
+def CrystalBuilderMain(
+    VaspInp,
+    NSamples,
+    Input_radius,
+    MinAtomicDis,
+    OutDir,
+    Optimize,
+    NumCandidate,
+    NCores_opt,
+):
     file_info, basis_vec, Num_atom, xyz_coordinates = readvasp(
         VaspInp.replace('.vasp', '') + '.vasp'
     )
@@ -369,6 +410,9 @@ def CrystalBuilderMain(VaspInp, NSamples, Input_radius, MinAtomicDis, OutDir):
 
     else:
         radius = float(Input_radius)
+
+    # Number of digits in total number of crystal models
+    digits = bd.len_digit_number(NSamples ** 4)
 
     count = 0
     for i in tm:
@@ -419,7 +463,7 @@ def CrystalBuilderMain(VaspInp, NSamples, Input_radius, MinAtomicDis, OutDir):
                                 + VaspInp
                                 + '/'
                                 + 'cryst_out-'
-                                + str(count).zfill(4)
+                                + str(count).zfill(digits)
                                 + '.vasp',
                                 first_poly,
                                 second_poly_moved,
@@ -435,5 +479,10 @@ def CrystalBuilderMain(VaspInp, NSamples, Input_radius, MinAtomicDis, OutDir):
                                 + 'Rotation 2 '
                                 + str(k),
                             )
+
+    if Optimize is True:
+        bd.screen_Candidates(
+            OutDir + VaspInp, NumCandidate=NumCandidate, NCores_opt=NCores_opt
+        )
 
     return VaspInp, count, radius

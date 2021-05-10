@@ -31,6 +31,7 @@ crystal_builder = CrB.Builder(
     InputRadius="auto",
     MinAtomicDis=2.0,
     Polymer=True,
+    Optimize=True,
     NCores=0,
 )
 results = crystal_builder.BuildCrystal()

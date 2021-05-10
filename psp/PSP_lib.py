@@ -3,12 +3,20 @@ import pandas as pd
 import psp.simulated_annealing as an
 import math
 import os
-import copy
+# import copy
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from openbabel import openbabel as ob
 from rdkit import RDLogger
 from scipy.spatial.distance import cdist
+# from openbabel import pybel as pb
+# from pymatgen.io import babel
+import glob
+# import multiprocessing
+# from joblib import Parallel, delayed
+
+# from joblib import wrap_non_picklable_objects
+# import time
 
 RDLogger.DisableLog('rdApp.*')
 
@@ -25,6 +33,20 @@ def build_dir(path):
         os.mkdir(path)
     except OSError:
         pass
+
+
+def is_nan(x):
+    return x != x
+
+
+def len_digit_number(n):
+    if n > 0:
+        digits = int(math.log10(n)) + 1
+    elif n == 0:
+        digits = 1
+    else:
+        digits = int(math.log10(-n)) + 2  # +1 if you don't count the '-'
+    return digits
 
 
 # This function minimize molecule using UFF forcefield and Steepest Descent method
@@ -2056,6 +2078,8 @@ def build_3D(
     df_smiles,
     ID,
     SMILES,
+    LeftCap,
+    RightCap,
     out_dir,
     Inter_Mol_Dis,
     Length,
@@ -2063,19 +2087,73 @@ def build_3D(
     NumConf,
     loop,
 ):
+    LCap_ = False
+    if LeftCap in df_smiles.columns:
+        smiles_LCap_ = df_smiles[df_smiles[ID] == unit_name][LeftCap].values[0]
+        if is_nan(smiles_LCap_) is False:
+            LCap_ = True
+
+    else:
+        smiles_LCap_ = ''
+
+    RCap_ = False
+    if RightCap in df_smiles.columns:
+        smiles_RCap_ = df_smiles[df_smiles[ID] == unit_name][RightCap].values[0]
+        if is_nan(smiles_RCap_) is False:
+            RCap_ = True
+
+    else:
+        smiles_RCap_ = ''
+
     # Get SMILES
     smiles_each = df_smiles[df_smiles[ID] == unit_name][SMILES].values[0]
-    smiles_each_copy = copy.copy(smiles_each)
+    # smiles_each_copy = copy.copy(smiles_each)
 
-    count = 0
-    for len in Length:
-        if len == 1:
-            mol = Chem.MolFromSmiles(smiles_each)
-            mol_new = Chem.DeleteSubstructs(mol, Chem.MolFromSmarts('[#0]'))
-            smiles_each = Chem.MolToSmiles(mol_new)
+    # count = 0
+    Final_SMILES = []
+    for ln in Length:
+        # start_1 = time.time()
+        if ln == 1:
+            if LCap_ is False and RCap_ is False:
+                mol = Chem.MolFromSmiles(smiles_each)
+                mol_new = Chem.DeleteSubstructs(mol, Chem.MolFromSmarts('[#0]'))
+                smiles_each_ind = Chem.MolToSmiles(mol_new)
+            else:
+                (
+                    unit_name,
+                    dum1,
+                    dum2,
+                    atom1,
+                    atom2,
+                    m1,
+                    neigh_atoms_info,
+                    oligo_list,
+                    dum,
+                    unit_dis,
+                    flag,
+                ) = Init_info(unit_name, smiles_each, xyz_in_dir, Length)
 
-        elif len > 1:
-            smiles_each = copy.copy(smiles_each_copy)
+                if flag == 'REJECT' and len(Final_SMILES) == 0:
+                    return unit_name, 'REJECT', Final_SMILES
+                elif flag == 'REJECT' and len(Final_SMILES) >= 1:
+                    return unit_name, 'PARTIAL SUCCESS', Final_SMILES
+                # Join end caps
+                smiles_each_ind = gen_smiles_with_cap(
+                    unit_name,
+                    dum1,
+                    dum2,
+                    atom1,
+                    atom2,
+                    smiles_each,
+                    smiles_LCap_,
+                    smiles_RCap_,
+                    LCap_,
+                    RCap_,
+                    xyz_in_dir,
+                )
+
+        elif ln > 1:
+            # smiles_each = copy.copy(smiles_each_copy)
 
             (
                 unit_name,
@@ -2091,27 +2169,241 @@ def build_3D(
                 flag,
             ) = Init_info(unit_name, smiles_each, xyz_in_dir, Length)
 
-            if flag == 'REJECT' and count == 0:
-                return unit_name, 'REJECT', 0
-            elif flag == 'REJECT' and count > 0:
-                return unit_name, 'PARTIAl SUCCESS'
+            if flag == 'REJECT' and len(Final_SMILES) == 0:
+                return unit_name, 'REJECT', Final_SMILES
+            elif flag == 'REJECT' and len(Final_SMILES) >= 1:
+                return unit_name, 'PARTIAL SUCCESS', Final_SMILES
 
-            smiles_each = gen_oligomer_smiles(
-                dum1, dum2, atom1, atom2, smiles_each, len, loop
+            smiles_each_ind = gen_oligomer_smiles(
+                unit_name,
+                dum1,
+                dum2,
+                atom1,
+                atom2,
+                smiles_each,
+                ln,
+                loop,
+                smiles_LCap_,
+                LCap_,
+                smiles_RCap_,
+                RCap_,
+                xyz_in_dir,
             )
 
-        m1 = Chem.MolFromSmiles(smiles_each)
-        if m1 is None and count == 0:
-            return unit_name, 'FAILURE'
-        elif m1 is None and count > 0:
-            return unit_name, 'PARTIAl SUCCESS'
+        m1 = Chem.MolFromSmiles(smiles_each_ind)
+        if m1 is None and len(Final_SMILES) == 0:
+            return unit_name, 'REJECT', Final_SMILES
+        elif m1 is None and len(Final_SMILES) >= 1:
+            return unit_name, 'PARTIAL SUCCESS', Final_SMILES
+
+        Final_SMILES.append(smiles_each_ind)
+        # OB_smi_2_xyz_vasp(unit_name, smiles_each_ind, l, out_dir, Inter_Mol_Dis, NumConf=NumConf, seed=None)
+        gen_conf_xyz_vasp(unit_name, m1, out_dir, ln, NumConf, Inter_Mol_Dis)
+        # end_1 = time.time()
+        # print(l, end_1 - start_1)
+    return unit_name, 'SUCCESS', Final_SMILES
+
+
+def Init_info_Cap(unit_name, smiles_each_ori, xyz_in_dir):
+    # Get index of dummy atoms and bond type associated with it
+    try:
+        dum_index, bond_type = FetchDum(smiles_each_ori)
+        if len(dum_index) == 1:
+            dum1 = dum_index[0]
         else:
-            count += 1
-        gen_conf_xyz_vasp(unit_name, m1, out_dir, len, NumConf, Inter_Mol_Dis)
-    return unit_name, 'SUCCESS'
+            print(
+                unit_name,
+                ": There are more or less than one dummy atoms in the SMILES string; ",
+            )
+            return unit_name, 0, 0, 0, 0, 'REJECT'
+    except Exception:
+        print(
+            unit_name,
+            ": Couldn't fetch the position of dummy atoms. Hints: (1) In SMILES string, use '*' for a dummy atom,"
+            "(2) Check RDKit installation.",
+        )
+        return unit_name, 0, 0, 0, 0, 'REJECT'
+
+    # Replace '*' with dummy atom
+    smiles_each = smiles_each_ori.replace(r'*', 'Cl')
+
+    # Convert SMILES to XYZ coordinates
+    convert_smiles2xyz, m1 = smiles_xyz(unit_name, smiles_each, xyz_in_dir)
+
+    # if fails to get XYZ coordinates; STOP
+    if convert_smiles2xyz == 'NOT_DONE':
+        print(
+            unit_name,
+            ": Couldn't get XYZ coordinates from SMILES string. Hints: (1) Check SMILES string,"
+            "(2) Check RDKit installation.",
+        )
+        return unit_name, 0, 0, 0, 0, 'REJECT'
+
+    # Collect valency and connecting information for each atom
+    neigh_atoms_info = connec_info(xyz_in_dir + unit_name + '.xyz')
+
+    try:
+        # Find connecting atoms associated with dummy atoms.
+        # dum1 and dum2 are connected to atom1 and atom2, respectively.
+        atom1 = neigh_atoms_info['NeiAtom'][dum1].copy()[0]
+
+    except Exception:
+        print(
+            unit_name,
+            ": Couldn't get the position of connecting atoms. Hints: (1) XYZ coordinates are not acceptable,"
+            "(2) Check Open Babel installation.",
+        )
+        return unit_name, 0, 0, 0, 0, 'REJECT'
+    return (
+        unit_name,
+        dum1,
+        atom1,
+        m1,
+        neigh_atoms_info,
+        '',
+    )
 
 
-def gen_oligomer_smiles(dum1, dum2, atom1, atom2, input_smiles, len, loop):
+def gen_smiles_with_cap(
+    unit_name,
+    dum1,
+    dum2,
+    atom1,
+    atom2,
+    smiles_each,
+    smiles_LCap_,
+    smiles_RCap_,
+    LCap_,
+    RCap_,
+    xyz_in_dir,
+    WithDum=True,
+):
+    # Main chain
+    # Check if there are dummy atoms in the chain
+    if WithDum is True:
+        main_mol = Chem.MolFromSmiles(smiles_each)
+        main_edit_m1 = Chem.EditableMol(main_mol)
+
+        # Remove dummy atoms
+        main_edit_m1.RemoveAtom(dum1)
+        if dum1 < dum2:
+            main_edit_m1.RemoveAtom(dum2 - 1)
+        else:
+            main_edit_m1.RemoveAtom(dum2)
+
+        # Mol without dummy atom
+        main_mol_noDum = main_edit_m1.GetMol()
+
+        # Get linking atoms
+        if atom1 > atom2:
+            atom1, atom2 = atom2, atom1
+
+        if dum1 < atom1 and dum2 < atom1:
+            first_atom = atom1 - 2
+        elif (dum1 < atom1 and dum2 > atom1) or (dum1 > atom1 and dum2 < atom1):
+            first_atom = atom1 - 1
+        else:
+            first_atom = atom1
+
+        if dum1 < atom2 and dum2 < atom2:
+            second_atom = atom2 - 2
+        elif (dum1 < atom2 and dum2 > atom2) or (dum1 > atom2 and dum2 < atom2):
+            second_atom = atom2 - 1
+        else:
+            second_atom = atom2
+    else:
+        main_mol_noDum = smiles_each
+        first_atom, second_atom = atom1, atom2
+
+    LCap_add = 0
+    # Left Cap
+    if LCap_ is True:
+        (unit_name, dum_L, atom_L, m1L, neigh_atoms_info_L, flag_L) = Init_info_Cap(
+            unit_name, smiles_LCap_, xyz_in_dir
+        )
+
+        # Reject if SMILES is not correct
+        if flag_L == 'REJECT':
+            return unit_name, 'REJECT', 0
+
+        # Editable Mol for LeftCap
+        LCap_m1 = Chem.MolFromSmiles(smiles_LCap_)
+        LCap_edit_m1 = Chem.EditableMol(LCap_m1)
+
+        # Remove dummy atoms
+        LCap_edit_m1.RemoveAtom(dum_L)
+
+        # Mol without dummy atom
+        LCap_m1 = LCap_edit_m1.GetMol()
+        LCap_add = LCap_m1.GetNumAtoms()
+
+        # Linking atom
+        if dum_L < atom_L:
+            LCap_atom = atom_L - 1
+        else:
+            LCap_atom = atom_L
+
+        # Join main chain with Left Cap
+        combo = Chem.CombineMols(LCap_m1, main_mol_noDum)
+        edcombo = Chem.EditableMol(combo)
+        edcombo.AddBond(
+            LCap_atom, first_atom + LCap_add, order=Chem.rdchem.BondType.SINGLE
+        )
+        main_mol_noDum = edcombo.GetMol()
+
+    # Right Cap
+    if RCap_ is True:
+        (unit_name, dum_R, atom_R, m1L, neigh_atoms_info_R, flag_R) = Init_info_Cap(
+            unit_name, smiles_RCap_, xyz_in_dir
+        )
+
+        # Reject if SMILES is not correct
+        if flag_R == 'REJECT':
+            return unit_name, 'REJECT', 0
+
+        # Editable Mol for RightCap
+        RCap_m1 = Chem.MolFromSmiles(smiles_RCap_)
+        RCap_edit_m1 = Chem.EditableMol(RCap_m1)
+
+        # Remove dummy atoms
+        RCap_edit_m1.RemoveAtom(dum_R)
+
+        # Mol without dummy atom
+        RCap_m1 = RCap_edit_m1.GetMol()
+
+        # Linking atom
+        if dum_R < atom_R:
+            RCap_atom = atom_R - 1
+        else:
+            RCap_atom = atom_R
+
+        # Join main chain with Left Cap
+        combo = Chem.CombineMols(main_mol_noDum, RCap_m1)
+        edcombo = Chem.EditableMol(combo)
+        edcombo.AddBond(
+            LCap_add + second_atom,
+            RCap_atom + main_mol_noDum.GetNumAtoms(),
+            order=Chem.rdchem.BondType.SINGLE,
+        )
+        main_mol_noDum = edcombo.GetMol()
+    return Chem.MolToSmiles(main_mol_noDum)
+
+
+def gen_oligomer_smiles(
+    unit_name,
+    dum1,
+    dum2,
+    atom1,
+    atom2,
+    input_smiles,
+    ln,
+    loop,
+    smiles_LCap_,
+    LCap_,
+    smiles_RCap_,
+    RCap_,
+    xyz_in_dir,
+):
     input_mol = Chem.MolFromSmiles(input_smiles)
     edit_m1 = Chem.EditableMol(input_mol)
 
@@ -2142,7 +2434,7 @@ def gen_oligomer_smiles(dum1, dum2, atom1, atom2, input_smiles, len, loop):
     else:
         first_atom = atom2
 
-    for i in range(1, len):
+    for i in range(1, ln):
         combo = Chem.CombineMols(inti_mol, monomer_mol)
         edcombo = Chem.EditableMol(combo)
         edcombo.AddBond(
@@ -2152,7 +2444,7 @@ def gen_oligomer_smiles(dum1, dum2, atom1, atom2, input_smiles, len, loop):
         )
         inti_mol = edcombo.GetMol()
 
-    if loop is True:
+    if loop is True and LCap_ is False and RCap_ is False:
         edcombo.AddBond(
             first_atom,
             second_atom + i * monomer_mol.GetNumAtoms(),
@@ -2160,31 +2452,84 @@ def gen_oligomer_smiles(dum1, dum2, atom1, atom2, input_smiles, len, loop):
         )
         inti_mol = edcombo.GetMol()
 
+    if LCap_ is True or RCap_ is True:
+        inti_mol = gen_smiles_with_cap(
+            unit_name,
+            0,
+            0,
+            first_atom,
+            second_atom + i * monomer_mol.GetNumAtoms(),
+            inti_mol,
+            smiles_LCap_,
+            smiles_RCap_,
+            LCap_,
+            RCap_,
+            xyz_in_dir,
+            WithDum=False,
+        )
+
+        return inti_mol
+
     return Chem.MolToSmiles(inti_mol)
 
 
-# Search a good conformer
-# INPUT: ID, mol without Hydrogen atom, row indices of dummy and connecting atoms, directory
-# OUTPUT: XYZ coordinates of the optimized molecule
-def gen_conf_xyz_vasp(unit_name, m1, out_dir, len, Nconf, Inter_Mol_Dis):
-    m2 = Chem.AddHs(m1)
-    cids = AllChem.EmbedMultipleConfs(m2, numConfs=Nconf + 5)
-    n = 0
-    for cid in cids:
-        n += 1
-        AllChem.UFFOptimizeMolecule(m2, confId=cid)
-        Chem.MolToXYZFile(
-            m2,
-            out_dir + unit_name + '_N' + str(len) + '_C' + str(n) + '.xyz',
-            confId=cid,
+def OB_smi_2_xyz_vasp(
+    unit_name, smiles, length, out_dir, Inter_Mol_Dis, NumConf=1, seed=None,
+):
+    if seed is not None:
+        rand = ob.OBRandom(True)
+        rand.Seed(seed)
+
+    obConversion.SetInFormat("smi")
+
+    mol = ob.OBMol()
+    obConversion.ReadString(mol, smiles)
+    mol.AddHydrogens()
+
+    # Reduce opt steps for large molecules
+    if mol.NumAtoms() > 50000:
+        OptStepCG1 = 100
+        OptStepCG2 = 1000
+        OptStepConf = 25
+        NumberConf = 1
+        WeightedSearch = False
+
+    else:
+        OptStepCG1 = 250
+        OptStepCG2 = 250
+        OptStepConf = 25
+        NumberConf = 20  # 100
+        WeightedSearch = True
+
+    builder = ob.OBBuilder()
+    builder.Build(mol)
+    ff = ob.OBForceField.FindForceField("uff")
+    ff.Setup(mol)
+    ff.ConjugateGradients(OptStepCG1)
+
+    for i in reversed(range(NumConf)):
+        # 1. The number of random conformers to consider during the search.
+        # 2. The number of steps to take during geometry optimization for each conformer.
+        if WeightedSearch is True:
+            ff.WeightedRotorSearch(
+                NumberConf, OptStepConf)
+        else:
+            ff.RandomRotorSearch(NumberConf, OptStepConf)
+        ff.ConjugateGradients(OptStepCG2)
+        ff.UpdateCoordinates(mol)
+
+        obConversion.SetOutFormat("xyz")
+        obConversion.WriteFile(
+            mol, out_dir + unit_name + '_N' + str(length) + '_C' + str(i + 1) + '.xyz'
         )
-        Chem.MolToMolFile(
-            m2,
-            out_dir + unit_name + '_N' + str(len) + '_C' + str(n) + '.mol',
-            confId=cid,
+
+        obConversion.SetOutFormat("pdb")
+        obConversion.WriteFile(
+            mol, out_dir + unit_name + '_N' + str(length) + '_C' + str(i + 1) + '.pdb'
         )
+
         unit = pd.read_csv(
-            out_dir + unit_name + '_N' + str(len) + '_C' + str(n) + '.xyz',
+            out_dir + unit_name + '_N' + str(length) + '_C' + str(i + 1) + '.xyz',
             header=None,
             skiprows=2,
             delim_whitespace=True,
@@ -2195,7 +2540,43 @@ def gen_conf_xyz_vasp(unit_name, m1, out_dir, len, Nconf, Inter_Mol_Dis):
             0,
             0,
             Inter_Mol_Dis,
-            out_dir + unit_name + '_N' + str(len) + '_C' + str(n) + '.vasp',
+            out_dir + unit_name + '_N' + str(length) + '_C' + str(i + 1) + '.vasp',
+        )
+
+
+# Search a good conformer
+# INPUT: ID, mol without Hydrogen atom, row indices of dummy and connecting atoms, directory
+# OUTPUT: XYZ coordinates of the optimized molecule
+def gen_conf_xyz_vasp(unit_name, m1, out_dir, ln, Nconf, Inter_Mol_Dis):
+    m2 = Chem.AddHs(m1)
+    cids = AllChem.EmbedMultipleConfs(m2, numConfs=Nconf + 5)
+    n = 0
+    for cid in cids:
+        n += 1
+        AllChem.UFFOptimizeMolecule(m2, confId=cid)
+        Chem.MolToXYZFile(
+            m2,
+            out_dir + unit_name + '_N' + str(ln) + '_C' + str(n) + '.xyz',
+            confId=cid,
+        )
+        Chem.MolToPDBFile(
+            m2,
+            out_dir + unit_name + '_N' + str(ln) + '_C' + str(n) + '.pdb',
+            confId=cid,
+        )
+        unit = pd.read_csv(
+            out_dir + unit_name + '_N' + str(ln) + '_C' + str(n) + '.xyz',
+            header=None,
+            skiprows=2,
+            delim_whitespace=True,
+        )
+        gen_molecule_vasp(
+            unit_name,
+            unit,
+            0,
+            0,
+            Inter_Mol_Dis,
+            out_dir + unit_name + '_N' + str(ln) + '_C' + str(n) + '.vasp',
         )
         if n == Nconf:
             break
@@ -2248,3 +2629,78 @@ def gen_molecule_vasp(unit_name, unit, atom1, atom2, Inter_Mol_Dis, outVASP):
 
     file.write(unit[[1, 2, 3]].to_string(header=False, index=False))
     file.close()
+
+
+def opt_mol_ob(
+    path_in,
+    format_in="xyz",
+    format_out="xyz",
+    OptStep=10000,
+    forcefield="uff",
+    OutFile=False,
+    path_out='',
+):
+    obConversion.SetInFormat(format_in)
+    mol = ob.OBMol()
+    obConversion.ReadFile(mol, path_in)
+
+    ff = ob.OBForceField.FindForceField(forcefield)
+    ff.Setup(mol)
+    ff.ConjugateGradients(OptStep)
+    ff.UpdateCoordinates(mol)
+
+    if OutFile is True:
+        obConversion.SetOutFormat(format_out)
+        obConversion.WriteFile(mol, path_out)
+    return mol, ff.Energy()
+
+
+def screen_Candidates(
+    dir_path_in,
+    format_in="POSCAR",
+    format_out="POSCAR",
+    OptStep=10000,
+    forcefield="uff",
+    NumCandidate=50,
+    NCores_opt=1,
+):
+    # Ouput directory
+    list_dir = dir_path_in.split('/')
+    dir_path_out = '/'.join(list_dir[:-1]) + '/' + list_dir[-1] + '_sort'
+    build_dir(dir_path_out)
+
+    # List of POSCAR files in the input directory
+    vasp_input_list = glob.glob(dir_path_in + "/" + "*.vasp")
+
+    if len(vasp_input_list) == 0:
+        return None
+
+    # Optimize all crystal models
+    list_cryst = []
+    for path_each in vasp_input_list:
+        mol, energy = opt_mol_ob(
+            path_each, format_in, format_out, OptStep, forcefield, OutFile=False
+        )
+        list_cryst.append([mol, energy])
+
+    # result = Parallel(n_jobs=NCores_opt)(delayed(opt_mol_ob)(path_each, format_in,
+    # format_out, OptStep, forcefield, OutFile=False) for path_each in vasp_input_list)
+    # print(result)
+    # list_cryst = []
+    # for i in result:
+    #    list_cryst.append([i[0], i[1]])
+
+    # Create a pandas DataFrame, sort, and then select
+    list_cryst = pd.DataFrame(list_cryst, columns=['OBmol', 'ener'])
+    list_cryst = list_cryst.sort_values(by='ener', ascending=True).head(NumCandidate)
+
+    digits = len_digit_number(NumCandidate)
+    # Generate poscar files for optimized crystal models
+    obConversion.SetOutFormat(format_out)
+    count = 1
+    for index, row in list_cryst.iterrows():
+        obConversion.WriteFile(
+            row['OBmol'],
+            dir_path_out + '/' + 'cryst_out-' + str(count).zfill(digits) + '.vasp',
+        )
+        count += 1

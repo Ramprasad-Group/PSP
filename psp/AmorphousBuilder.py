@@ -2,8 +2,9 @@ import numpy as np
 import pandas as pd
 import psp.MD_lib as MDlib
 import time
-import os
+# import os
 import psp.PSP_lib as bd
+from openbabel import openbabel as ob
 
 # from scipy.optimize import minimize
 from optimparallel import minimize_parallel
@@ -19,6 +20,8 @@ class Builder:
         NumMole="Num",
         Length="Len",
         NumConf="NumConf",
+        LeftCap="LeftCap",
+        RightCap="RightCap",
         Loop="Loop",
         OutFile="amor_model",
         OutDir="amorphous_models",
@@ -28,6 +31,7 @@ class Builder:
         box_type="c",
         box_size=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
         incr_per=0.4,
+        BondInfo=True,
     ):
         self.Dataframe = Dataframe
         self.ID_col = ID_col
@@ -35,6 +39,8 @@ class Builder:
         self.NumMole = NumMole
         self.Length = Length
         self.NumConf = NumConf
+        self.LeftCap = (LeftCap,)
+        self.RightCap = (RightCap,)
         self.Loop = Loop
         self.OutFile = OutFile
         self.OutDir = OutDir
@@ -44,6 +50,7 @@ class Builder:
         self.box_type = box_type
         self.box_size = box_size
         self.incr_per = incr_per
+        self.BondInfo = BondInfo
 
     def Build(self):
         # location of directory for VASP inputs (polymers) and build a directory
@@ -55,7 +62,8 @@ class Builder:
         bd.build_dir(OutDir_packmol)
 
         # PACKMOL
-        packmol_path = os.getenv("PACKMOL_EXEC")
+        # packmol_path = os.getenv("PACKMOL_EXEC")
+        packmol_path = '/home/hari/.soft/packmol/packmol'
 
         xyz_gen_pd = pd.DataFrame()
         for i in self.Dataframe.index:
@@ -65,12 +73,14 @@ class Builder:
                 df,
                 ID_col=self.ID_col,
                 SMILES_col=self.SMILES_col,
+                LeftCap=self.LeftCap[0],
+                RightCap=self.RightCap[0],
                 OutDir=OutDir_xyz,
                 Length=[int(df[self.Length].values)],
                 NumConf=int(df[self.NumConf].values),
-                loop=eval(str(df[self.Loop].values[0])),
+                Loop=eval(str(df[self.Loop].values[0])),
             )
-            results = mol.Build3D()
+            results = mol.Build()
             xyz_gen_pd = pd.concat([xyz_gen_pd, results])
 
         if len(list(set(xyz_gen_pd["Result"].values))) != 1:
@@ -78,7 +88,6 @@ class Builder:
             print(
                 "Couldn't generate XYZ coordinates of molecules, check 'molecules.csv'"
             )
-            exit()
 
         XYZ_list, smi_list, NMol_list = [], [], []
         for index, row in self.Dataframe.iterrows():
@@ -88,35 +97,8 @@ class Builder:
             ]
 
             # Get SMILES string for oligomers
-            # Get row number for dummy and linking atoms
-            if row[self.Length] > 1:
-                (
-                    unit_name,
-                    dum1,
-                    dum2,
-                    atom1,
-                    atom2,
-                    m1,
-                    neigh_atoms_info,
-                    oligo_list,
-                    dum,
-                    unit_dis,
-                    flag,
-                ) = bd.Init_info(
-                    row[self.ID_col], row[self.SMILES_col], OutDir_xyz, self.Length
-                )
-                smiles_each = bd.gen_oligomer_smiles(
-                    dum1,
-                    dum2,
-                    atom1,
-                    atom2,
-                    row[self.SMILES_col],
-                    row[self.Length],
-                    eval(str(row[self.Loop])),
-                )
-            else:
-                smiles_each = row[self.SMILES_col]
-            smi_list += [smiles_each] * row[self.NumConf]
+            smiles_each = xyz_gen_pd[xyz_gen_pd['ID'] == row['ID']]['SMILES'].values[0]
+            smi_list += smiles_each * row[self.NumConf]
 
             # Get a list of filenames for XYZ coordinates
             for conf in range(1, row[self.NumConf] + 1):
@@ -127,7 +109,7 @@ class Builder:
                     + str(row[self.Length])
                     + "_C"
                     + str(conf)
-                    + ".xyz"
+                    + ".pdb"
                 )
 
         # Define boundary conditions
@@ -174,12 +156,21 @@ class Builder:
         if errout is not None:
             print(" Error in packmol calculation")
             exit()
-        packmol_xyz = pd.read_csv(
-            OutDir_packmol + "packmol.xyz",
-            header=None,
-            skiprows=2,
-            delim_whitespace=True,
-        )
+
+        mol = ob.OBMol()
+        obConversion = ob.OBConversion()
+        obConversion.SetInAndOutFormats("pdb", "mol2")
+        obConversion.ReadFile(mol, OutDir_packmol + "packmol.pdb")
+        obConversion.WriteFile(mol, OutDir_packmol + "packmol.mol2")
+
+        packmol_xyz = MDlib.read_mol2_xyz(OutDir_packmol + "packmol.mol2")
+        packmol_bond = MDlib.read_mol2_bond(OutDir_packmol + "packmol.mol2")
+        # packmol_xyz = pd.read_csv(
+        #    OutDir_packmol + "packmol.xyz",
+        #    header=None,
+        #    skiprows=2,
+        #    delim_whitespace=True,
+        # )
 
         MDlib.gen_sys_vasp(
             self.OutDir + "/" + self.OutFile + ".vasp",
@@ -194,12 +185,14 @@ class Builder:
         MDlib.gen_sys_data(
             self.OutDir + "/" + self.OutFile + ".data",
             packmol_xyz,
+            packmol_bond,
             xmin,
             xmax,
             ymin,
             ymax,
             zmin,
             zmax,
+            self.BondInfo,
         )
 
     def Build_psp(self):
@@ -220,7 +213,7 @@ class Builder:
                 OutDir=OutDir_xyz,
                 Length=[int(df[self.Length].values)],
                 NumConf=int(df[self.NumConf].values),
-                loop=eval(str(df[self.Loop].values[0])),
+                Loop=eval(str(df[self.Loop].values[0])),
             )
             results = mol.Build3D()
             xyz_gen_pd = pd.concat([xyz_gen_pd, results])

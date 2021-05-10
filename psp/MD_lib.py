@@ -5,6 +5,9 @@ from rdkit.Chem import Descriptors
 from scipy.spatial.distance import cdist
 from random import shuffle
 import subprocess
+# import mmap
+# import os
+from itertools import takewhile, islice, dropwhile
 
 
 def barycenter(unit):
@@ -406,8 +409,8 @@ def gen_packmol_inp(
         f.write(
             "tolerance " + str(tolerance) + "\n"
         )  # Minimum distance between any two molecule
-        f.write("output " + OutDir_packmol + "packmol.xyz\n")
-        f.write("filetype xyz\n\n")
+        f.write("output " + OutDir_packmol + "packmol.pdb\n")
+        f.write("filetype pdb\n\n")
         for mol in range(len(NMol_list)):
             f.write("structure " + XYZ_list[mol] + "\n")
             f.write("  number " + str(NMol_list[mol]) + "\n")
@@ -496,15 +499,19 @@ def gen_sys_vasp(filename, unit, xmin, xmax, ymin, ymax, zmin, zmax):
 
 
 def gen_sys_data(
-    filename, unit, xmin, xmax, ymin, ymax, zmin, zmax
+    filename, unit, packmol_bond, xmin, xmax, ymin, ymax, zmin, zmax, BondInfo
 ):  # lammps data file
     unit = unit.sort_values(by=[0])
+    new_atom_num = list(unit.index)
+
     unit_ele = unit.drop_duplicates(subset=0, keep="first").copy()
 
     # add_dis = 0.4 # This additional distance (in Ang) is added to avoid interaction near boundary
     file = open(filename, 'w+')
     file.write('### ' + '# LAMMPS data file written by PSP' + ' ###\n')
     file.write(str(unit.shape[0]) + ' atoms\n')
+    if BondInfo is True:
+        file.write(str(packmol_bond.shape[0]) + ' bonds\n')
     file.write(str(len(list(unit_ele[0].values))) + ' atom types\n')
     file.write(str(xmin) + ' ' + str(xmax) + ' xlo xhi\n')
     file.write(str(ymin) + ' ' + str(ymax) + ' ylo yhi\n')
@@ -516,7 +523,9 @@ def gen_sys_data(
     count = 1
     for index, row in unit_ele.iterrows():
         ele_list.append(row[0])
-        ele_mass.append(Chem.GetPeriodicTable().GetAtomicWeight(row[0]))
+        ele_mass.append(
+            Chem.GetPeriodicTable().GetAtomicWeight(row[0])
+        )  # Check error: Element not found
         ele_type.append(count)
         count += 1
 
@@ -539,6 +548,30 @@ def gen_sys_data(
     file.write(
         unit[['SN', 'ele_type', 'charge', 1, 2, 3]].to_string(header=False, index=False)
     )
+
+    if BondInfo is True:
+        file.write('\n\nBonds\n\n')
+
+        packmol_bond_reorder = []
+        for index, row in packmol_bond.iterrows():
+            packmol_bond_reorder.append(
+                [new_atom_num[int(row[2]) - 1], new_atom_num[int(row[3]) - 1]]
+            )
+
+        packmol_bond_reorder = pd.DataFrame(
+            packmol_bond_reorder, columns=['atm1', 'atm2']
+        )
+        packmol_bond_reorder['atm1'] += 1
+        packmol_bond_reorder['atm2'] += 1
+        packmol_bond_reorder['BO'] = packmol_bond[1]
+        packmol_bond_reorder = packmol_bond_reorder.sort_values(by=['atm1'])
+        packmol_bond_reorder['sl'] = packmol_bond[0].values
+
+        file.write(
+            packmol_bond_reorder[['sl', 'BO', 'atm1', 'atm2']].to_string(
+                header=False, index=False
+            )
+        )
     file.close()
 
 
@@ -554,3 +587,24 @@ def main_func(x, *args):
     return evaluate_obj(
         sys, args[1], args[2], args[3], args[4], args[5], args[6], args[7]
     )
+
+
+def read_mol2_bond(mol2_file):
+    list_bonds = []
+    with open(mol2_file, 'r') as f:
+        dropped = dropwhile(lambda _line: "@<TRIPOS>BOND" not in _line, f)
+        next(dropped, '')
+        for line in dropped:
+            list_bonds.append([line.split()[0]] + [line.split()[3]] + line.split()[1:3])
+    return pd.DataFrame(list_bonds)
+
+
+def read_mol2_xyz(mol2_file):
+    list_xyz = []
+    with open(mol2_file) as f:
+        for ln in takewhile(
+            lambda x: "@<TRIPOS>BOND" not in x,
+            islice(dropwhile(lambda x: "@<TRIPOS>ATOM" not in x, f), 1, None),
+        ):
+            list_xyz.append([ln.split()[5].split(".")[0]] + ln.split()[2:5])
+    return pd.DataFrame(list_xyz)

@@ -1,18 +1,21 @@
 import pandas as pd
 import psp.MoleculeBuilder as mb
 
-df_smiles = pd.read_csv("molecule.csv", low_memory=False)
+df_smiles = pd.read_csv("molecule1.csv", low_memory=False)
 mol = mb.Builder(
     df_smiles,
     ID_col="ID",
     SMILES_col="smiles",
-    OutDir='molecules',
+    LeftCap = "LeftCap",
+    RightCap ='RightCap',
+    OutDir='test_models',
     Inter_Mol_Dis=6,
-    Length=[5,10,15],
-    NumConf=4,
-    loop=True,
+    Length=[50],#16
+    NumConf=1,
+    Loop=True,
+    NCores=1
 )
-results = mol.Build3D()
+results = mol.Build()
 print(results)
 exit()
 # MM or MD

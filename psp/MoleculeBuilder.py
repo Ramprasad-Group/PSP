@@ -15,24 +15,28 @@ class Builder:
         NCores=0,
         ID_col='ID',
         SMILES_col='smiles',
+        LeftCap='LeftCap',
+        RightCap='RightCap',
         OutDir='molecules',
         Inter_Mol_Dis=6,
         Length=[1],
         NumConf=1,
-        loop=False,
+        Loop=False,
     ):
         self.ID_col = ID_col
         self.SMILES_col = SMILES_col
+        self.LeftCap = LeftCap
+        self.RightCap = RightCap
         self.OutDir = OutDir
         self.Dataframe = Dataframe
         self.NCores = NCores
         self.Inter_Mol_Dis = Inter_Mol_Dis
         self.Length = Length
         self.NumConf = NumConf
-        self.loop = loop
+        self.Loop = Loop
 
     # list of molecules name and CORRECT/WRONG
-    def Build3D(self):
+    def Build(self):
 
         # location of directory for VASP inputs (polymers) and build a directory
         out_dir = self.OutDir + '/'
@@ -49,10 +53,10 @@ class Builder:
         start_1 = time.time()
         list_out_xyz = 'output_MB.csv'
         chk_tri = []
-        ID = self.ID_col
-        SMILES = self.SMILES_col
+        # ID =
+        # SMILES = self.SMILES_col
         df = self.Dataframe.copy()
-        df[ID] = df[ID].apply(str)
+        df[self.ID_col] = df[self.ID_col].apply(str)
 
         if self.NCores == 0:
             self.NCores = multiprocessing.cpu_count() - 1
@@ -61,19 +65,23 @@ class Builder:
             delayed(bd.build_3D)(
                 unit_name,
                 df,
-                ID,
-                SMILES,
+                self.ID_col,
+                self.SMILES_col,
+                self.LeftCap,
+                self.RightCap,
                 out_dir,
                 self.Inter_Mol_Dis,
                 self.Length,
                 xyz_in_dir,
                 self.NumConf,
-                self.loop,
+                self.Loop,
             )
-            for unit_name in df[ID].values
+            for unit_name in df[self.ID_col].values
         )
+        # print(result)
+        # exit()
         for i in result:
-            chk_tri.append([i[0], i[1]])
+            chk_tri.append([i[0], i[1], i[2]])
 
         end_1 = time.time()
         print("")
@@ -84,7 +92,7 @@ class Builder:
             ' minutes',
         )
 
-        chk_tri = pd.DataFrame(chk_tri, columns=['ID', 'Result'])
+        chk_tri = pd.DataFrame(chk_tri, columns=['ID', 'Result', 'SMILES'])
         chk_tri.to_csv(list_out_xyz)
 
         # Delete work directory

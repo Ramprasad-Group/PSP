@@ -18,7 +18,7 @@ class Builder:
         NumConf=1,
         Ndimer=10,
         ABdis=2.0,
-        loop=False,
+        Loop=False,
         OutFile='AB',
         OutDir='dimer_models',
         OutDir_xyz='molecules',
@@ -30,7 +30,7 @@ class Builder:
         self.NumConf = NumConf
         self.Ndimer = Ndimer
         self.ABdis = ABdis
-        self.loop = loop
+        self.Loop = Loop
         self.OutFile = OutFile
         self.OutDir = OutDir
         self.OutDir_xyz = OutDir_xyz
@@ -52,9 +52,9 @@ class Builder:
                 OutDir=OutDir_xyz,
                 Length=self.Length,
                 NumConf=1,
-                loop=self.loop,
+                Loop=self.Loop,
             )
-            results = mol.Build3D()
+            results = mol.Build()
             xyz_gen_pd = pd.concat([xyz_gen_pd, results])
 
         if len(list(set(xyz_gen_pd['Result'].values))) != 1:
