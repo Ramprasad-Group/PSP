@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import psp.MD_lib as MDlib
 import time
-from os import path
+import os
 import psp.PSP_lib as bd
 from openbabel import openbabel as ob
 
@@ -62,8 +62,8 @@ class Builder:
         bd.build_dir(OutDir_packmol)
 
         # PACKMOL
-        # packmol_path = os.getenv("PACKMOL_EXEC")
-        packmol_path = '/home/hari/.soft/packmol/packmol'
+        packmol_path = os.getenv("PACKMOL_EXEC")
+        #packmol_path = '/home/hari/.soft/packmol/packmol'
 
         xyz_gen_pd = pd.DataFrame()
         for i in self.Dataframe.index:
@@ -157,7 +157,7 @@ class Builder:
         if errout is not None:
             print(" Error in packmol calculation")
             exit()
-        elif path.exists(OutDir_packmol + "packmol.pdb") is False:
+        elif os.path.exists(OutDir_packmol + "packmol.pdb") is False:
             print(" Error in packmol calculation")
             exit()
 
