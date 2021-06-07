@@ -63,7 +63,7 @@ class Builder:
 
         # PACKMOL
         packmol_path = os.getenv("PACKMOL_EXEC")
-        #packmol_path = '/home/hari/.soft/packmol/packmol'
+        # packmol_path = '/home/hari/.soft/packmol/packmol'
 
         xyz_gen_pd = pd.DataFrame()
         for i in self.Dataframe.index:
