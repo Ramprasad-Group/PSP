@@ -1,7 +1,7 @@
 import pandas as pd
 import psp.MoleculeBuilder as mb
 
-df_smiles = pd.read_csv("molecule1.csv", low_memory=False)
+df_smiles = pd.read_csv("molecule.csv", low_memory=False)
 mol = mb.Builder(
     df_smiles,
     ID_col="ID",
@@ -10,10 +10,10 @@ mol = mb.Builder(
     RightCap ='RightCap',
     OutDir='test_models',
     Inter_Mol_Dis=6,
-    Length=[50],#16
+    Length=[4],#16
     NumConf=1,
     Loop=True,
-    NCores=1
+    NCores=0
 )
 results = mol.Build()
 print(results)

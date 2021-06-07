@@ -1,12 +1,12 @@
 import pandas as pd
 import psp.AmorphousBuilder as ab
 
-input_df = pd.read_csv("input_PE.csv", low_memory=False)
+input_df = pd.read_csv("nafion.csv", low_memory=False)
 amor = ab.Builder(
     input_df,
     ID_col="ID",
     SMILES_col="smiles",
-    OutDir='amorphous_models',
+    #OutDir='PE_tests',
     Length='Len',
     NumConf='NumConf',
     LeftCap = "LeftCap",

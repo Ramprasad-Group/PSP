@@ -61,6 +61,11 @@ class Builder:
         if self.NCores == 0:
             self.NCores = multiprocessing.cpu_count() - 1
 
+        if self.NCores == -1:
+            NCores_opt = 0
+        else:
+            NCores_opt = 1
+
         result = Parallel(n_jobs=self.NCores)(
             delayed(bd.build_3D)(
                 unit_name,
@@ -75,6 +80,7 @@ class Builder:
                 xyz_in_dir,
                 self.NumConf,
                 self.Loop,
+                NCores_opt,
             )
             for unit_name in df[self.ID_col].values
         )

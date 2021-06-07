@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import psp.MD_lib as MDlib
 import time
-# import os
+from os import path
 import psp.PSP_lib as bd
 from openbabel import openbabel as ob
 
@@ -79,6 +79,7 @@ class Builder:
                 Length=[int(df[self.Length].values)],
                 NumConf=int(df[self.NumConf].values),
                 Loop=eval(str(df[self.Loop].values[0])),
+                NCores=-1,
             )
             results = mol.Build()
             xyz_gen_pd = pd.concat([xyz_gen_pd, results])
@@ -154,6 +155,9 @@ class Builder:
         errout = MDlib.run_packmol(command, OutDir_packmol + "packmol.out")
 
         if errout is not None:
+            print(" Error in packmol calculation")
+            exit()
+        elif path.exists(OutDir_packmol + "packmol.pdb") is False:
             print(" Error in packmol calculation")
             exit()
 

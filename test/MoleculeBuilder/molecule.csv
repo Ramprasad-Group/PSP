@@ -1,3 +1,2 @@
-ID,smiles
-PVC,C(C([*])Cl)[*]
-cc,[*]CC[*]
+ID,smiles,LeftCap,RightCap
+Nafion,[*]C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(OC(F)(F)C(F)(OC(F)(F)C(F)(F)S(=O)(=O)O)C(F)(F)F)C([*])(F)F,C(Cl)(Cl)(Cl)[*],C(Cl)(Cl)(Cl)[*]

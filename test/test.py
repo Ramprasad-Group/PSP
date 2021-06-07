@@ -5,9 +5,7 @@ import os
 import psp.ChainBuilder as ChB
 import psp.CrystalBuilder as CrB
 
-
 TEST_DIR = os.path.abspath(os.path.dirname(__file__))
-
 
 class PspGeneralTest(unittest.TestCase):
     def test_crystal_build(self):

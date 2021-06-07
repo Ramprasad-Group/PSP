@@ -19,7 +19,7 @@ class Builder:
         Ndimer=10,
         ABdis=2.0,
         Loop=False,
-        OutFile='AB',
+        OutFile='',
         OutDir='dimer_models',
         OutDir_xyz='molecules',
     ):

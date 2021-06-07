@@ -5,6 +5,7 @@ from rdkit.Chem import Descriptors
 from scipy.spatial.distance import cdist
 from random import shuffle
 import subprocess
+
 # import mmap
 # import os
 from itertools import takewhile, islice, dropwhile

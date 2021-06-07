@@ -3,15 +3,18 @@ import pandas as pd
 import psp.simulated_annealing as an
 import math
 import os
+
 # import copy
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from openbabel import openbabel as ob
 from rdkit import RDLogger
 from scipy.spatial.distance import cdist
+
 # from openbabel import pybel as pb
 # from pymatgen.io import babel
 import glob
+
 # import multiprocessing
 # from joblib import Parallel, delayed
 
@@ -457,6 +460,7 @@ def connec_info(unit_name):
 # INPUT: Name of a output file and a DataFrame of element names and respective XYZ-coordinates
 # OUTPUT: Write a XYZ file
 def gen_xyz(filename, unit):
+    unit.iloc[:, 1:4] = unit.iloc[:, 1:4].round(6)
     with open(filename, 'w') as f:
         f.write(str(unit.values.shape[0]))  # NUMBER OF ATOMS
         f.write("\n\n")  # TWO SPACES
@@ -2086,6 +2090,7 @@ def build_3D(
     xyz_in_dir,
     NumConf,
     loop,
+    NCores_opt,
 ):
     LCap_ = False
     if LeftCap in df_smiles.columns:
@@ -2198,10 +2203,18 @@ def build_3D(
 
         Final_SMILES.append(smiles_each_ind)
         # OB_smi_2_xyz_vasp(unit_name, smiles_each_ind, l, out_dir, Inter_Mol_Dis, NumConf=NumConf, seed=None)
-        gen_conf_xyz_vasp(unit_name, m1, out_dir, ln, NumConf, Inter_Mol_Dis)
+        NumC = gen_conf_xyz_vasp(
+            unit_name, m1, out_dir, ln, NumConf, Inter_Mol_Dis, NCores_opt
+        )
+
+        if NumC == 0:
+            return unit_name, 'FAILURE', Final_SMILES
+        else:
+            return unit_name, 'SUCCESS', Final_SMILES
+
         # end_1 = time.time()
         # print(l, end_1 - start_1)
-    return unit_name, 'SUCCESS', Final_SMILES
+    # return unit_name, 'SUCCESS', Final_SMILES
 
 
 def Init_info_Cap(unit_name, smiles_each_ori, xyz_in_dir):
@@ -2511,8 +2524,7 @@ def OB_smi_2_xyz_vasp(
         # 1. The number of random conformers to consider during the search.
         # 2. The number of steps to take during geometry optimization for each conformer.
         if WeightedSearch is True:
-            ff.WeightedRotorSearch(
-                NumberConf, OptStepConf)
+            ff.WeightedRotorSearch(NumberConf, OptStepConf)
         else:
             ff.RandomRotorSearch(NumberConf, OptStepConf)
         ff.ConjugateGradients(OptStepCG2)
@@ -2547,9 +2559,23 @@ def OB_smi_2_xyz_vasp(
 # Search a good conformer
 # INPUT: ID, mol without Hydrogen atom, row indices of dummy and connecting atoms, directory
 # OUTPUT: XYZ coordinates of the optimized molecule
-def gen_conf_xyz_vasp(unit_name, m1, out_dir, ln, Nconf, Inter_Mol_Dis):
+def gen_conf_xyz_vasp(unit_name, m1, out_dir, ln, Nconf, Inter_Mol_Dis, NCores_opt):
     m2 = Chem.AddHs(m1)
-    cids = AllChem.EmbedMultipleConfs(m2, numConfs=Nconf + 5)
+    NAttempt = 10000
+    if NCores_opt != 1:
+        NAttempt = 1000000
+
+    for i in range(10):
+        cids = AllChem.EmbedMultipleConfs(
+            m2,
+            numConfs=Nconf + 10,
+            numThreads=NCores_opt,
+            randomSeed=i,
+            maxAttempts=NAttempt,
+        )
+
+        if len(cids) > 0:
+            break
     n = 0
     for cid in cids:
         n += 1
@@ -2580,6 +2606,8 @@ def gen_conf_xyz_vasp(unit_name, m1, out_dir, ln, Nconf, Inter_Mol_Dis):
         )
         if n == Nconf:
             break
+
+    return len(cids)
 
 
 # This function generates a VASP input (polymer) file
