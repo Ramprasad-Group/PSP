@@ -2561,7 +2561,9 @@ def OB_smi_2_xyz_vasp(
 # Search a good conformer
 # INPUT: ID, mol without Hydrogen atom, row indices of dummy and connecting atoms, directory
 # OUTPUT: XYZ coordinates of the optimized molecule
-def gen_conf_xyz_vasp(unit_name, m1, out_dir, ln, Nconf, Inter_Mol_Dis, IrrStruc, NCores_opt):
+def gen_conf_xyz_vasp(
+    unit_name, m1, out_dir, ln, Nconf, Inter_Mol_Dis, IrrStruc, NCores_opt
+):
     m2 = Chem.AddHs(m1)
     NAttempt = 10000
     if NCores_opt != 1:
@@ -2582,7 +2584,7 @@ def gen_conf_xyz_vasp(unit_name, m1, out_dir, ln, Nconf, Inter_Mol_Dis, IrrStruc
     for cid in cids:
         n += 1
         AllChem.UFFOptimizeMolecule(m2, confId=cid)
-        #AllChem.MMFFOptimizeMolecule(m2, confId=cid)
+        # AllChem.MMFFOptimizeMolecule(m2, confId=cid)
 
         Chem.MolToPDBFile(
             m2,
@@ -2597,7 +2599,9 @@ def gen_conf_xyz_vasp(unit_name, m1, out_dir, ln, Nconf, Inter_Mol_Dis, IrrStruc
                 confId=cid,
             )
         else:
-            disorder_struc(unit_name + '_N' + str(ln) + '_C' + str(n), out_dir, NCores_opt)
+            disorder_struc(
+                unit_name + '_N' + str(ln) + '_C' + str(n), out_dir, NCores_opt
+            )
 
         unit = pd.read_csv(
             out_dir + unit_name + '_N' + str(ln) + '_C' + str(n) + '.xyz',
@@ -2667,21 +2671,23 @@ def gen_molecule_vasp(unit_name, unit, atom1, atom2, Inter_Mol_Dis, outVASP):
     file.write(unit[[1, 2, 3]].to_string(header=False, index=False))
     file.close()
 
+
 def disorder_struc(filename, dir_path, NCores_opt):
     # pdb to cml
     obConversion.SetInAndOutFormats("pdb", "cml")
     obConversion.ReadFile(mol, os.path.join(dir_path, filename + '.pdb'))
     obConversion.WriteFile(mol, os.path.join(dir_path, filename + '.cml'))
 
-    #MD simulation followed by opt
+    # MD simulation followed by opt
     scml = system.read_cml(os.path.join(dir_path, filename + '.cml'))
     scml.apply_forcefield(forcefield.Gaff2())
     lmps.quick_md(scml, np=NCores_opt, ensemble='nvt', timestep=0.5, run=15000)
-    lmps.quick_min(scml, np=NCores_opt, etol = 1.0e-5, ftol = 1.0e-5)
+    lmps.quick_min(scml, np=NCores_opt, etol=1.0e-5, ftol=1.0e-5)
 
-    #Write files
+    # Write files
     scml.write_xyz(os.path.join(dir_path, filename + '.xyz'))
     scml.write_pdb(os.path.join(dir_path, filename + '.pdb'))
+
 
 def opt_mol_ob(
     path_in,
