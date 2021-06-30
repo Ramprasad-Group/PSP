@@ -22,6 +22,7 @@ class Builder:
         Length=[1],
         NumConf=1,
         Loop=False,
+        IrrStruc=False,
     ):
         self.ID_col = ID_col
         self.SMILES_col = SMILES_col
@@ -34,6 +35,7 @@ class Builder:
         self.Length = Length
         self.NumConf = NumConf
         self.Loop = Loop
+        self.IrrStruc = IrrStruc
 
     # list of molecules name and CORRECT/WRONG
     def Build(self):
@@ -61,8 +63,9 @@ class Builder:
         if self.NCores == 0:
             self.NCores = multiprocessing.cpu_count() - 1
 
-        if self.NCores == -1:
+        if self.NCores == -1 or self.IrrStruc is True:
             NCores_opt = 0
+            self.NCores = 1
         else:
             NCores_opt = 1
 
@@ -80,6 +83,7 @@ class Builder:
                 xyz_in_dir,
                 self.NumConf,
                 self.Loop,
+                self.IrrStruc,
                 NCores_opt,
             )
             for unit_name in df[self.ID_col].values
