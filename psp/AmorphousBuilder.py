@@ -1,10 +1,11 @@
 import numpy as np
 import pandas as pd
-import psp.MD_lib as MDlib
+import MD_lib as MDlib
 import time
 import os
-import psp.PSP_lib as bd
+import PSP_lib as bd
 from openbabel import openbabel as ob
+from subprocess import call
 
 # from scipy.optimize import minimize
 from optimparallel import minimize_parallel
@@ -43,23 +44,21 @@ class Builder:
         self.RightCap = (RightCap,)
         self.Loop = Loop
         self.OutFile = OutFile
-        self.OutDir = OutDir
-        self.OutDir_xyz = OutDir_xyz
+        self.OutDir = OutDir + "/"
+        self.OutDir_xyz = OutDir + "/" + OutDir_xyz + "/"
+        self.OutDir_packmol = OutDir + "/" + "packmol" + "/"
+        self.OutDir_ligpargen = OutDir + "/" + "ligpargen" + "/"
         self.density = density
         self.tol_dis = tol_dis
         self.box_type = box_type
         self.box_size = box_size
         self.incr_per = incr_per
         self.BondInfo = BondInfo
-
     def Build(self):
         # location of directory for VASP inputs (polymers) and build a directory
-        out_dir = self.OutDir + "/"
-        bd.build_dir(out_dir)
-        OutDir_xyz = out_dir + self.OutDir_xyz + "/"
-        bd.build_dir(OutDir_xyz)
-        OutDir_packmol = out_dir + "packmol" + "/"
-        bd.build_dir(OutDir_packmol)
+        bd.build_dir(self.OutDir)
+        bd.build_dir(self.OutDir_xyz)
+        bd.build_dir(self.OutDir_packmol)
 
         # PACKMOL
         packmol_path = os.getenv("PACKMOL_EXEC")
@@ -75,7 +74,7 @@ class Builder:
                 SMILES_col=self.SMILES_col,
                 LeftCap=self.LeftCap[0],
                 RightCap=self.RightCap[0],
-                OutDir=OutDir_xyz,
+                OutDir=self.OutDir_xyz,
                 Length=[int(df[self.Length].values)],
                 NumConf=int(df[self.NumConf].values),
                 Loop=eval(str(df[self.Loop].values[0])),
@@ -104,7 +103,7 @@ class Builder:
             # Get a list of filenames for XYZ coordinates
             for conf in range(1, row[self.NumConf] + 1):
                 XYZ_list.append(
-                    OutDir_xyz
+                    self.OutDir_xyz
                     + str(row[self.ID_col])
                     + "_N"
                     + str(row[self.Length])
@@ -138,7 +137,7 @@ class Builder:
 
         # PACKMOL input file
         MDlib.gen_packmol_inp(
-            OutDir_packmol,
+            self.OutDir_packmol,
             self.tol_dis,
             XYZ_list,
             NMol_list,
@@ -151,33 +150,33 @@ class Builder:
         )
 
         # PACKMOL calculation
-        command = packmol_path + " < " + OutDir_packmol + "packmol.inp"
-        errout = MDlib.run_packmol(command, OutDir_packmol + "packmol.out")
+        command = packmol_path + " < " + self.OutDir_packmol + "packmol.inp"
+        errout = MDlib.run_packmol(command, self.OutDir_packmol + "packmol.out")
 
         if errout is not None:
             print(" Error in packmol calculation")
             exit()
-        elif os.path.exists(OutDir_packmol + "packmol.pdb") is False:
+        elif os.path.exists(self.OutDir_packmol + "packmol.pdb") is False:
             print(" Error in packmol calculation")
             exit()
 
         mol = ob.OBMol()
         obConversion = ob.OBConversion()
         obConversion.SetInAndOutFormats("pdb", "mol2")
-        obConversion.ReadFile(mol, OutDir_packmol + "packmol.pdb")
-        obConversion.WriteFile(mol, OutDir_packmol + "packmol.mol2")
+        obConversion.ReadFile(mol, self.OutDir_packmol + "packmol.pdb")
+        obConversion.WriteFile(mol, self.OutDir_packmol + "packmol.mol2")
 
-        packmol_xyz = MDlib.read_mol2_xyz(OutDir_packmol + "packmol.mol2")
-        packmol_bond = MDlib.read_mol2_bond(OutDir_packmol + "packmol.mol2")
+        packmol_xyz = MDlib.read_mol2_xyz(self.OutDir_packmol + "packmol.mol2")
+        packmol_bond = MDlib.read_mol2_bond(self.OutDir_packmol + "packmol.mol2")
         # packmol_xyz = pd.read_csv(
-        #    OutDir_packmol + "packmol.xyz",
+        #    self.OutDir_packmol + "packmol.xyz",
         #    header=None,
         #    skiprows=2,
         #    delim_whitespace=True,
         # )
 
         MDlib.gen_sys_vasp(
-            self.OutDir + "/" + self.OutFile + ".vasp",
+            self.OutDir + self.OutFile + ".vasp",
             packmol_xyz,
             xmin,
             xmax,
@@ -187,7 +186,7 @@ class Builder:
             zmax,
         )
         MDlib.gen_sys_data(
-            self.OutDir + "/" + self.OutFile + ".data",
+            self.OutDir + self.OutFile + ".data",
             packmol_xyz,
             packmol_bond,
             xmin,
@@ -201,10 +200,8 @@ class Builder:
 
     def Build_psp(self):
         # location of directory for VASP inputs (polymers) and build a directory
-        out_dir = self.OutDir + "/"
-        bd.build_dir(out_dir)
-        OutDir_xyz = out_dir + self.OutDir_xyz + "/"
-        bd.build_dir(OutDir_xyz)
+        bd.build_dir(self.OutDir)
+        bd.build_dir(self.OutDir_xyz)
 
         xyz_gen_pd = pd.DataFrame()
         for i in self.Dataframe.index:
@@ -214,7 +211,7 @@ class Builder:
                 df,
                 ID_col=self.ID_col,
                 SMILES_col=self.SMILES_col,
-                OutDir=OutDir_xyz,
+                OutDir=self.OutDir_xyz,
                 Length=[int(df[self.Length].values)],
                 NumConf=int(df[self.NumConf].values),
                 Loop=eval(str(df[self.Loop].values[0])),
@@ -252,7 +249,7 @@ class Builder:
                     unit_dis,
                     flag,
                 ) = bd.Init_info(
-                    row[self.ID_col], row[self.SMILES_col], OutDir_xyz, self.Length
+                    row[self.ID_col], row[self.SMILES_col], self.OutDir_xyz, self.Length
                 )
                 smiles_each = bd.gen_oligomer_smiles(
                     dum1,
@@ -270,7 +267,7 @@ class Builder:
             # Get a list of filenames for XYZ coordinates
             for conf in range(1, row[self.NumConf] + 1):
                 XYZ_list.append(
-                    OutDir_xyz
+                    self.OutDir_xyz
                     + "/"
                     + str(row[self.ID_col])
                     + "_N"
@@ -332,9 +329,9 @@ class Builder:
             sys = MDlib.move_molecules(
                 sys, arr_x[0], arr_x[1], arr_x[2], arr_x[3], arr_x[4], arr_x[5]
             )
-            MDlib.gen_sys_xyz(self.OutDir + "/" + self.OutFile + ".xyz", sys)
+            MDlib.gen_sys_xyz(self.OutDir + self.OutFile + ".xyz", sys)
             MDlib.gen_sys_vasp(
-                self.OutDir + "/" + self.OutFile + ".vasp",
+                self.OutDir + self.OutFile + ".vasp",
                 sys,
                 xmin - proxy_dis,
                 xmax + proxy_dis,
@@ -344,7 +341,7 @@ class Builder:
                 zmax + proxy_dis,
             )
             MDlib.gen_sys_data(
-                self.OutDir + "/" + self.OutFile + ".data",
+                self.OutDir + self.OutFile + ".data",
                 sys,
                 xmin - proxy_dis,
                 xmax + proxy_dis,
@@ -356,9 +353,9 @@ class Builder:
         else:
             print("Value of the Objective function: ", evaluation)
         sys1 = MDlib.move_molecules(sys, disx, disy, disz, theta1, theta2, theta3)
-        MDlib.gen_sys_xyz(self.OutDir + "/" + "initial_geo.xyz", sys1)
+        MDlib.gen_sys_xyz(self.OutDir + "initial_geo.xyz", sys1)
         MDlib.gen_sys_vasp(
-            self.OutDir + "/" + "initial_geo.vasp",
+            self.OutDir + "initial_geo.vasp",
             sys1,
             xmin - proxy_dis,
             xmax + proxy_dis,
@@ -367,3 +364,51 @@ class Builder:
             zmin - proxy_dis,
             zmax + proxy_dis,
         )
+
+    def get_opls_param(self):
+        bd.build_dir(self.OutDir_ligpargen)
+
+        # run LigParGen for every pdb file in the OutDir_xyz directory    
+        for index, row in self.Dataframe.iterrows():
+            for conf in range(1, row[self.NumConf] + 1):
+                _id = str(row[self.ID_col])
+                _length = row[self.Length]
+                _conf = str(conf)
+                conf_pdb_fname = self.OutDir_xyz + "{}_N{}_C{}.pdb".format(_id, _length, _conf)
+
+                try:
+                    print("LigParGen working on {}". format(conf_pdb_fname))
+                    call("LigParGen -p {} -r {} -c 0 -o 0 -l".format(conf_pdb_fname, _id), shell=True)
+                    lig_output_fname = "{}.lmp".format(_id)
+                    os.rename(lig_output_fname, "{}{}".format(self.OutDir_ligpargen, lig_output_fname))
+                except BaseException:
+                    print('problem running LigParGen for {}.'.format(conf_pdb_fname))
+
+        system_pdb_fname = self.OutDir_packmol + "packmol.pdb"
+        skip_beginning = 5 # header lines of packmol.pdb
+        atom_count = 0 # coutner for atom number
+        r = np.zeros([1, 3], float) # 2D array of x, y, z coordinates, r[id][coordinate]
+
+        # get all atom coordinates from the system/packmol pdb file
+        with open(system_pdb_fname, 'r') as f:
+            for skipped_frame in range(skip_beginning):
+                f.readline()
+
+            line = f.readline()
+            x_coord, y_coord, z_coord = MDlib.read_pdb_line(line)
+            r[atom_count][0] = x_coord
+            r[atom_count][1] = y_coord
+            r[atom_count][2] = z_coord
+
+            # if next line still returns x, y, z coordinates, allocate more memeory for the array
+            while True:
+                try:
+                    atom_count += 1
+                    line = f.readline()
+                    x_coord, y_coord, z_coord = MDlib.read_pdb_line(line)
+                    r = np.concatenate( ( r, np.zeros([1, 3], float) ) )
+                    r[atom_count][0] = x_coord
+                    r[atom_count][1] = y_coord
+                    r[atom_count][2] = z_coord
+                except:
+                    break

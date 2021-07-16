@@ -609,3 +609,19 @@ def read_mol2_xyz(mol2_file):
         ):
             list_xyz.append([ln.split()[5].split(".")[0]] + ln.split()[2:5])
     return pd.DataFrame(list_xyz)
+
+# read in pdb file; please see the following link for details of pdb format
+# https://www.cgl.ucsf.edu/chimera/docs/UsersGuide/tutorials/pdbintro.html
+def read_pdb_line(line):
+    record_type = line[0:6]
+    atom_serial_num = line[6:11]
+    atom_name = line[12:16]
+    residue_name = line[17:20]
+    chain_identifier = line[21]
+    residue_seq_num = line[22:26]
+    x_coord = float(line[30:38])
+    y_coord = float(line[38:46])
+    z_coord = float(line[46:54])
+    element = line[76:78]
+
+    return x_coord, y_coord, z_coord
