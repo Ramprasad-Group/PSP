@@ -623,5 +623,16 @@ def read_pdb_line(line):
     y_coord = float(line[38:46])
     z_coord = float(line[46:54])
     element = line[76:78]
-
     return x_coord, y_coord, z_coord
+
+
+def read_lmps_header(lmp_file):
+    f = open(lmp_file)
+    lines = f.readlines()
+    natoms = int(lines[2].split()[0])
+    nbonds = int(lines[3].split()[0])
+    nangles = int(lines[4].split()[0])
+    ndihedrals = int(lines[5].split()[0])
+    nimpropers = int(lines[6].split()[0])
+    return natoms, nbonds, nangles, ndihedrals, nimpropers
+
