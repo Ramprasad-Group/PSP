@@ -365,6 +365,7 @@ class Builder:
             zmax + proxy_dis,
         )
 
+
     def get_opls(self, output_fname='amor_opls.lmps'):
         system_pdb_fname = self.OutDir_packmol + "packmol.pdb"
         skip_beginning = 5 # header lines of packmol.pdb
@@ -396,7 +397,6 @@ class Builder:
                     break
 
         bd.build_dir(self.OutDir_ligpargen)
-
         total_atoms, total_bonds, total_angles, total_dihedrals, total_impropers = (0 for i in range(5))
         total_atom_types, total_bond_types, total_angle_types, total_dihedral_types, total_improper_types = (0 for i in range(5))
         dicts = []
@@ -509,7 +509,7 @@ class Builder:
                     out.write('{count:>8} {1:>10}\n'.format(*fields, count=counter))
             out.write('\n')
 
-            # Pair/Bond/Angle/Dihedral/Improper Coeffs sections
+            # Pair, Bond, Angle, Dihedral, and Improper Coeffs sections
             for coeff_type in switcher_coeffs:
                 if switcher_coeffs.get(coeff_type)[0] == 0:
                     continue
@@ -564,13 +564,13 @@ class Builder:
                             new_type = section_convertdicts[index][fields[1]]
                             new_atom1 = int(fields[2]) + atom_counter
                             new_atom2 = int(fields[3]) + atom_counter
-                            out.write('{:>8} {:>8} {:>6} {:>6} '.format(new_id, new_type, new_atom1, new_atom2))
+                            out.write('{:>8} {:>8} {:>6} {:>6}'.format(new_id, new_type, new_atom1, new_atom2))
                             if not section_type == 'Bonds':
                                 new_atom3 = int(fields[4]) + atom_counter
-                                out.write('{:>6} '.format(new_atom3))
+                                out.write(' {:>6}'.format(new_atom3))
                                 if not section_type == 'Angles':
                                     new_atom4 = int(fields[5]) + atom_counter
-                                    out.write('{:>6} '.format(new_atom4))
+                                    out.write(' {:>6}'.format(new_atom4))
                             out.write('\n')
                         atom_counter += len(dic.get('Atoms'))
                         type_counter += len(dic.get(section_type))
