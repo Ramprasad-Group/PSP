@@ -26,6 +26,7 @@ jobs:
         shell: bash -l {0}
         run: |
           conda install -c conda-forge rdkit openbabel==3.1.1
+          sudo apt-get install -y mpich
           git clone https://github.com/polysimtools/pysimm
           sudo python pysimm/complete_install.py --pysimm $PWD --lammps $PWD
           python -m pip install --upgrade pip
