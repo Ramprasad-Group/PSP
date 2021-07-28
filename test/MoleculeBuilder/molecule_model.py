@@ -10,11 +10,12 @@ mol = mb.Builder(
     RightCap ='RightCap',
     OutDir='models',
     Inter_Mol_Dis=6,
-    Length=[16],#16
+    Length=[1,3],#16
     NumConf=1,
-    Loop=True,
+    Loop=False,
     NCores=-1,
-    IrrStruc=False
+    IrrStruc=False,
+    OPLS=True
 )
 results = mol.Build()
 print(results)

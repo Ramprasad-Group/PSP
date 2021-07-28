@@ -23,6 +23,7 @@ class Builder:
         NumConf=1,
         Loop=False,
         IrrStruc=False,
+        OPLS=False,
     ):
         self.ID_col = ID_col
         self.SMILES_col = SMILES_col
@@ -36,6 +37,7 @@ class Builder:
         self.NumConf = NumConf
         self.Loop = Loop
         self.IrrStruc = IrrStruc
+        self.OPLS=OPLS
 
     # list of molecules name and CORRECT/WRONG
     def Build(self):
@@ -84,6 +86,7 @@ class Builder:
                 self.NumConf,
                 self.Loop,
                 self.IrrStruc,
+                self.OPLS,
                 NCores_opt,
             )
             for unit_name in df[self.ID_col].values
@@ -104,6 +107,8 @@ class Builder:
 
         chk_tri = pd.DataFrame(chk_tri, columns=['ID', 'Result', 'SMILES'])
         chk_tri.to_csv(list_out_xyz)
+        
+        bd.del_tmp_files()
 
         # Delete work directory
         if os.path.isdir('work_dir/'):

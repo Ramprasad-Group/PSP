@@ -10,6 +10,7 @@ from rdkit.Chem import AllChem
 from openbabel import openbabel as ob
 from rdkit import RDLogger
 from scipy.spatial.distance import cdist
+from subprocess import call
 
 # from pysimm import system, lmps, forcefield
 
@@ -2093,6 +2094,7 @@ def build_3D(
     NumConf,
     loop,
     IrrStruc,
+    OPLS,
     NCores_opt,
 ):
     LCap_ = False
@@ -2141,9 +2143,9 @@ def build_3D(
                     flag,
                 ) = Init_info(unit_name, smiles_each, xyz_in_dir, Length)
 
-                if flag == 'REJECT' and len(Final_SMILES) == 0:
+                if flag == 'REJECT' and len(Final_SMILES) == 0 and ln == Length[-1]:
                     return unit_name, 'REJECT', Final_SMILES
-                elif flag == 'REJECT' and len(Final_SMILES) >= 1:
+                elif flag == 'REJECT' and len(Final_SMILES) >= 1 and ln == Length[-1]:
                     return unit_name, 'PARTIAL SUCCESS', Final_SMILES
                 # Join end caps
                 smiles_each_ind = gen_smiles_with_cap(
@@ -2177,9 +2179,9 @@ def build_3D(
                 flag,
             ) = Init_info(unit_name, smiles_each, xyz_in_dir, Length)
 
-            if flag == 'REJECT' and len(Final_SMILES) == 0:
+            if flag == 'REJECT' and len(Final_SMILES) == 0 and ln == Length[-1]:
                 return unit_name, 'REJECT', Final_SMILES
-            elif flag == 'REJECT' and len(Final_SMILES) >= 1:
+            elif flag == 'REJECT' and len(Final_SMILES) >= 1 and ln == Length[-1]:
                 return unit_name, 'PARTIAL SUCCESS', Final_SMILES
 
             smiles_each_ind = gen_oligomer_smiles(
@@ -2199,20 +2201,20 @@ def build_3D(
             )
 
         m1 = Chem.MolFromSmiles(smiles_each_ind)
-        if m1 is None and len(Final_SMILES) == 0:
+        if m1 is None and len(Final_SMILES) == 0 and ln == Length[-1]:
             return unit_name, 'REJECT', Final_SMILES
-        elif m1 is None and len(Final_SMILES) >= 1:
+        elif m1 is None and len(Final_SMILES) >= 1 and ln == Length[-1]:
             return unit_name, 'PARTIAL SUCCESS', Final_SMILES
 
         Final_SMILES.append(smiles_each_ind)
         # OB_smi_2_xyz_vasp(unit_name, smiles_each_ind, l, out_dir, Inter_Mol_Dis, NumConf=NumConf, seed=None)
         NumC = gen_conf_xyz_vasp(
-            unit_name, m1, out_dir, ln, NumConf, Inter_Mol_Dis, IrrStruc, NCores_opt
+            unit_name, m1, out_dir, ln, NumConf, Inter_Mol_Dis, IrrStruc, NCores_opt, OPLS
         )
 
-        if NumC == 0:
+        if NumC == 0 and ln == Length[-1]:
             return unit_name, 'FAILURE', Final_SMILES
-        else:
+        elif ln == Length[-1]:
             return unit_name, 'SUCCESS', Final_SMILES
 
         # end_1 = time.time()
@@ -2563,7 +2565,7 @@ def OB_smi_2_xyz_vasp(
 # INPUT: ID, mol without Hydrogen atom, row indices of dummy and connecting atoms, directory
 # OUTPUT: XYZ coordinates of the optimized molecule
 def gen_conf_xyz_vasp(
-    unit_name, m1, out_dir, ln, Nconf, Inter_Mol_Dis, IrrStruc, NCores_opt
+    unit_name, m1, out_dir, ln, Nconf, Inter_Mol_Dis, IrrStruc, NCores_opt, OPLS
 ):
     m2 = Chem.AddHs(m1)
     NAttempt = 10000
@@ -2586,12 +2588,19 @@ def gen_conf_xyz_vasp(
         n += 1
         AllChem.UFFOptimizeMolecule(m2, confId=cid)
         # AllChem.MMFFOptimizeMolecule(m2, confId=cid)
+        
+        outfile_name = out_dir + unit_name + '_N' + str(ln) + '_C' + str(n)
+        
+        # Generate pdb file
+        Chem.MolToPDBFile(m2, outfile_name + '.pdb', confId=cid)
 
-        Chem.MolToPDBFile(
-            m2,
-            out_dir + unit_name + '_N' + str(ln) + '_C' + str(n) + '.pdb',
-            confId=cid,
-        )
+        # Generate OPLS parameter file
+        if n == 1 and OPLS is True:
+            if os.path.exists(outfile_name + '.pdb'):
+                try:
+                    call("LigParGen -p {}.pdb -r {} -c 0 -o 0 -l".format(outfile_name, outfile_name), shell=True)
+                except BaseException:
+                    print('problem running LigParGen for {}.pdb.'.format(outfile_name))
 
         if IrrStruc is False:
             Chem.MolToXYZFile(
@@ -2765,3 +2774,25 @@ def screen_Candidates(
             dir_path_out + '/' + 'cryst_out-' + str(count).zfill(digits) + '.vasp',
         )
         count += 1
+
+def del_tmp_files():
+    if os.path.exists("plt.pdb"):
+        os.remove("plt.pdb")
+    if os.path.exists("olog"):
+        os.remove("olog")
+    if os.path.exists("optzmat"):
+        os.remove("optzmat")
+    if os.path.exists("slvzmat"):
+        os.remove("slvzmat")
+    if os.path.exists("pysimm.sim.in"):
+        os.remove("pysimm.sim.in")
+    if os.path.exists("sum"):
+        os.remove("sum")
+    if os.path.exists("out"):
+        os.remove("out")
+    if os.path.exists("log.lammps"):
+        os.remove("log.lammps")
+    if os.path.exists("clu.pdb"):
+        os.remove("clu.pdb")
+    if os.path.exists("LL"):
+        os.remove("LL")
