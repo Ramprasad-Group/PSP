@@ -10,7 +10,8 @@ from rdkit.Chem import AllChem
 from openbabel import openbabel as ob
 from rdkit import RDLogger
 from scipy.spatial.distance import cdist
-from pysimm import system, lmps, forcefield
+
+# from pysimm import system, lmps, forcefield
 
 # from openbabel import pybel as pb
 # from pymatgen.io import babel
@@ -2673,6 +2674,8 @@ def gen_molecule_vasp(unit_name, unit, atom1, atom2, Inter_Mol_Dis, outVASP):
 
 
 def disorder_struc(filename, dir_path, NCores_opt):
+    from pysimm import system, lmps, forcefield
+
     # pdb to cml
     obConversion.SetInAndOutFormats("pdb", "cml")
     obConversion.ReadFile(mol, os.path.join(dir_path, filename + '.pdb'))

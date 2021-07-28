@@ -54,6 +54,7 @@ class Builder:
         self.box_size = box_size
         self.incr_per = incr_per
         self.BondInfo = BondInfo
+
     def Build(self):
         # location of directory for VASP inputs (polymers) and build a directory
         bd.build_dir(self.OutDir)
@@ -123,7 +124,7 @@ class Builder:
             self.box_size = MDlib.get_box_size(
                 total_vol, box_type=self.box_type, incr_per=self.incr_per
             )
-            
+
         xmin, xmax, ymin, ymax, zmin, zmax = (
             self.box_size[0],
             self.box_size[1],
@@ -365,12 +366,13 @@ class Builder:
             zmax + proxy_dis,
         )
 
-
     def get_opls(self, output_fname='amor_opls.lmps'):
         system_pdb_fname = self.OutDir_packmol + "packmol.pdb"
-        skip_beginning = 5 # header lines of packmol.pdb
-        atom_count = 0 # coutner for atom number
-        r = np.zeros([1, 3], float) # 2D array of x, y, z coordinates, r[id][coordinate]
+        skip_beginning = 5  # header lines of packmol.pdb
+        atom_count = 0  # coutner for atom number
+        r = np.zeros(
+            [1, 3], float
+        )  # 2D array of x, y, z coordinates, r[id][coordinate]
 
         # get all atom coordinates from the system/packmol pdb file
         with open(system_pdb_fname, 'r') as f:
@@ -389,37 +391,55 @@ class Builder:
                     atom_count += 1
                     line = f.readline()
                     x_coord, y_coord, z_coord = MDlib.read_pdb_line(line)
-                    r = np.concatenate( ( r, np.zeros([1, 3], float) ) )
+                    r = np.concatenate((r, np.zeros([1, 3], float)))
                     r[atom_count][0] = x_coord
                     r[atom_count][1] = y_coord
                     r[atom_count][2] = z_coord
-                except:
+                except Exception:
                     break
 
         bd.build_dir(self.OutDir_ligpargen)
-        total_atoms, total_bonds, total_angles, total_dihedrals, total_impropers = (0 for i in range(5))
-        total_atom_types, total_bond_types, total_angle_types, total_dihedral_types, total_improper_types = (0 for i in range(5))
+        total_atoms, total_bonds, total_angles, total_dihedrals, total_impropers = (
+            0 for i in range(5)
+        )
+        (
+            total_atom_types,
+            total_bond_types,
+            total_angle_types,
+            total_dihedral_types,
+            total_improper_types,
+        ) = (0 for i in range(5))
         dicts = []
 
-        # run LigParGen for every pdb file in the OutDir_xyz directory    
+        # run LigParGen for every pdb file in the OutDir_xyz directory
         for index, row in self.Dataframe.iterrows():
             _id = str(row[self.ID_col])
             _length = row[self.Length]
             _num = row[self.NumMole]
-            _conf = 1 # read in only the first conformer
+            _conf = 1  # read in only the first conformer
             output_prefix = "{}_N{}_C{}".format(_id, _length, _conf)
 
             try:
-                print("LigParGen working on {}.pdb". format(output_prefix))
-                call("LigParGen -p {0}{1}.pdb -r {1} -c 0 -o 0 -l".format(self.OutDir_xyz, output_prefix), shell=True)
+                print("LigParGen working on {}.pdb".format(output_prefix))
+                call(
+                    "LigParGen -p {0}{1}.pdb -r {1} -c 0 -o 0 -l".format(
+                        self.OutDir_xyz, output_prefix
+                    ),
+                    shell=True,
+                )
                 lig_output_fname = "{}.lmp".format(output_prefix)
                 os.rename(lig_output_fname, self.OutDir_ligpargen + lig_output_fname)
             except BaseException:
-                print('problem running LigParGen for {}.pdb.'.format(output_file_prefix))
+                print(
+                    'problem running LigParGen for {}.pdb.'.format(output_prefix)
+                )
 
-            # quickly read the headers of LigParGen generated LAMMPS files to count total number of atoms/bonds/angles...etc
+            # quickly read the headers of LigParGen generated LAMMPS
+            # files to count total number of atoms/bonds/angles...etc
             data_fname = self.OutDir_ligpargen + lig_output_fname
-            natoms, nbonds, nangles, ndihedrals, nimpropers = MDlib.read_lmps_header(data_fname)
+            natoms, nbonds, nangles, ndihedrals, nimpropers = MDlib.read_lmps_header(
+                data_fname
+            )
 
             total_atom_types += natoms
             total_bond_types += nbonds
@@ -433,7 +453,7 @@ class Builder:
             total_impropers += nimpropers * _num
 
             # this switcher dict is to navigate through and store info for each section of a LAMMPS file
-            switcher = { 
+            switcher = {
                 'Masses': [],
                 'Pair Coeffs': [],
                 'Bond Coeffs': [],
@@ -445,10 +465,10 @@ class Builder:
                 'Angles': [],
                 'Dihedrals': [],
                 'Impropers': [],
-                'Num': _num
+                'Num': _num,
             }
             current_section = None
-            
+
             # read all the info in the LigParGen generated LAMMPS file for modification
             with open(data_fname, 'rt') as lines:
                 for line in lines:
@@ -457,30 +477,40 @@ class Builder:
                     elif line == '\n' or not current_section:
                         continue
                     else:
-                        section_list = switcher.get(current_section, 'Invalid current section')
+                        section_list = switcher.get(
+                            current_section, 'Invalid current section'
+                        )
                         section_list.append(line.split())
             dicts.append(switcher)
-        
+
         # These switcher dicts are for each section of the LAMMPS file that we will build
-        atomconvertdicts, bondconvertdicts, angleconvertdicts, dihedralconvertdicts, improperconvertdicts = ([] for i in range(5))
+        (
+            atomconvertdicts,
+            bondconvertdicts,
+            angleconvertdicts,
+            dihedralconvertdicts,
+            improperconvertdicts,
+        ) = ([] for i in range(5))
         switcher_coeffs = {
             'Pair Coeffs': [total_atoms, atomconvertdicts],
             'Bond Coeffs': [total_bonds, bondconvertdicts],
             'Angle Coeffs': [total_angles, angleconvertdicts],
             'Dihedral Coeffs': [total_dihedrals, dihedralconvertdicts],
-            'Improper Coeffs': [total_impropers, improperconvertdicts]
+            'Improper Coeffs': [total_impropers, improperconvertdicts],
         }
         switcher_main = {
             'Bonds': [total_bonds, bondconvertdicts],
             'Angles': [total_angles, angleconvertdicts],
             'Dihedrals': [total_dihedrals, dihedralconvertdicts],
-            'Impropers': [total_impropers, improperconvertdicts]
+            'Impropers': [total_impropers, improperconvertdicts],
         }
 
         # build the final LAMMPS output
         with open(output_fname, 'wt') as out:
             # header section
-            out.write('LAMMPS data file Created by PSP - with LigParGen OPLS parameters\n')
+            out.write(
+                'LAMMPS data file Created by PSP - with LigParGen OPLS parameters\n'
+            )
             out.write('\n')
             out.write('{:>12}  atoms\n'.format(total_atoms))
             out.write('{:>12}  bonds\n'.format(total_bonds))
@@ -494,9 +524,15 @@ class Builder:
             out.write('{:>12}  dihedral types\n'.format(total_dihedral_types))
             out.write('{:>12}  improper types\n'.format(total_improper_types))
             out.write('\n')
-            out.write('{:>12}  {:>12} xlo xhi\n'.format(self.box_size[0], self.box_size[1]))
-            out.write('{:>12}  {:>12} ylo yhi\n'.format(self.box_size[2], self.box_size[3]))
-            out.write('{:>12}  {:>12} zlo zhi\n'.format(self.box_size[4], self.box_size[5]))
+            out.write(
+                '{:>12}  {:>12} xlo xhi\n'.format(self.box_size[0], self.box_size[1])
+            )
+            out.write(
+                '{:>12}  {:>12} ylo yhi\n'.format(self.box_size[2], self.box_size[3])
+            )
+            out.write(
+                '{:>12}  {:>12} zlo zhi\n'.format(self.box_size[4], self.box_size[5])
+            )
             out.write('\n')
 
             # Masses section
@@ -523,7 +559,9 @@ class Builder:
                         convertdict[fields[0]] = counter
                         fields[0] = counter
                         if coeff_type == 'Dihedral Coeffs':
-                            out.write('{:>8} {:>10} {:>10} {:>10} {:>10}\n'.format(*fields))
+                            out.write(
+                                '{:>8} {:>10} {:>10} {:>10} {:>10}\n'.format(*fields)
+                            )
                         elif coeff_type == 'Improper Coeffs':
                             out.write('{:>8} {:>10} {:>10} {:>10}\n'.format(*fields))
                         else:
@@ -541,13 +579,23 @@ class Builder:
                     chain_counter += 1
                     for fields in dic.get('Atoms'):
                         atom_counter += 1
-                        new_x = r[atom_counter-1][0]
-                        new_y = r[atom_counter-1][1]
-                        new_z = r[atom_counter-1][2]
+                        new_x = r[atom_counter - 1][0]
+                        new_y = r[atom_counter - 1][1]
+                        new_z = r[atom_counter - 1][2]
                         new_atomtype = atomconvertdicts[index][fields[2]]
-                        out.write('{:>8} {:>7} {:>3} {:>12} {:>10} {:>10} {:>10}\n'.format(atom_counter, chain_counter, new_atomtype, fields[3], new_x, new_y, new_z))
+                        out.write(
+                            '{:>8} {:>7} {:>3} {:>12} {:>10} {:>10} {:>10}\n'.format(
+                                atom_counter,
+                                chain_counter,
+                                new_atomtype,
+                                fields[3],
+                                new_x,
+                                new_y,
+                                new_z,
+                            )
+                        )
             out.write('\n')
-            
+
             # Bond, Angle, Dihedral, and Improper sections
             for section_type in switcher_main:
                 if switcher_main.get(section_type)[0] == 0:
@@ -564,7 +612,11 @@ class Builder:
                             new_type = section_convertdicts[index][fields[1]]
                             new_atom1 = int(fields[2]) + atom_counter
                             new_atom2 = int(fields[3]) + atom_counter
-                            out.write('{:>8} {:>8} {:>6} {:>6}'.format(new_id, new_type, new_atom1, new_atom2))
+                            out.write(
+                                '{:>8} {:>8} {:>6} {:>6}'.format(
+                                    new_id, new_type, new_atom1, new_atom2
+                                )
+                            )
                             if not section_type == 'Bonds':
                                 new_atom3 = int(fields[4]) + atom_counter
                                 out.write(' {:>6}'.format(new_atom3))

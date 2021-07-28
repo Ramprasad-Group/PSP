@@ -8,13 +8,13 @@ mol = mb.Builder(
     SMILES_col="smiles",
     LeftCap = "LeftCap",
     RightCap ='RightCap',
-    OutDir='test_models',
+    OutDir='models',
     Inter_Mol_Dis=6,
     Length=[16],#16
     NumConf=1,
     Loop=True,
     NCores=-1,
-    IrrStruc=True
+    IrrStruc=False
 )
 results = mol.Build()
 print(results)

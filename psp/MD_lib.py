@@ -610,6 +610,7 @@ def read_mol2_xyz(mol2_file):
             list_xyz.append([ln.split()[5].split(".")[0]] + ln.split()[2:5])
     return pd.DataFrame(list_xyz)
 
+
 # read in pdb file; please see the following link for details of pdb format
 # https://www.cgl.ucsf.edu/chimera/docs/UsersGuide/tutorials/pdbintro.html
 def read_pdb_line(line):
@@ -635,4 +636,3 @@ def read_lmps_header(lmp_file):
     ndihedrals = int(lines[5].split()[0])
     nimpropers = int(lines[6].split()[0])
     return natoms, nbonds, nangles, ndihedrals, nimpropers
-
