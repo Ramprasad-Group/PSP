@@ -89,7 +89,7 @@ class Builder:
         bd.build_dir(xyz_tmp_dir)
 
         # location of directory for VASP inputs (polymers) and build a directory
-        vasp_out_dir = self.OutDir + '/'
+        vasp_out_dir = os.path.join(self.OutDir, "")
         bd.build_dir(vasp_out_dir)
 
         start_1 = time.time()

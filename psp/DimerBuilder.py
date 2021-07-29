@@ -37,9 +37,9 @@ class Builder:
 
     def Build(self):
         # location of directory for VASP inputs (polymers) and build a directory
-        out_dir = self.OutDir + '/'
+        out_dir = os.path.join(self.OutDir, "")
         bd.build_dir(out_dir)
-        OutDir_xyz = out_dir + self.OutDir_xyz + '/'
+        OutDir_xyz = os.path.join(out_dir, self.OutDir_xyz, "")
         bd.build_dir(OutDir_xyz)
 
         xyz_gen_pd = pd.DataFrame()

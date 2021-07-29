@@ -25,7 +25,7 @@ class Builder:
         self.NSamples = NSamples
         self.InputRadius = InputRadius
         self.MinAtomicDis = MinAtomicDis
-        self.OutDir = OutDir + '/'
+        self.OutDir = os.path.join(OutDir, "")
         self.NCores = NCores
         self.Polymer = Polymer
         self.Optimize = Optimize
@@ -321,13 +321,7 @@ def CrystalBuilderMainPolymer(
                 dist = dist[~np.isnan(dist)]
                 if (dist > 2.0).all():
                     count += 1
-                    create_crystal_vasp(
-                        OutDir
-                        + VaspInp
-                        + '/'
-                        + 'cryst_out-'
-                        + str(count).zfill(digits)
-                        + '.vasp',
+                    create_crystal_vasp(os.path.join(OutDir, VaspInp, 'cryst_out-' + str(count).zfill(digits) + '.vasp'),
                         first_poly,
                         second_poly_rm2,
                         Num_atom,
@@ -458,13 +452,7 @@ def CrystalBuilderMain(
                         dist = dist[~np.isnan(dist)]
                         if (dist > 2.0).all():
                             count += 1
-                            create_crystal_vasp(
-                                OutDir
-                                + VaspInp
-                                + '/'
-                                + 'cryst_out-'
-                                + str(count).zfill(digits)
-                                + '.vasp',
+                            create_crystal_vasp(os.path.join(OutDir, VaspInp, 'cryst_out-' + str(count).zfill(digits) + '.vasp'),
                                 first_poly,
                                 second_poly_moved,
                                 Num_atom,

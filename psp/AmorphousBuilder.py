@@ -44,10 +44,10 @@ class Builder:
         self.RightCap = (RightCap,)
         self.Loop = Loop
         self.OutFile = OutFile
-        self.OutDir = OutDir + "/"
-        self.OutDir_xyz = OutDir + "/" + OutDir_xyz + "/"
-        self.OutDir_packmol = OutDir + "/" + "packmol" + "/"
-        self.OutDir_ligpargen = OutDir + "/" + "ligpargen" + "/"
+        self.OutDir = os.path.join(OutDir,"")
+        self.OutDir_xyz = os.path.join(OutDir, OutDir_xyz, "")
+        self.OutDir_packmol = os.path.join(OutDir, "packmol", "")
+        self.OutDir_ligpargen = os.path.join(OutDir, "ligpargen", "")
         self.density = density
         self.tol_dis = tol_dis
         self.box_type = box_type
@@ -60,7 +60,7 @@ class Builder:
         bd.build_dir(self.OutDir)
         bd.build_dir(self.OutDir_xyz)
         bd.build_dir(self.OutDir_packmol)
-
+        
         # PACKMOL
         packmol_path = os.getenv("PACKMOL_EXEC")
         # packmol_path = '/home/hari/.soft/packmol/packmol'
@@ -151,24 +151,24 @@ class Builder:
         )
 
         # PACKMOL calculation
-        command = packmol_path + " < " + self.OutDir_packmol + "packmol.inp"
-        errout = MDlib.run_packmol(command, self.OutDir_packmol + "packmol.out")
+        command = packmol_path + " < " + os.path.join(self.OutDir_packmol, "packmol.inp")
+        errout = MDlib.run_packmol(command, os.path.join(self.OutDir_packmol, "packmol.out"))
 
         if errout is not None:
             print(" Error in packmol calculation")
             exit()
-        elif os.path.exists(self.OutDir_packmol + "packmol.pdb") is False:
+        elif os.path.exists(os.path.join(self.OutDir_packmol, "packmol.pdb")) is False:
             print(" Error in packmol calculation")
             exit()
 
         mol = ob.OBMol()
         obConversion = ob.OBConversion()
         obConversion.SetInAndOutFormats("pdb", "mol2")
-        obConversion.ReadFile(mol, self.OutDir_packmol + "packmol.pdb")
-        obConversion.WriteFile(mol, self.OutDir_packmol + "packmol.mol2")
+        obConversion.ReadFile(mol, os.path.join(self.OutDir_packmol, "packmol.pdb"))
+        obConversion.WriteFile(mol, os.path.join(self.OutDir_packmol, "packmol.mol2"))
 
-        packmol_xyz = MDlib.read_mol2_xyz(self.OutDir_packmol + "packmol.mol2")
-        packmol_bond = MDlib.read_mol2_bond(self.OutDir_packmol + "packmol.mol2")
+        packmol_xyz = MDlib.read_mol2_xyz(os.path.join(self.OutDir_packmol, "packmol.mol2"))
+        packmol_bond = MDlib.read_mol2_bond(os.path.join(self.OutDir_packmol, "packmol.mol2"))
         # packmol_xyz = pd.read_csv(
         #    self.OutDir_packmol + "packmol.xyz",
         #    header=None,
@@ -177,7 +177,7 @@ class Builder:
         # )
 
         MDlib.gen_sys_vasp(
-            self.OutDir + self.OutFile + ".vasp",
+            os.path.join(self.OutDir, self.OutFile + ".vasp"),
             packmol_xyz,
             xmin,
             xmax,
@@ -187,7 +187,7 @@ class Builder:
             zmax,
         )
         MDlib.gen_sys_data(
-            self.OutDir + self.OutFile + ".data",
+            os.path.join(self.OutDir, self.OutFile + ".data"),
             packmol_xyz,
             packmol_bond,
             xmin,
@@ -367,7 +367,7 @@ class Builder:
         )
 
     def get_opls(self, output_fname='amor_opls.lmps'):
-        system_pdb_fname = self.OutDir_packmol + "packmol.pdb"
+        system_pdb_fname = os.path.join(self.OutDir_packmol, "packmol.pdb")
         skip_beginning = 5  # header lines of packmol.pdb
         atom_count = 0  # coutner for atom number
         r = np.zeros(

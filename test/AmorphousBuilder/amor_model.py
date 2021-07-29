@@ -1,12 +1,12 @@
 import pandas as pd
 import psp.AmorphousBuilder as ab
 
-input_df = pd.read_csv("nafion.csv", low_memory=False)
+input_df = pd.read_csv("input_PE.csv", low_memory=False)
 amor = ab.Builder(
     input_df,
     ID_col="ID",
     SMILES_col="smiles",
-    #OutDir='PE_tests',
+    OutDir='PE_tests',
     Length='Len',
     NumConf='NumConf',
     LeftCap = "LeftCap",
@@ -18,3 +18,4 @@ amor = ab.Builder(
     #box_size=[0.0,20,0.0,20,0.0,20]
 )
 amor.Build()
+amor.get_opls(output_fname='amor_opls.lmps')
