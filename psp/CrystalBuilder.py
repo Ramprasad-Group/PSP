@@ -142,7 +142,14 @@ def Center_XY_r(xyz_coordinates, angle, r_cricle):
 
 
 def create_crystal_vasp(
-    filename, first_poly, second_poly, Num_atom, basis_vec, file_info, cry_info
+    filename,
+    first_poly,
+    second_poly,
+    Num_atom,
+    basis_vec,
+    file_info,
+    cry_info,
+    Polymer=True,
 ):
     crystal_struc = pd.DataFrame()
     row1 = 0
@@ -181,7 +188,10 @@ def create_crystal_vasp(
         #        print('b',crystal_struc[1].max(), crystal_struc[1].min())
         a_vec = crystal_struc[1].max() - crystal_struc[1].min() + keep_space
         b_vec = crystal_struc[2].max() - crystal_struc[2].min() + keep_space
-        c_vec = basis_vec.loc[2, 2]
+        if Polymer is True:
+            c_vec = basis_vec.loc[2, 2]
+        else:
+            c_vec = crystal_struc[3].max() - crystal_struc[3].min() + keep_space
 
         f.write(' ' + str(a_vec) + ' ' + str(0.0) + ' ' + str(0.0) + '\n')
         f.write(' ' + str(0.0) + ' ' + str(b_vec) + ' ' + str(0.0) + '\n')
@@ -321,7 +331,12 @@ def CrystalBuilderMainPolymer(
                 dist = dist[~np.isnan(dist)]
                 if (dist > 2.0).all():
                     count += 1
-                    create_crystal_vasp(os.path.join(OutDir, VaspInp, 'cryst_out-' + str(count).zfill(digits) + '.vasp'),
+                    create_crystal_vasp(
+                        os.path.join(
+                            OutDir,
+                            VaspInp,
+                            'cryst_out-' + str(count).zfill(digits) + '.vasp',
+                        ),
                         first_poly,
                         second_poly_rm2,
                         Num_atom,
@@ -409,64 +424,70 @@ def CrystalBuilderMain(
     digits = bd.len_digit_number(NSamples ** 4)
 
     count = 0
-    for i in tm:
-        for j in rm1:
-            for k in rm2:
-                for aX in rm3:
-                    for aY in rm3:
-                        second_poly_tl = tl(xyz_coordinates, i)
-                        second_poly_rm1 = rotateXY(second_poly_tl, j)
-                        second_poly_rm2 = Center_XY_r(second_poly_rm1, k, radius)
-                        second_poly_rm3_aX = bd.rotateXYZOrigin(
-                            second_poly_rm2, aX, 0.0, 0.0
-                        )
-                        second_poly_rm3_aY = bd.rotateXYZOrigin(
-                            second_poly_rm3_aX, 0.0, aY, 0.0
-                        )
+    for i in tm:  # Second poly
+        for j in rm1:  # Second poly
+            for k in rm2:  # Second poly
+                for aX in rm3:  # Second poly
+                    for aY in rm3:  # Second poly
+                        for bX in rm3:  # First poly
+                            for bY in rm3:  # First poly
+                                for bZ in rm3:  # First poly
 
-                        # Final XYZ coordinates of second molecule
-                        second_poly_moved = second_poly_rm3_aY.copy()
+                                    first_poly_bX = bd.rotateXYZOrigin(
+                                        first_poly, bX, 0.0, 0.0
+                                    )
+                                    first_poly_bY = bd.rotateXYZOrigin(
+                                        first_poly_bX, 0.0, bY, 0.0
+                                    )
+                                    first_poly_moved = bd.rotateXYZOrigin(
+                                        first_poly_bY, 0.0, 0.0, bZ
+                                    )
 
-                        # Build a Trimer
-                        second_poly_moved_2 = second_poly_moved.copy()
-                        second_poly_moved_3 = second_poly_moved.copy()
-                        second_poly_moved_2[3] = second_poly_moved_2[3] + float(
-                            basis_vec.loc[2, 2]
-                        )
-                        second_poly_moved_3[3] = second_poly_moved_3[3] - float(
-                            basis_vec.loc[2, 2]
-                        )
-                        second_poly_dimer = pd.concat(
-                            [
-                                second_poly_moved,
-                                second_poly_moved_2,
-                                second_poly_moved_3,
-                            ]
-                        )
+                                    second_poly_tl = tl(xyz_coordinates, i)
+                                    second_poly_rm1 = rotateXY(second_poly_tl, j)
+                                    second_poly_rm2 = Center_XY_r(
+                                        second_poly_rm1, k, radius
+                                    )
+                                    second_poly_rm3_aX = bd.rotateXYZOrigin(
+                                        second_poly_rm2, aX, 0.0, 0.0
+                                    )
+                                    second_poly_moved = bd.rotateXYZOrigin(
+                                        second_poly_rm3_aX, 0.0, aY, 0.0
+                                    )
 
-                        # Calculate distance between atoms in first_unit and second_unit
-                        dist = cdist(
-                            first_poly[[1, 2, 3]].values,
-                            second_poly_dimer[[1, 2, 3]].values,
-                        )
-                        dist = dist[~np.isnan(dist)]
-                        if (dist > 2.0).all():
-                            count += 1
-                            create_crystal_vasp(os.path.join(OutDir, VaspInp, 'cryst_out-' + str(count).zfill(digits) + '.vasp'),
-                                first_poly,
-                                second_poly_moved,
-                                Num_atom,
-                                basis_vec,
-                                file_info,
-                                'CrystalBuilder Info:: Translation: '
-                                + str(i)
-                                + '; '
-                                + 'Rotation 1 '
-                                + str(j)
-                                + '; '
-                                + 'Rotation 2 '
-                                + str(k),
-                            )
+                                    # Calculate distance between atoms in first_unit and second_unit
+                                    dist = cdist(
+                                        first_poly_moved[[1, 2, 3]].values,
+                                        second_poly_moved[[1, 2, 3]].values,
+                                    )
+                                    dist[np.isnan(dist)] = 0.0
+                                    dist = dist.flatten()
+
+                                    if min(dist) > 2.0:
+                                        count += 1
+                                        create_crystal_vasp(
+                                            os.path.join(
+                                                OutDir,
+                                                VaspInp,
+                                                'cryst_out-'
+                                                + str(count).zfill(digits)
+                                                + '.vasp',
+                                            ),
+                                            first_poly_moved,
+                                            second_poly_moved,
+                                            Num_atom,
+                                            basis_vec,
+                                            file_info,
+                                            'CrystalBuilder Info:: Translation: '
+                                            + str(i)
+                                            + '; '
+                                            + 'Rotation 1 '
+                                            + str(j)
+                                            + '; '
+                                            + 'Rotation 2 '
+                                            + str(k),
+                                            Polymer=False,
+                                        )
 
     if Optimize is True:
         bd.screen_Candidates(

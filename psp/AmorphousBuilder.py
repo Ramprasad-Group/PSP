@@ -44,7 +44,7 @@ class Builder:
         self.RightCap = (RightCap,)
         self.Loop = Loop
         self.OutFile = OutFile
-        self.OutDir = os.path.join(OutDir,"")
+        self.OutDir = os.path.join(OutDir, "")
         self.OutDir_xyz = os.path.join(OutDir, OutDir_xyz, "")
         self.OutDir_packmol = os.path.join(OutDir, "packmol", "")
         self.OutDir_ligpargen = os.path.join(OutDir, "ligpargen", "")
@@ -60,7 +60,7 @@ class Builder:
         bd.build_dir(self.OutDir)
         bd.build_dir(self.OutDir_xyz)
         bd.build_dir(self.OutDir_packmol)
-        
+
         # PACKMOL
         packmol_path = os.getenv("PACKMOL_EXEC")
         # packmol_path = '/home/hari/.soft/packmol/packmol'
@@ -151,8 +151,12 @@ class Builder:
         )
 
         # PACKMOL calculation
-        command = packmol_path + " < " + os.path.join(self.OutDir_packmol, "packmol.inp")
-        errout = MDlib.run_packmol(command, os.path.join(self.OutDir_packmol, "packmol.out"))
+        command = (
+            packmol_path + " < " + os.path.join(self.OutDir_packmol, "packmol.inp")
+        )
+        errout = MDlib.run_packmol(
+            command, os.path.join(self.OutDir_packmol, "packmol.out")
+        )
 
         if errout is not None:
             print(" Error in packmol calculation")
@@ -167,8 +171,12 @@ class Builder:
         obConversion.ReadFile(mol, os.path.join(self.OutDir_packmol, "packmol.pdb"))
         obConversion.WriteFile(mol, os.path.join(self.OutDir_packmol, "packmol.mol2"))
 
-        packmol_xyz = MDlib.read_mol2_xyz(os.path.join(self.OutDir_packmol, "packmol.mol2"))
-        packmol_bond = MDlib.read_mol2_bond(os.path.join(self.OutDir_packmol, "packmol.mol2"))
+        packmol_xyz = MDlib.read_mol2_xyz(
+            os.path.join(self.OutDir_packmol, "packmol.mol2")
+        )
+        packmol_bond = MDlib.read_mol2_bond(
+            os.path.join(self.OutDir_packmol, "packmol.mol2")
+        )
         # packmol_xyz = pd.read_csv(
         #    self.OutDir_packmol + "packmol.xyz",
         #    header=None,
@@ -430,9 +438,7 @@ class Builder:
                 lig_output_fname = "{}.lmp".format(output_prefix)
                 os.rename(lig_output_fname, self.OutDir_ligpargen + lig_output_fname)
             except BaseException:
-                print(
-                    'problem running LigParGen for {}.pdb.'.format(output_prefix)
-                )
+                print('problem running LigParGen for {}.pdb.'.format(output_prefix))
 
             # quickly read the headers of LigParGen generated LAMMPS
             # files to count total number of atoms/bonds/angles...etc

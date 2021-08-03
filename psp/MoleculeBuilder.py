@@ -37,7 +37,7 @@ class Builder:
         self.NumConf = NumConf
         self.Loop = Loop
         self.IrrStruc = IrrStruc
-        self.OPLS=OPLS
+        self.OPLS = OPLS
 
     # list of molecules name and CORRECT/WRONG
     def Build(self):
@@ -107,7 +107,7 @@ class Builder:
 
         chk_tri = pd.DataFrame(chk_tri, columns=['ID', 'Result', 'SMILES'])
         chk_tri.to_csv(list_out_xyz)
-        
+
         bd.del_tmp_files()
 
         # Delete work directory

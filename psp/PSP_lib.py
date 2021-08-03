@@ -2209,7 +2209,15 @@ def build_3D(
         Final_SMILES.append(smiles_each_ind)
         # OB_smi_2_xyz_vasp(unit_name, smiles_each_ind, l, out_dir, Inter_Mol_Dis, NumConf=NumConf, seed=None)
         NumC = gen_conf_xyz_vasp(
-            unit_name, m1, out_dir, ln, NumConf, Inter_Mol_Dis, IrrStruc, NCores_opt, OPLS
+            unit_name,
+            m1,
+            out_dir,
+            ln,
+            NumConf,
+            Inter_Mol_Dis,
+            IrrStruc,
+            NCores_opt,
+            OPLS,
         )
 
         if NumC == 0 and ln == Length[-1]:
@@ -2588,9 +2596,9 @@ def gen_conf_xyz_vasp(
         n += 1
         AllChem.UFFOptimizeMolecule(m2, confId=cid)
         # AllChem.MMFFOptimizeMolecule(m2, confId=cid)
-        
+
         outfile_name = out_dir + unit_name + '_N' + str(ln) + '_C' + str(n)
-        
+
         # Generate pdb file
         Chem.MolToPDBFile(m2, outfile_name + '.pdb', confId=cid)
 
@@ -2598,7 +2606,12 @@ def gen_conf_xyz_vasp(
         if n == 1 and OPLS is True:
             if os.path.exists(outfile_name + '.pdb'):
                 try:
-                    call("LigParGen -p {}.pdb -r {} -c 0 -o 0 -l".format(outfile_name, outfile_name), shell=True)
+                    call(
+                        "LigParGen -p {}.pdb -r {} -c 0 -o 0 -l".format(
+                            outfile_name, outfile_name
+                        ),
+                        shell=True,
+                    )
                 except BaseException:
                     print('problem running LigParGen for {}.pdb.'.format(outfile_name))
 
@@ -2774,6 +2787,7 @@ def screen_Candidates(
             dir_path_out + '/' + 'cryst_out-' + str(count).zfill(digits) + '.vasp',
         )
         count += 1
+
 
 def del_tmp_files():
     if os.path.exists("plt.pdb"):
