@@ -1,10 +1,15 @@
 # PolymerStructurePredictor (PSP)
 
-In the case of organic oligomers/polymers, preparing 3D-geometries is the first and crucial step for high-level *ab-initio* calculations. Building 3D structures by hand is not only a tedious job but sometimes challenging as well. The PSP makes your life a lot easier by automatically generating proper 3D structures from SMILES strings.
+PSP is an autonomous model generator that can build a hierarchy of polymer models starting from oligomer/infinite polymer chains to sophisticated amorphous models, using a simplified molecular-input line-entry system (SMILES) of polymers. This toolkit allows users to tune several parameters to manage the quality of models and computational cost and produce an OPLS parameter file if desired. Models can be utilized as the starting geometry for physics-based simulations, allowing for complete automation in polymer discovery. 
 
->The PSP generates models for monomers, oligomers, infinite polymer chains, crystal  as well as amorphous structures from a SMILES string.
+>PSP generates models for monomers, linear and loop oligomers, infinite polymer chains, crystal, and amorphous structures from a SMILES string.
 
 ## Contributors
+* Harikrishna Sahu
+* Huan Tran
+* Kuan-Hsuan Shen
+* Joseph Montoya
+* Rampi Ramprasad
 
 ## License & copyright
 Ramprasad Group, Georgia Tech, USA
@@ -17,8 +22,7 @@ Licensed under the [MIT License](LICENSE).
 * Issues: 
 
 ## Installation
-
-### Requirements
+PSP requires the following packages to be installed in order to function properly:
 * [RDKit](https://www.rdkit.org/) v2020.09.1.0
 * [Open Babel](https://open-babel.readthedocs.io/en/latest/index.html) v3.1.1
 * [PACKMOL](http://leandro.iqm.unicamp.br/m3g/packmol/home.shtml) v20.2.2
@@ -26,9 +30,10 @@ Licensed under the [MIT License](LICENSE).
 * [LAMMPS](https://docs.lammps.org/Manual.html)
 * [LigParGen](http://zarbi.chem.yale.edu/ligpargen/) v2.1
 
-It should be noted that all dependencies must be installed separately and tested to ensure that they all function. We recommend using Anaconda python, and creating a fresh conda environment for the install (e. g. `conda create -n MY_ENV_NAME`).
+It should be noted that all dependencies must be installed separately and tested to ensure that they all function. We recommend using Anaconda python, and creating a fresh conda environment for PSP (e. g. `conda create -n MY_ENV_NAME`).
 
-RDKit and OpenBabel are available as conda packages and can be installed as mentioned in the following links (1)[https://anaconda.org/rdkit/rdkit](https://anaconda.org/rdkit/rdkit) and (2)[https://anaconda.org/conda-forge/openbabel](https://anaconda.org/conda-forge/openbabel).
+
+RDKit and OpenBabel are available as conda packages and can be installed using the instructions provided in the following links (1)[https://anaconda.org/rdkit/rdkit](https://anaconda.org/rdkit/rdkit) and (2)[https://anaconda.org/conda-forge/openbabel](https://anaconda.org/conda-forge/openbabel).
 
 The installation procedure for the PACKMOL package may be found at the following link: [http://leandro.iqm.unicamp.br/m3g/packmol/home.shtml](http://leandro.iqm.unicamp.br/m3g/packmol/home.shtml). Make sure to include the path for PACKMOL executable as an environment variable "PACKMOL\_EXEC".
 
