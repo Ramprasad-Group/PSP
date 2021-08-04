@@ -32,19 +32,18 @@ PSP requires the following packages to be installed in order to function properl
 
 It should be noted that all dependencies must be installed separately and tested to ensure that they all function. We recommend using Anaconda python, and creating a fresh conda environment for PSP (e. g. `conda create -n MY_ENV_NAME`).
 
-
 RDKit and OpenBabel are available as conda packages and can be installed using the instructions provided in the following links (1)[https://anaconda.org/rdkit/rdkit](https://anaconda.org/rdkit/rdkit) and (2)[https://anaconda.org/conda-forge/openbabel](https://anaconda.org/conda-forge/openbabel).
 
-The installation procedure for the PACKMOL package may be found at the following link: [http://leandro.iqm.unicamp.br/m3g/packmol/home.shtml](http://leandro.iqm.unicamp.br/m3g/packmol/home.shtml). Make sure to include the path for PACKMOL executable as an environment variable "PACKMOL\_EXEC".
+The deatiled intructions for the installation of PACKMOL package can be found at the following URL: [http://leandro.iqm.unicamp.br/m3g/packmol/home.shtml](http://leandro.iqm.unicamp.br/m3g/packmol/home.shtml). Make sure to include the path for PACKMOL executable as an environment variable "PACKMOL\_EXEC" in ~/.bashrc file.
 
 LAMMPS can be installed separately or along with PySIMM. Make sure to add the PySIMM package to your PYTHONPATH and add PySIMM and LAMMPS command-line tools to your PATH as mentioned in the PySIMM documentation.
 
 Following that, source your ~/.bashrc file.  PSP will look for PATHs for PACKMOL, PySIMM, and LAMMPS while performing its tasks.
 
-PSP requires LigParGen 2.1 installed in a local server that needs BOSS as well as the following packages (1) Openbabel 2.4, (2) Network 1.11, (3) pandas 0.25.1. The following link has a detailed description of the installation: [http://zarbi.chem.yale.edu/ligpargen](http://zarbi.chem.yale.edu/ligpargen/). The user either needs to modify the LigParGen source codes or replace them with the provided ones so that the output files can be stored in the desired directory instead of the default \tmp directory. The modified source code is available at www.
+PSP requires LigParGen 2.1 installed in a local server that needs BOSS as well as the following packages (1) Openbabel 2.4, (2) Network 1.11, (3) pandas 0.25.1. The following link has a detailed description of the installation: [http://zarbi.chem.yale.edu/ligpargen](http://zarbi.chem.yale.edu/ligpargen/). The user either needs to modify the LigParGen source codes or replace them with the supplied ones to store the output files in the desired directory instead of the default \tmp directory. The modified source code is available at www.
 
-Then use the included setup.py procedure, from the cloned directory.
+Once all dependencies are installed, clone the PSP repository and install it using the *setup.py* included in the package.
 
 ```angular2
-python setup.py develop
+python setup.py install
 ```
