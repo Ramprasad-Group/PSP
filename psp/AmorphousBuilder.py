@@ -490,7 +490,7 @@ class Builder:
         }
         dicts = []
 
-        from pysimm import system, lmps, forcefield, amber
+        from pysimm import system, forcefield
 
         # run Pysimm for every mol2 (converted from pdb with Babel) file in the OutDir_xyz directory
         for index, row in self.Dataframe.iterrows():
@@ -499,21 +499,21 @@ class Builder:
             _num = row[self.NumMole]
             _conf = 1  # read in only the first conformer
             output_prefix = "{}_N{}_C{}".format(_id, _length, _conf)
+            mol2_file = os.path.join(self.OutDir_xyz, "{}.mol2".format(output_prefix))
             call('babel -ipdb {0}.pdb -omol2 {0}.mol2'.format(os.path.join(self.OutDir_xyz, output_prefix)), shell=True)
             data_fname = os.path.join(self.OutDir_pysimm, "{}.lmp".format(output_prefix))
 
             try:
-                print("Pysimm working on {}.mol2".format(output_prefix))
-                s = system.read_mol2(os.path.join(self.OutDir_xyz, "{}.mol2".format(output_prefix))) 
+                print("Pysimm working on {}".format(mol2_file))
+                s = system.read_mol2(mol2_file) 
             except BaseException:
-                print('problem reading {}.mol2 for Pysimm.'.format(output_prefix))
+                print('problem reading {} for Pysimm.'.format(mol2_file))
 
             f = forcefield.Gaff2()
             if atom_typing == 'pysimm':
                 s.apply_forcefield(f, charges='gasteiger')
             elif atom_typing == 'antechamber':
-                MDlib.get_forcefield_types(s, 'gaff2', f, swap_dict)
-                amber.cleanup_antechamber()
+                MDlib.get_type_from_antechamber(s, mol2_file, 'gaff2', f, swap_dict)
                 s.pair_style = 'lj'
                 s.apply_forcefield(f, charges='gasteiger', skip_ptypes=True)
             else:

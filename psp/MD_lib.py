@@ -849,27 +849,48 @@ def write_lammps_ouput(lammps_output, r, box_size, system_stats, dicts):
             out.write('\n')
 
 
-def get_forcefield_types(s, types='gaff2', f=None, swap_dict=None):
-    import os
+def get_type_from_antechamber(s, mol2_file, types='gaff2', f=None, swap_dict=None, cleanup=True):
+    import os, glob
     ANTECHAMBER_EXEC  = os.environ.get('ANTECHAMBER_EXEC')
-    subprocess.call('{} -fi mol2 -i {} -fo ac -o pysimm.tmp.ac -at {}'.format(ANTECHAMBER_EXEC, os.path.join(self.OutDir_xyz, output_prefix), types), shell=True)
-    with open('pysimm.tmp.ac') as fr:
-        fr.readline()
-        fr.readline()
+    temp_ac_fname = 'temp.ac'
+    temp_pdb_fname = None
+    try:
+        subprocess.call('{} -fi mol2 -i {} -fo ac -o {} -at {}'.format(ANTECHAMBER_EXEC, mol2_file, temp_ac_fname, types), shell=True)
+        fr = open(temp_ac_fname, "r")
+    except BaseException:
+        print('Error running Antechamber with the mol2 file, switch to using pdb file')
+        temp_pdb_fname = 'temp.pdb'
+        s.write_pdb(temp_pdb_fname)
+        subprocess.call('{} -fi pdb -i {} -fo ac -o {} -at {}'.format(ANTECHAMBER_EXEC, temp_pdb_fname, temp_ac_fname, types), shell=True)
+        fr = open(temp_ac_fname, "r")
+    fr.readline()
+    fr.readline()
+    line = fr.readline()
+    while line.split()[0] == 'ATOM':
+        tag = int(line.split()[1])
+        type_name = line.split()[-1]
+        if swap_dict:
+            for key in swap_dict:
+                if type_name == key:
+                    type_name = swap_dict[key]
+        if s.particle_types.get(type_name):
+            s.particles[tag].type = s.particle_types.get(type_name)[0]
+        elif f:
+            pt = f.particle_types.get(type_name)
+            if pt:
+                s.particles[tag].type = s.particle_types.add(pt[0].copy())
+        else:
+            print('cannot find type {} in system or forcefield'.format(type_name))
         line = fr.readline()
-        while line.split()[0] == 'ATOM':
-            tag = int(line.split()[1])
-            type_name = line.split()[-1]
-            if swap_dict:
-                for key in swap_dict:
-                    if type_name == key:
-                        type_name = swap_dict[key]
-            if s.particle_types.get(type_name):
-                s.particles[tag].type = s.particle_types.get(type_name)[0]
-            elif f:
-                pt = f.particle_types.get(type_name)
-                if pt:
-                    s.particles[tag].type = s.particle_types.add(pt[0].copy())
-            else:
-                print('cannot find type {} in system or forcefield'.format(type_name))
-            line = fr.readline()
+    fr.close()
+
+    if cleanup:
+        fnames = ['ATOMTYPE.INF', temp_ac_fname]
+        fnames += glob.glob('ANTECHAMBER*')
+        if temp_pdb_fname:
+            fnames += [temp_pdb_fname]
+        for fname in fnames:
+            try:
+                os.remove(fname)
+            except:
+                print('problem removing {} during cleanup'.format(fname))
