@@ -852,8 +852,7 @@ def write_lammps_ouput(lammps_output, r, box_size, system_stats, dicts):
 def get_forcefield_types(s, types='gaff2', f=None, swap_dict=None):
     import os
     ANTECHAMBER_EXEC  = os.environ.get('ANTECHAMBER_EXEC')
-    s.write_pdb('pysimm.tmp.pdb')
-    subprocess.call('{} -fi pdb -i pysimm.tmp.pdb -fo ac -o pysimm.tmp.ac -at {}'.format(ANTECHAMBER_EXEC, types), shell=True)
+    subprocess.call('{} -fi mol2 -i {} -fo ac -o pysimm.tmp.ac -at {}'.format(ANTECHAMBER_EXEC, os.path.join(self.OutDir_xyz, output_prefix), types), shell=True)
     with open('pysimm.tmp.ac') as fr:
         fr.readline()
         fr.readline()

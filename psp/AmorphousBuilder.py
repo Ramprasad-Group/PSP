@@ -492,20 +492,21 @@ class Builder:
 
         from pysimm import system, lmps, forcefield, amber
 
-        # run Pysimm for every mol file in the OutDir_xyz directory
+        # run Pysimm for every mol2 (converted from pdb with Babel) file in the OutDir_xyz directory
         for index, row in self.Dataframe.iterrows():
             _id = str(row[self.ID_col])
             _length = row[self.Length]
             _num = row[self.NumMole]
             _conf = 1  # read in only the first conformer
             output_prefix = "{}_N{}_C{}".format(_id, _length, _conf)
+            call('babel -ipdb {0}.pdb -omol2 {0}.mol2'.format(os.path.join(self.OutDir_xyz, output_prefix)), shell=True)
             data_fname = os.path.join(self.OutDir_pysimm, "{}.lmp".format(output_prefix))
 
             try:
-                print("Pysimm working on {}.mol".format(output_prefix))
-                s = system.read_mol(os.path.join(self.OutDir_xyz, "{}.mol".format(output_prefix))) 
+                print("Pysimm working on {}.mol2".format(output_prefix))
+                s = system.read_mol2(os.path.join(self.OutDir_xyz, "{}.mol2".format(output_prefix))) 
             except BaseException:
-                print('problem reading {}.mol for Pysimm.'.format(output_prefix))
+                print('problem reading {}.mol2 for Pysimm.'.format(output_prefix))
 
             f = forcefield.Gaff2()
             if atom_typing == 'pysimm':
