@@ -635,7 +635,37 @@ def read_lmps_header(lmp_file):
     nangles = int(lines[4].split()[0])
     ndihedrals = int(lines[5].split()[0])
     nimpropers = int(lines[6].split()[0])
-    return natoms, nbonds, nangles, ndihedrals, nimpropers
+
+    parts = lines[8].split()
+    if (len(parts) >= 2 and parts[1] == 'atom'):
+        natom_types = int(parts[0])
+    else:
+        natom_types = 0
+
+    parts = lines[9].split()  
+    if (len(parts) >= 2 and parts[1] == 'bond'):
+        nbond_types = int(parts[0])
+    else:
+        nbond_types = 0
+    
+    parts = lines[10].split()
+    if (len(parts) >= 2 and parts[1] == 'angle'):
+        nangle_types = int(parts[0])
+    else:
+        nangle_types = 0
+    
+    parts = lines[11].split()
+    if (len(parts) >= 2 and parts[1] == 'dihedral'):
+        ndihedral_types = int(parts[0])
+    else:
+        ndihedral_types = 0
+        
+    parts = lines[12].split()
+    if (len(parts) >= 2 and parts[1] == 'improper'):
+        nimproper_types = int(parts[0])
+    else:
+        nimproper_types = 0
+    return natoms, nbonds, nangles, ndihedrals, nimpropers, natom_types, nbond_types, nangle_types, ndihedral_types, nimproper_types
 
 
 # returns a 2D array of x, y, z coordinates (i.e. r[id][coordinate])
@@ -672,7 +702,7 @@ def get_coord_from_pdb(system_pdb_fname):
     return r
 
 
-def write_lammps(lammps_output, r, box_size, system_stats, dicts):
+def write_lammps_ouput(lammps_output, r, box_size, system_stats, dicts):
     # These switcher dicts are for each section of the LAMMPS file that we will build
     (
         atomconvertdicts,
@@ -699,7 +729,7 @@ def write_lammps(lammps_output, r, box_size, system_stats, dicts):
     with open(lammps_output, 'wt') as out:
         # header section
         out.write(
-            'LAMMPS data file Created by PSP - with LigParGen OPLS parameters\n'
+            'LAMMPS data file Created by PSP\n'
         )
         out.write('\n')
         out.write('{:>12}  atoms\n'.format(system_stats['total_atoms']))
@@ -817,3 +847,30 @@ def write_lammps(lammps_output, r, box_size, system_stats, dicts):
                     atom_counter += len(dic.get('Atoms'))
                     type_counter += len(dic.get(section_type))
             out.write('\n')
+
+
+def get_forcefield_types(s, types='gaff2', f=None, swap_dict=None):
+    import os
+    ANTECHAMBER_EXEC  = os.environ.get('ANTECHAMBER_EXEC')
+    s.write_pdb('pysimm.tmp.pdb')
+    subprocess.call('{} -fi pdb -i pysimm.tmp.pdb -fo ac -o pysimm.tmp.ac -at {}'.format(ANTECHAMBER_EXEC, types), shell=True)
+    with open('pysimm.tmp.ac') as fr:
+        fr.readline()
+        fr.readline()
+        line = fr.readline()
+        while line.split()[0] == 'ATOM':
+            tag = int(line.split()[1])
+            type_name = line.split()[-1]
+            if swap_dict:
+                for key in swap_dict:
+                    if type_name == key:
+                        type_name = swap_dict[key]
+            if s.particle_types.get(type_name):
+                s.particles[tag].type = s.particle_types.get(type_name)[0]
+            elif f:
+                pt = f.particle_types.get(type_name)
+                if pt:
+                    s.particles[tag].type = s.particle_types.add(pt[0].copy())
+            else:
+                print('cannot find type {} in system or forcefield'.format(type_name))
+            line = fr.readline()

@@ -1,15 +1,15 @@
 import numpy as np
 import pandas as pd
-import MD_lib as MDlib
+import psp.MD_lib as MDlib
 import time
 import os
-import PSP_lib as bd
+import psp.PSP_lib as bd
 from openbabel import openbabel as ob
 from subprocess import call
 
 # from scipy.optimize import minimize
 from optimparallel import minimize_parallel
-import MoleculeBuilder as mb
+import psp.MoleculeBuilder as mb
 
 
 class Builder:
@@ -402,6 +402,8 @@ class Builder:
             _num = row[self.NumMole]
             _conf = 1  # read in only the first conformer
             output_prefix = "{}_N{}_C{}".format(_id, _length, _conf)
+            lig_output_fname = "{}.lmp".format(output_prefix)
+            data_fname = os.path.join(self.OutDir_ligpargen, lig_output_fname)
 
             try:
                 print("LigParGen working on {}.pdb".format(output_prefix))
@@ -411,23 +413,22 @@ class Builder:
                     ),
                     shell=True,
                 )
-                lig_output_fname = "{}.lmp".format(output_prefix)
-                os.rename(lig_output_fname, os.path.join(self.OutDir_ligpargen, lig_output_fname))
+                os.rename(lig_output_fname, data_fname)
             except BaseException:
                 print('problem running LigParGen for {}.pdb.'.format(output_prefix))
 
             # quickly read the headers of LigParGen generated LAMMPS
             # files to count total number of atoms/bonds/angles...etc
-            data_fname = self.OutDir_ligpargen + lig_output_fname
-            natoms, nbonds, nangles, ndihedrals, nimpropers = MDlib.read_lmps_header(
+            natoms, nbonds, nangles, ndihedrals, nimpropers, natom_types, nbond_types, \
+            nangle_types, ndihedral_types, nimproper_types = MDlib.read_lmps_header(
                 data_fname
             )
 
-            system_stats['total_atom_types'] += natoms
-            system_stats['total_bond_types'] += nbonds
-            system_stats['total_angle_types'] += nangles
-            system_stats['total_dihedral_types'] += ndihedrals
-            system_stats['total_improper_types'] += nimpropers
+            system_stats['total_atom_types'] += natom_types
+            system_stats['total_bond_types'] += nbond_types
+            system_stats['total_angle_types'] += nangle_types
+            system_stats['total_dihedral_types'] += ndihedral_types
+            system_stats['total_improper_types'] += nimproper_types
             system_stats['total_atoms'] += natoms * _num
             system_stats['total_bonds'] += nbonds * _num
             system_stats['total_angles'] += nangles * _num
@@ -466,32 +467,108 @@ class Builder:
             dicts.append(switcher)
 
         lammps_output = os.path.join(self.OutDir, output_fname)
-        MDlib.write_lammps(lammps_output, r, self.box_size, system_stats, dicts)
+        MDlib.write_lammps_ouput(lammps_output, r, self.box_size, system_stats, dicts)
 
 
-    def get_gaff2(self, output_fname='amor_gaff2.lmps'):
+    def get_gaff2(self, output_fname='amor_gaff2.lmps', atom_typing='pysimm', swap_dict=None):
         system_pdb_fname = os.path.join(self.OutDir_packmol, "packmol.pdb")
         r = MDlib.get_coord_from_pdb(system_pdb_fname)
         
         bd.build_dir(self.OutDir_pysimm)
-        
 
-if __name__ == '__main__':
-    input_df = pd.read_csv("input_amor1.csv", low_memory=False)
-    amor = Builder(
-        input_df,
-        ID_col="ID",
-        SMILES_col="smiles",
-        #OutDir='PE_tests',
-        Length='Len',
-        NumConf='NumConf',
-        LeftCap = "LeftCap",
-        RightCap = "RightCap",
-        Loop='Loop',
-        density=0.65,
-        box_type='c',
-        BondInfo=False
-        #box_size=[0.0,20,0.0,20,0.0,20]
-    )
-    amor.Build()
-    amor.get_opls(output_fname='amor_opls.lmps')
+        system_stats = {
+            'total_atoms': 0,
+            'total_bonds': 0,
+            'total_angles': 0,
+            'total_dihedrals': 0,
+            'total_impropers': 0,
+            'total_atom_types': 0,
+            'total_bond_types': 0,
+            'total_angle_types': 0,
+            'total_dihedral_types': 0,
+            'total_improper_types': 0,
+        }
+        dicts = []
+
+        from pysimm import system, lmps, forcefield, amber
+
+        # run Pysimm for every mol file in the OutDir_xyz directory
+        for index, row in self.Dataframe.iterrows():
+            _id = str(row[self.ID_col])
+            _length = row[self.Length]
+            _num = row[self.NumMole]
+            _conf = 1  # read in only the first conformer
+            output_prefix = "{}_N{}_C{}".format(_id, _length, _conf)
+            data_fname = os.path.join(self.OutDir_pysimm, "{}.lmp".format(output_prefix))
+
+            try:
+                print("Pysimm working on {}.mol".format(output_prefix))
+                s = system.read_mol(os.path.join(self.OutDir_xyz, "{}.mol".format(output_prefix))) 
+            except BaseException:
+                print('problem reading {}.mol for Pysimm.'.format(output_prefix))
+
+            f = forcefield.Gaff2()
+            if atom_typing == 'pysimm':
+                s.apply_forcefield(f, charges='gasteiger')
+            elif atom_typing == 'antechamber':
+                MDlib.get_forcefield_types(s, 'gaff2', f, swap_dict)
+                amber.cleanup_antechamber()
+                s.pair_style = 'lj'
+                s.apply_forcefield(f, charges='gasteiger', skip_ptypes=True)
+            else:
+                print('Invalid atom typing option, please select pysimm or antechamber.')
+            s.write_lammps(data_fname)
+           
+            # quickly read the headers of Pysimm generated LAMMPS
+            # files to count total number of atoms/bonds/angles...etc        
+            natoms, nbonds, nangles, ndihedrals, nimpropers, natom_types, nbond_types, \
+            nangle_types, ndihedral_types, nimproper_types = MDlib.read_lmps_header(
+                data_fname
+            )
+
+            system_stats['total_atom_types'] += natom_types
+            system_stats['total_bond_types'] += nbond_types
+            system_stats['total_angle_types'] += nangle_types
+            system_stats['total_dihedral_types'] += ndihedral_types
+            system_stats['total_improper_types'] += nimproper_types
+            system_stats['total_atoms'] += natoms * _num
+            system_stats['total_bonds'] += nbonds * _num
+            system_stats['total_angles'] += nangles * _num
+            system_stats['total_dihedrals'] += ndihedrals * _num
+            system_stats['total_impropers'] += nimpropers * _num
+
+            # this switcher dict is to navigate through and store info for each section of a LAMMPS file
+            switcher = {
+                'Masses': [],
+                'Pair Coeffs': [],
+                'Bond Coeffs': [],
+                'Angle Coeffs': [],
+                'Dihedral Coeffs': [],
+                'Improper Coeffs': [],
+                'Atoms': [],
+                'Velocities': [],
+                'Bonds': [],
+                'Angles': [],
+                'Dihedrals': [],
+                'Impropers': [],
+                'Num': _num,
+            }
+            current_section = None
+
+            # read all the info in the Pysimm generated LAMMPS file for modification
+            with open(data_fname, 'rt') as lines:
+                for line in lines:
+                    if any(x in line for x in switcher.keys()):
+                        current_section = line.strip()
+                    elif line == '\n' or not current_section:
+                        continue
+                    else:
+                        section_list = switcher.get(
+                            current_section, 'Invalid current section'
+                        )
+                        section_list.append(line.split())
+            dicts.append(switcher)
+
+        lammps_output = os.path.join(self.OutDir, output_fname)
+        MDlib.write_lammps_ouput(lammps_output, r, self.box_size, system_stats, dicts)
+
