@@ -762,7 +762,8 @@ def write_lammps_ouput(lammps_output, r, box_size, system_stats, dicts):
         for dic in dicts:
             for fields in dic.get('Masses'):
                 counter += 1
-                out.write('{count:>8} {1:>10}\n'.format(*fields, count=counter))
+                parts = ' '.join(['%s' % (i,) for i in fields[1:]])
+                out.write('{:>12}  {:<}\n'.format(counter, parts))
         out.write('\n')
 
         # Pair, Bond, Angle, Dihedral, and Improper Coeffs sections
@@ -777,15 +778,8 @@ def write_lammps_ouput(lammps_output, r, box_size, system_stats, dicts):
                 for fields in dic.get(coeff_type):
                     counter += 1
                     convertdict[fields[0]] = counter
-                    fields[0] = counter
-                    if coeff_type == 'Dihedral Coeffs':
-                        out.write(
-                            '{:>8} {:>10} {:>10} {:>10} {:>10}\n'.format(*fields)
-                        )
-                    elif coeff_type == 'Improper Coeffs':
-                        out.write('{:>8} {:>10} {:>10} {:>10}\n'.format(*fields))
-                    else:
-                        out.write('{:>8} {:>10} {:>10}\n'.format(*fields))
+                    parts = ' '.join(['%s' % (i,) for i in fields[1:]])
+                    out.write('{:>12}  {:<}\n'.format(counter, parts))
                 switcher_coeffs.get(coeff_type)[1].append(convertdict)
             out.write('\n')
 
