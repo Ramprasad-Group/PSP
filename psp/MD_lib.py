@@ -847,7 +847,7 @@ def get_type_from_antechamber(s, mol2_file, types='gaff2', f=None, swap_dict=Non
         subprocess.call('{} -fi mol2 -i {} -fo ac -o {} -at {}'.format(ANTECHAMBER_EXEC, mol2_file, temp_ac_fname, types), shell=True)
         fr = open(temp_ac_fname, "r")
     except BaseException:
-        print('Error running Antechamber with the mol2 file, switch to using pdb file')
+        print('Error running Antechamber with the mol2 file, switch to using pdb file.')
         temp_pdb_fname = 'temp.pdb'
         s.write_pdb(temp_pdb_fname)
         subprocess.call('{} -fi pdb -i {} -fo ac -o {} -at {}'.format(ANTECHAMBER_EXEC, temp_pdb_fname, temp_ac_fname, types), shell=True)
