@@ -592,18 +592,23 @@ def move_barycenter(unit, xyz_shift, origin=True, barycenter=True):
         unit_copy[3] = unit_copy[3] + xyz_shift[2]
     return unit_copy
 
+
 # Rotate in X, Y and Z directions simultaneously
 def rotateXYZ(unit, theta3, theta2, theta1):
-    th1 = theta1 * np.pi / 180.0 # Z-axis
-    th2 = theta2 * np.pi / 180.0 # Y-axis
-    th3 = theta3 * np.pi / 180.0 # X-axis
+    th1 = theta1 * np.pi / 180.0  # Z-axis
+    th2 = theta2 * np.pi / 180.0  # Y-axis
+    th3 = theta3 * np.pi / 180.0  # X-axis
     Rot_matrix = np.array(
         [
             [
-                np.cos(th1) * np.cos(th2), np.cos(th1) * np.sin(th2) * np.sin(th3) - np.sin(th1) * np.cos(th3), np.cos(th1) * np.sin(th2) * np.cos(th3) + np.sin(th1) * np.sin(th3),
+                np.cos(th1) * np.cos(th2),
+                np.cos(th1) * np.sin(th2) * np.sin(th3) - np.sin(th1) * np.cos(th3),
+                np.cos(th1) * np.sin(th2) * np.cos(th3) + np.sin(th1) * np.sin(th3),
             ],
             [
-                np.sin(th1) * np.cos(th2), np.sin(th1) * np.sin(th2) * np.sin(th3) + np.cos(th1) * np.cos(th3), np.sin(th1) * np.sin(th2) * np.cos(th3) - np.cos(th1) * np.sin(th3),
+                np.sin(th1) * np.cos(th2),
+                np.sin(th1) * np.sin(th2) * np.sin(th3) + np.cos(th1) * np.cos(th3),
+                np.sin(th1) * np.sin(th2) * np.cos(th3) - np.cos(th1) * np.sin(th3),
             ],
             [-np.sin(th2), np.cos(th2) * np.sin(th3), np.cos(th2) * np.cos(th3)],
         ]
@@ -615,6 +620,7 @@ def rotateXYZ(unit, theta3, theta2, theta1):
     newXYZ.index = unit.index
     unit.loc[:, [1, 2, 3]] = newXYZ.loc[:, [1, 2, 3]]
     return unit
+
 
 # Rotate in X, Y and Z directions simultaneously
 def rotateXYZOrigin(unit_copy, theta1, theta2, theta3):
@@ -2581,8 +2587,8 @@ def gen_conf_xyz_vasp(
             maxAttempts=NAttempt,
         )
 
-        if len(cids) > 0:
-            break
+    #   if len(cids) > 0:
+    #       break
     n = 0
     for cid in cids:
         n += 1

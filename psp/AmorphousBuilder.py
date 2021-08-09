@@ -7,9 +7,11 @@ import psp.PSP_lib as bd
 from openbabel import openbabel as ob
 from subprocess import call
 import glob
+
 # from scipy.optimize import minimize
 from optimparallel import minimize_parallel
 import psp.MoleculeBuilder as mb
+import random
 
 
 class Builder:
@@ -63,11 +65,10 @@ class Builder:
         bd.build_dir(self.OutDir)
         bd.build_dir(self.OutDir_xyz)
 
-        if self.NumModel > 1:
-            for model in range(1,self.NumModel+1):
-                bd.build_dir(self.OutDir_packmol + '_' + str(model))
-        else:
-            bd.build_dir(self.OutDir_packmol)
+        # if self.NumModel > 1:
+        #    for model in range(1,self.NumModel+1):
+        #
+        # else:
 
         # PACKMOL
         packmol_path = os.getenv("PACKMOL_EXEC")
@@ -85,7 +86,7 @@ class Builder:
                 RightCap=self.RightCap[0],
                 OutDir=self.OutDir_xyz,
                 Length=[int(df[self.Length].values)],
-                NumConf=int(df[self.NumConf].values),
+                NumConf=int(df[self.NumConf].values) * self.NumModel,
                 Loop=eval(str(df[self.Loop].values[0])),
                 NCores=-1,
             )
@@ -98,7 +99,7 @@ class Builder:
                 "Couldn't generate XYZ coordinates of molecules, check 'molecules.csv'"
             )
 
-        XYZ_list, smi_list, NMol_list = [], [], []
+        XYZ_list, smi_list, NMol_list, NumConf_list = [], [], [], []
         for index, row in self.Dataframe.iterrows():
             # Get number of molecules for each conformer of molecules
             NMol_list += [int(row[self.NumMole] / row[self.NumConf])] * row[
@@ -112,8 +113,9 @@ class Builder:
             # Get a list of filenames for XYZ coordinates
             XYZ_list_ind = glob.glob(self.OutDir_xyz + str(row[self.ID_col]) + "*.pdb")
             XYZ_list.append(XYZ_list_ind)
+            NumConf_list.append(int(row[self.NumConf]))
 
-            #for conf in range(1, row[self.NumConf] + 1):
+            # for conf in range(1, row[self.NumConf] + 1):
             #    XYZ_list.append(
             #        self.OutDir_xyz
             #        + str(row[self.ID_col])
@@ -147,20 +149,45 @@ class Builder:
 
         fix_dis = self.tol_dis / 2
 
-        for model in range(1, self.NumModel+1):
+        ind_mol_count = [0] * len(NumConf_list)
+        count_model = 0
+        for model in range(1, self.NumModel + 1):
             if self.NumModel > 1:
-                packmol_outdir_model = self.OutDir_packmol + '_' + str(model)
+                print("MODEL ", model)
+                packmol_outdir_model = self.OutDir_packmol[:-1] + '_' + str(model) + "/"
+                bd.build_dir(packmol_outdir_model)
+
+                XYZ_list_ind_model = []
+                count_mol = 0
                 for ind_list in XYZ_list:
-                    XYZ_list_.append(ind_list[i:i+"NumConf"])
-                    print(i)
-                exit()
+                    if len(ind_list) >= (count_model + 1) * NumConf_list[count_mol]:
+                        XYZ_list_ind_model.append(
+                            ind_list[
+                                count_model
+                                * NumConf_list[count_mol]: (count_model + 1)
+                                * NumConf_list[count_mol]
+                            ]
+                        )
+                    else:
+                        XYZ_list_ind_model.append(
+                            random.sample(ind_list, NumConf_list[count_mol])
+                        )
+
+                    count_mol += 1
+
+                XYZ_list_model = [
+                    item for sublist in XYZ_list_ind_model for item in sublist
+                ]
+                count_model += 1
             else:
+                bd.build_dir(self.OutDir_packmol)
+
                 packmol_outdir_model = self.OutDir_packmol
                 XYZ_list_model = [item for sublist in XYZ_list for item in sublist]
-
+            # exit()
             # PACKMOL input file
             MDlib.gen_packmol_inp(
-                self.OutDir_packmol,
+                packmol_outdir_model,
                 self.tol_dis,
                 XYZ_list_model,
                 NMol_list,
@@ -174,30 +201,37 @@ class Builder:
 
             # PACKMOL calculation
             command = (
-                packmol_path + " < " + os.path.join(self.OutDir_packmol, "packmol.inp")
+                packmol_path + " < " + os.path.join(packmol_outdir_model, "packmol.inp")
             )
             errout = MDlib.run_packmol(
-                command, os.path.join(self.OutDir_packmol, "packmol.out")
+                command, os.path.join(packmol_outdir_model, "packmol.out")
             )
 
             if errout is not None:
                 print(" Error in packmol calculation")
                 exit()
-            elif os.path.exists(os.path.join(self.OutDir_packmol, "packmol.pdb")) is False:
+            elif (
+                os.path.exists(os.path.join(packmol_outdir_model, "packmol.pdb"))
+                is False
+            ):
                 print(" Error in packmol calculation")
                 exit()
 
             mol = ob.OBMol()
             obConversion = ob.OBConversion()
             obConversion.SetInAndOutFormats("pdb", "mol2")
-            obConversion.ReadFile(mol, os.path.join(self.OutDir_packmol, "packmol.pdb"))
-            obConversion.WriteFile(mol, os.path.join(self.OutDir_packmol, "packmol.mol2"))
+            obConversion.ReadFile(
+                mol, os.path.join(packmol_outdir_model, "packmol.pdb")
+            )
+            obConversion.WriteFile(
+                mol, os.path.join(packmol_outdir_model, "packmol.mol2")
+            )
 
             packmol_xyz = MDlib.read_mol2_xyz(
-                os.path.join(self.OutDir_packmol, "packmol.mol2")
+                os.path.join(packmol_outdir_model, "packmol.mol2")
             )
             packmol_bond = MDlib.read_mol2_bond(
-                os.path.join(self.OutDir_packmol, "packmol.mol2")
+                os.path.join(packmol_outdir_model, "packmol.mol2")
             )
             # packmol_xyz = pd.read_csv(
             #    self.OutDir_packmol + "packmol.xyz",
@@ -206,8 +240,14 @@ class Builder:
             #    delim_whitespace=True,
             # )
 
+            # Output filename
+            if self.NumModel > 1:
+                output_filename = self.OutFile + "_N" + str(count_model)
+            else:
+                output_filename = self.OutFile
+
             MDlib.gen_sys_vasp(
-                os.path.join(self.OutDir, self.OutFile + ".vasp"),
+                os.path.join(self.OutDir, output_filename + ".vasp"),
                 packmol_xyz,
                 xmin,
                 xmax,
@@ -217,7 +257,7 @@ class Builder:
                 zmax,
             )
             MDlib.gen_sys_data(
-                os.path.join(self.OutDir, self.OutFile + ".data"),
+                os.path.join(self.OutDir, output_filename + ".data"),
                 packmol_xyz,
                 packmol_bond,
                 xmin,
@@ -440,10 +480,18 @@ class Builder:
 
             # quickly read the headers of LigParGen generated LAMMPS
             # files to count total number of atoms/bonds/angles...etc
-            natoms, nbonds, nangles, ndihedrals, nimpropers, natom_types, nbond_types, \
-            nangle_types, ndihedral_types, nimproper_types = MDlib.read_lmps_header(
-                data_fname
-            )
+            (
+                natoms,
+                nbonds,
+                nangles,
+                ndihedrals,
+                nimpropers,
+                natom_types,
+                nbond_types,
+                nangle_types,
+                ndihedral_types,
+                nimproper_types,
+            ) = MDlib.read_lmps_header(data_fname)
 
             system_stats['total_atom_types'] += natom_types
             system_stats['total_bond_types'] += nbond_types
@@ -490,11 +538,12 @@ class Builder:
         lammps_output = os.path.join(self.OutDir, output_fname)
         MDlib.write_lammps_ouput(lammps_output, r, self.box_size, system_stats, dicts)
 
-
-    def get_gaff2(self, output_fname='amor_gaff2.lmps', atom_typing='pysimm', swap_dict=None):
+    def get_gaff2(
+        self, output_fname='amor_gaff2.lmps', atom_typing='pysimm', swap_dict=None
+    ):
         system_pdb_fname = os.path.join(self.OutDir_packmol, "packmol.pdb")
         r = MDlib.get_coord_from_pdb(system_pdb_fname)
-        
+
         bd.build_dir(self.OutDir_pysimm)
 
         system_stats = {
@@ -521,12 +570,19 @@ class Builder:
             _conf = 1  # read in only the first conformer
             output_prefix = "{}_N{}_C{}".format(_id, _length, _conf)
             mol2_file = os.path.join(self.OutDir_xyz, "{}.mol2".format(output_prefix))
-            call('babel -ipdb {0}.pdb -omol2 {0}.mol2'.format(os.path.join(self.OutDir_xyz, output_prefix)), shell=True)
-            data_fname = os.path.join(self.OutDir_pysimm, "{}.lmp".format(output_prefix))
+            call(
+                'babel -ipdb {0}.pdb -omol2 {0}.mol2'.format(
+                    os.path.join(self.OutDir_xyz, output_prefix)
+                ),
+                shell=True,
+            )
+            data_fname = os.path.join(
+                self.OutDir_pysimm, "{}.lmp".format(output_prefix)
+            )
 
             try:
                 print("Pysimm working on {}".format(mol2_file))
-                s = system.read_mol2(mol2_file) 
+                s = system.read_mol2(mol2_file)
             except BaseException:
                 print('problem reading {} for Pysimm.'.format(mol2_file))
 
@@ -538,15 +594,25 @@ class Builder:
                 s.pair_style = 'lj'
                 s.apply_forcefield(f, charges='gasteiger', skip_ptypes=True)
             else:
-                print('Invalid atom typing option, please select pysimm or antechamber.')
+                print(
+                    'Invalid atom typing option, please select pysimm or antechamber.'
+                )
             s.write_lammps(data_fname)
-           
+
             # quickly read the headers of Pysimm generated LAMMPS
-            # files to count total number of atoms/bonds/angles...etc        
-            natoms, nbonds, nangles, ndihedrals, nimpropers, natom_types, nbond_types, \
-            nangle_types, ndihedral_types, nimproper_types = MDlib.read_lmps_header(
-                data_fname
-            )
+            # files to count total number of atoms/bonds/angles...etc
+            (
+                natoms,
+                nbonds,
+                nangles,
+                ndihedrals,
+                nimpropers,
+                natom_types,
+                nbond_types,
+                nangle_types,
+                ndihedral_types,
+                nimproper_types,
+            ) = MDlib.read_lmps_header(data_fname)
 
             system_stats['total_atom_types'] += natom_types
             system_stats['total_bond_types'] += nbond_types
@@ -593,4 +659,3 @@ class Builder:
 
         lammps_output = os.path.join(self.OutDir, output_fname)
         MDlib.write_lammps_ouput(lammps_output, r, self.box_size, system_stats, dicts)
-

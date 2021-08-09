@@ -82,15 +82,36 @@ class Builder:
         print('    - crystal builder started for %s ' % i[0])
         if self.Polymer is True:
             if isinstance(self.NSamples, int):
-                print('maximum number of possible crustals for each polymer chain: ', self.NSamples * self.NSamples * self.NSamples,)
+                print(
+                    'maximum number of possible crustals for each polymer chain: ',
+                    self.NSamples * self.NSamples * self.NSamples,
+                )
             else:
-                print('maximum number of possible crustals for each polymer chain: ', len(self.NSamples[0]) * len(self.NSamples[1]) * len(self.NSamples[2]), )
+                print(
+                    'maximum number of possible crustals for each polymer chain: ',
+                    len(self.NSamples[0])
+                    * len(self.NSamples[1])
+                    * len(self.NSamples[2]),
+                )
         else:
             if isinstance(self.NSamples, int):
-                print('maximum number of possible crustals for each chain: ', self.NSamples**8)
+                print(
+                    'maximum number of possible crustals for each chain: ',
+                    self.NSamples ** 8,
+                )
             else:
-                print('maximum number of possible crustals for each polymer chain: ', len(self.NSamples[0])*len(self.NSamples[1])*len(self.NSamples[2])*len(self.NSamples[3])*len(self.NSamples[4])*len(self.NSamples[5])*len(self.NSamples[6])*len(self.NSamples[7]))
-            
+                print(
+                    'maximum number of possible crustals for each polymer chain: ',
+                    len(self.NSamples[0])
+                    * len(self.NSamples[1])
+                    * len(self.NSamples[2])
+                    * len(self.NSamples[3])
+                    * len(self.NSamples[4])
+                    * len(self.NSamples[5])
+                    * len(self.NSamples[6])
+                    * len(self.NSamples[7]),
+                )
+
         output = pd.DataFrame(output, columns=['ID', 'Count', 'radius'])
         end_1 = time.time()
         print('    - crystal building completed.')
@@ -281,7 +302,8 @@ def CrystalBuilderMainPolymer(
                 - min(xyz_coordinates[3].values)
                 + (max(xyz_coordinates[3].values) - min(xyz_coordinates[3].values))
                 / samples,
-                (max(xyz_coordinates[3].values) - min(xyz_coordinates[3].values)) / samples,
+                (max(xyz_coordinates[3].values) - min(xyz_coordinates[3].values))
+                / samples,
             ),
             decimals=2,
         )
@@ -412,7 +434,8 @@ def CrystalBuilderMain(
                 - min(xyz_coordinates[3].values)
                 + (max(xyz_coordinates[3].values) - min(xyz_coordinates[3].values))
                 / samples,
-                (max(xyz_coordinates[3].values) - min(xyz_coordinates[3].values)) / samples,
+                (max(xyz_coordinates[3].values) - min(xyz_coordinates[3].values))
+                / samples,
             ),
             decimals=2,
         )
@@ -422,7 +445,7 @@ def CrystalBuilderMain(
         )  # Rotation in X and Y axes
 
         # Total samples
-        samp = [tm,rm1,rm2,rm2,rm2,rm2,rm2,rm2]
+        samp = [tm, rm1, rm2, rm2, rm2, rm2, rm2, rm2]
 
         # Number of digits in total number of crystal models
         digits = bd.len_digit_number(NSamples ** 8)
@@ -432,7 +455,16 @@ def CrystalBuilderMain(
             samp = NSamples.copy()
 
             # Number of digits in total number of crystal models
-            digits = bd.len_digit_number(len(samp[0])*len(samp[1])*len(samp[2])*len(samp[3])*len(samp[4])*len(samp[5])*len(samp[6])*len(samp[7])) 
+            digits = bd.len_digit_number(
+                len(samp[0])
+                * len(samp[1])
+                * len(samp[2])
+                * len(samp[3])
+                * len(samp[4])
+                * len(samp[5])
+                * len(samp[6])
+                * len(samp[7])
+            )
 
         else:
             print("There is an error in inputs: Check 'NSamples'")
@@ -464,7 +496,7 @@ def CrystalBuilderMain(
         radius = float(Input_radius)
 
     # Number of digits in total number of crystal models
-    #digits = bd.len_digit_number(NSamples ** 8)
+    # digits = bd.len_digit_number(NSamples ** 8)
 
     count = 0
     for i in samp[0]:  # Second poly

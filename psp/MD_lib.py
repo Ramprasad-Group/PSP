@@ -372,16 +372,20 @@ def evaluate_obj(sys, dis_cutoff, xmin, xmax, ymin, ymax, zmin, zmax):
 
 # Rotate in X, Y and Z directions simultaneously
 def rotateXYZ(unit, theta3, theta2, theta1):
-    th1 = theta1 * np.pi / 180.0 # Z-axis
-    th2 = theta2 * np.pi / 180.0 # Y-axis
-    th3 = theta3 * np.pi / 180.0 # X-axis
+    th1 = theta1 * np.pi / 180.0  # Z-axis
+    th2 = theta2 * np.pi / 180.0  # Y-axis
+    th3 = theta3 * np.pi / 180.0  # X-axis
     Rot_matrix = np.array(
         [
             [
-                np.cos(th1) * np.cos(th2), np.cos(th1) * np.sin(th2) * np.sin(th3) - np.sin(th1) * np.cos(th3), np.cos(th1) * np.sin(th2) * np.cos(th3) + np.sin(th1) * np.sin(th3),
+                np.cos(th1) * np.cos(th2),
+                np.cos(th1) * np.sin(th2) * np.sin(th3) - np.sin(th1) * np.cos(th3),
+                np.cos(th1) * np.sin(th2) * np.cos(th3) + np.sin(th1) * np.sin(th3),
             ],
             [
-                np.sin(th1) * np.cos(th2), np.sin(th1) * np.sin(th2) * np.sin(th3) + np.cos(th1) * np.cos(th3), np.sin(th1) * np.sin(th2) * np.cos(th3) - np.cos(th1) * np.sin(th3),
+                np.sin(th1) * np.cos(th2),
+                np.sin(th1) * np.sin(th2) * np.sin(th3) + np.cos(th1) * np.cos(th3),
+                np.sin(th1) * np.sin(th2) * np.cos(th3) - np.cos(th1) * np.sin(th3),
             ],
             [-np.sin(th2), np.cos(th2) * np.sin(th3), np.cos(th2) * np.cos(th3)],
         ]
@@ -632,44 +636,53 @@ def read_lmps_header(lmp_file):
     nimpropers = int(lines[6].split()[0])
 
     parts = lines[8].split()
-    if (len(parts) >= 2 and parts[1] == 'atom'):
+    if len(parts) >= 2 and parts[1] == 'atom':
         natom_types = int(parts[0])
     else:
         natom_types = 0
 
-    parts = lines[9].split()  
-    if (len(parts) >= 2 and parts[1] == 'bond'):
+    parts = lines[9].split()
+    if len(parts) >= 2 and parts[1] == 'bond':
         nbond_types = int(parts[0])
     else:
         nbond_types = 0
-    
+
     parts = lines[10].split()
-    if (len(parts) >= 2 and parts[1] == 'angle'):
+    if len(parts) >= 2 and parts[1] == 'angle':
         nangle_types = int(parts[0])
     else:
         nangle_types = 0
-    
+
     parts = lines[11].split()
-    if (len(parts) >= 2 and parts[1] == 'dihedral'):
+    if len(parts) >= 2 and parts[1] == 'dihedral':
         ndihedral_types = int(parts[0])
     else:
         ndihedral_types = 0
-        
+
     parts = lines[12].split()
-    if (len(parts) >= 2 and parts[1] == 'improper'):
+    if len(parts) >= 2 and parts[1] == 'improper':
         nimproper_types = int(parts[0])
     else:
         nimproper_types = 0
-    return natoms, nbonds, nangles, ndihedrals, nimpropers, natom_types, nbond_types, nangle_types, ndihedral_types, nimproper_types
+    return (
+        natoms,
+        nbonds,
+        nangles,
+        ndihedrals,
+        nimpropers,
+        natom_types,
+        nbond_types,
+        nangle_types,
+        ndihedral_types,
+        nimproper_types,
+    )
 
 
 # returns a 2D array of x, y, z coordinates (i.e. r[id][coordinate])
 def get_coord_from_pdb(system_pdb_fname):
     skip_beginning = 5  # header lines of packmol.pdb
     atom_count = 0  # coutner for atom number
-    r = np.zeros(
-        [1, 3], float
-    )  # 2D array of x, y, z coordinates, r[id][coordinate]
+    r = np.zeros([1, 3], float)  # 2D array of x, y, z coordinates, r[id][coordinate]
 
     # get all atom coordinates from the system/packmol pdb file
     with open(system_pdb_fname, 'r') as f:
@@ -723,9 +736,7 @@ def write_lammps_ouput(lammps_output, r, box_size, system_stats, dicts):
     # build the final LAMMPS output
     with open(lammps_output, 'wt') as out:
         # header section
-        out.write(
-            'LAMMPS data file Created by PSP\n'
-        )
+        out.write('LAMMPS data file Created by PSP\n')
         out.write('\n')
         out.write('{:>12}  atoms\n'.format(system_stats['total_atoms']))
         out.write('{:>12}  bonds\n'.format(system_stats['total_bonds']))
@@ -736,18 +747,16 @@ def write_lammps_ouput(lammps_output, r, box_size, system_stats, dicts):
         out.write('{:>12}  atom types\n'.format(system_stats['total_atom_types']))
         out.write('{:>12}  bond types\n'.format(system_stats['total_bond_types']))
         out.write('{:>12}  angle types\n'.format(system_stats['total_angle_types']))
-        out.write('{:>12}  dihedral types\n'.format(system_stats['total_dihedral_types']))
-        out.write('{:>12}  improper types\n'.format(system_stats['total_improper_types']))
+        out.write(
+            '{:>12}  dihedral types\n'.format(system_stats['total_dihedral_types'])
+        )
+        out.write(
+            '{:>12}  improper types\n'.format(system_stats['total_improper_types'])
+        )
         out.write('\n')
-        out.write(
-            '{:>12}  {:>12} xlo xhi\n'.format(box_size[0], box_size[1])
-        )
-        out.write(
-            '{:>12}  {:>12} ylo yhi\n'.format(box_size[2], box_size[3])
-        )
-        out.write(
-            '{:>12}  {:>12} zlo zhi\n'.format(box_size[4], box_size[5])
-        )
+        out.write('{:>12}  {:>12} xlo xhi\n'.format(box_size[0], box_size[1]))
+        out.write('{:>12}  {:>12} ylo yhi\n'.format(box_size[2], box_size[3]))
+        out.write('{:>12}  {:>12} zlo zhi\n'.format(box_size[4], box_size[5]))
         out.write('\n')
 
         # Masses section
@@ -838,19 +847,33 @@ def write_lammps_ouput(lammps_output, r, box_size, system_stats, dicts):
             out.write('\n')
 
 
-def get_type_from_antechamber(s, mol2_file, types='gaff2', f=None, swap_dict=None, cleanup=True):
-    import os, glob
-    ANTECHAMBER_EXEC  = os.environ.get('ANTECHAMBER_EXEC')
+def get_type_from_antechamber(
+    s, mol2_file, types='gaff2', f=None, swap_dict=None, cleanup=True
+):
+    import os
+    import glob
+
+    ANTECHAMBER_EXEC = os.environ.get('ANTECHAMBER_EXEC')
     temp_ac_fname = 'temp.ac'
     temp_pdb_fname = None
     try:
-        subprocess.call('{} -fi mol2 -i {} -fo ac -o {} -at {}'.format(ANTECHAMBER_EXEC, mol2_file, temp_ac_fname, types), shell=True)
+        subprocess.call(
+            '{} -fi mol2 -i {} -fo ac -o {} -at {}'.format(
+                ANTECHAMBER_EXEC, mol2_file, temp_ac_fname, types
+            ),
+            shell=True,
+        )
         fr = open(temp_ac_fname, "r")
     except BaseException:
         print('Error running Antechamber with the mol2 file, switch to using pdb file')
         temp_pdb_fname = 'temp.pdb'
         s.write_pdb(temp_pdb_fname)
-        subprocess.call('{} -fi pdb -i {} -fo ac -o {} -at {}'.format(ANTECHAMBER_EXEC, temp_pdb_fname, temp_ac_fname, types), shell=True)
+        subprocess.call(
+            '{} -fi pdb -i {} -fo ac -o {} -at {}'.format(
+                ANTECHAMBER_EXEC, temp_pdb_fname, temp_ac_fname, types
+            ),
+            shell=True,
+        )
         fr = open(temp_ac_fname, "r")
     fr.readline()
     fr.readline()
@@ -881,5 +904,5 @@ def get_type_from_antechamber(s, mol2_file, types='gaff2', f=None, swap_dict=Non
         for fname in fnames:
             try:
                 os.remove(fname)
-            except:
+            except Exception:
                 print('problem removing {} during cleanup'.format(fname))
