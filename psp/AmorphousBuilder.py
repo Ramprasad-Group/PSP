@@ -62,7 +62,12 @@ class Builder:
         # location of directory for VASP inputs (polymers) and build a directory
         bd.build_dir(self.OutDir)
         bd.build_dir(self.OutDir_xyz)
-        bd.build_dir(self.OutDir_packmol)
+
+        if self.NumModel > 1:
+            for model in range(1,self.NumModel+1):
+                bd.build_dir(self.OutDir_packmol + '_' + str(model))
+        else:
+            bd.build_dir(self.OutDir_packmol)
 
         # PACKMOL
         packmol_path = os.getenv("PACKMOL_EXEC")
@@ -105,16 +110,19 @@ class Builder:
             smi_list += smiles_each * row[self.NumConf]
 
             # Get a list of filenames for XYZ coordinates
-            for conf in range(1, row[self.NumConf] + 1):
-                XYZ_list.append(
-                    self.OutDir_xyz
-                    + str(row[self.ID_col])
-                    + "_N"
-                    + str(row[self.Length])
-                    + "_C"
-                    + str(conf)
-                    + ".pdb"
-                )
+            XYZ_list_ind = glob.glob(self.OutDir_xyz + str(row[self.ID_col]) + "*.pdb")
+            XYZ_list.append(XYZ_list_ind)
+
+            #for conf in range(1, row[self.NumConf] + 1):
+            #    XYZ_list.append(
+            #        self.OutDir_xyz
+            #        + str(row[self.ID_col])
+            #        + "_N"
+            #        + str(row[self.Length])
+            #        + "_C"
+            #        + str(conf)
+            #        + ".pdb"
+            #    )
 
         # Define boundary conditions
         if max(self.box_size) == 0.0:  # Box size is not provided
@@ -139,76 +147,87 @@ class Builder:
 
         fix_dis = self.tol_dis / 2
 
-        # PACKMOL input file
-        MDlib.gen_packmol_inp(
-            self.OutDir_packmol,
-            self.tol_dis,
-            XYZ_list,
-            NMol_list,
-            xmin + fix_dis,
-            xmax - fix_dis,
-            ymin + fix_dis,
-            ymax - fix_dis,
-            zmin + fix_dis,
-            zmax - fix_dis,
-        )
+        for model in range(1, self.NumModel+1):
+            if self.NumModel > 1:
+                packmol_outdir_model = self.OutDir_packmol + '_' + str(model)
+                for ind_list in XYZ_list:
+                    XYZ_list_.append(ind_list[i:i+"NumConf"])
+                    print(i)
+                exit()
+            else:
+                packmol_outdir_model = self.OutDir_packmol
+                XYZ_list_model = [item for sublist in XYZ_list for item in sublist]
 
-        # PACKMOL calculation
-        command = (
-            packmol_path + " < " + os.path.join(self.OutDir_packmol, "packmol.inp")
-        )
-        errout = MDlib.run_packmol(
-            command, os.path.join(self.OutDir_packmol, "packmol.out")
-        )
+            # PACKMOL input file
+            MDlib.gen_packmol_inp(
+                self.OutDir_packmol,
+                self.tol_dis,
+                XYZ_list_model,
+                NMol_list,
+                xmin + fix_dis,
+                xmax - fix_dis,
+                ymin + fix_dis,
+                ymax - fix_dis,
+                zmin + fix_dis,
+                zmax - fix_dis,
+            )
 
-        if errout is not None:
-            print(" Error in packmol calculation")
-            exit()
-        elif os.path.exists(os.path.join(self.OutDir_packmol, "packmol.pdb")) is False:
-            print(" Error in packmol calculation")
-            exit()
+            # PACKMOL calculation
+            command = (
+                packmol_path + " < " + os.path.join(self.OutDir_packmol, "packmol.inp")
+            )
+            errout = MDlib.run_packmol(
+                command, os.path.join(self.OutDir_packmol, "packmol.out")
+            )
 
-        mol = ob.OBMol()
-        obConversion = ob.OBConversion()
-        obConversion.SetInAndOutFormats("pdb", "mol2")
-        obConversion.ReadFile(mol, os.path.join(self.OutDir_packmol, "packmol.pdb"))
-        obConversion.WriteFile(mol, os.path.join(self.OutDir_packmol, "packmol.mol2"))
+            if errout is not None:
+                print(" Error in packmol calculation")
+                exit()
+            elif os.path.exists(os.path.join(self.OutDir_packmol, "packmol.pdb")) is False:
+                print(" Error in packmol calculation")
+                exit()
 
-        packmol_xyz = MDlib.read_mol2_xyz(
-            os.path.join(self.OutDir_packmol, "packmol.mol2")
-        )
-        packmol_bond = MDlib.read_mol2_bond(
-            os.path.join(self.OutDir_packmol, "packmol.mol2")
-        )
-        # packmol_xyz = pd.read_csv(
-        #    self.OutDir_packmol + "packmol.xyz",
-        #    header=None,
-        #    skiprows=2,
-        #    delim_whitespace=True,
-        # )
+            mol = ob.OBMol()
+            obConversion = ob.OBConversion()
+            obConversion.SetInAndOutFormats("pdb", "mol2")
+            obConversion.ReadFile(mol, os.path.join(self.OutDir_packmol, "packmol.pdb"))
+            obConversion.WriteFile(mol, os.path.join(self.OutDir_packmol, "packmol.mol2"))
 
-        MDlib.gen_sys_vasp(
-            os.path.join(self.OutDir, self.OutFile + ".vasp"),
-            packmol_xyz,
-            xmin,
-            xmax,
-            ymin,
-            ymax,
-            zmin,
-            zmax,
-        )
-        MDlib.gen_sys_data(
-            os.path.join(self.OutDir, self.OutFile + ".data"),
-            packmol_xyz,
-            packmol_bond,
-            xmin,
-            xmax,
-            ymin,
-            ymax,
-            zmin,
-            zmax,
-            self.BondInfo,
-        )
+            packmol_xyz = MDlib.read_mol2_xyz(
+                os.path.join(self.OutDir_packmol, "packmol.mol2")
+            )
+            packmol_bond = MDlib.read_mol2_bond(
+                os.path.join(self.OutDir_packmol, "packmol.mol2")
+            )
+            # packmol_xyz = pd.read_csv(
+            #    self.OutDir_packmol + "packmol.xyz",
+            #    header=None,
+            #    skiprows=2,
+            #    delim_whitespace=True,
+            # )
+
+            MDlib.gen_sys_vasp(
+                os.path.join(self.OutDir, self.OutFile + ".vasp"),
+                packmol_xyz,
+                xmin,
+                xmax,
+                ymin,
+                ymax,
+                zmin,
+                zmax,
+            )
+            MDlib.gen_sys_data(
+                os.path.join(self.OutDir, self.OutFile + ".data"),
+                packmol_xyz,
+                packmol_bond,
+                xmin,
+                xmax,
+                ymin,
+                ymax,
+                zmin,
+                zmax,
+                self.BondInfo,
+            )
 
     def Build_psp(self):
         # location of directory for VASP inputs (polymers) and build a directory
