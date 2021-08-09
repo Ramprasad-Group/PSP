@@ -80,10 +80,17 @@ class Builder:
 
         print("")
         print('    - crystal builder started for %s ' % i[0])
-        print(
-            '      maximum number of possible crustals for each polymer chain: ',
-            self.NSamples * self.NSamples * (self.NSamples),
-        )
+        if self.Polymer is True:
+            if isinstance(self.NSamples, int):
+                print('maximum number of possible crustals for each polymer chain: ', self.NSamples * self.NSamples * self.NSamples,)
+            else:
+                print('maximum number of possible crustals for each polymer chain: ', len(self.NSamples[0]) * len(self.NSamples[1]) * len(self.NSamples[2]), )
+        else:
+            if isinstance(self.NSamples, int):
+                print('maximum number of possible crustals for each chain: ', self.NSamples**8)
+            else:
+                print('maximum number of possible crustals for each polymer chain: ', len(self.NSamples[0])*len(self.NSamples[1])*len(self.NSamples[2])*len(self.NSamples[3])*len(self.NSamples[4])*len(self.NSamples[5])*len(self.NSamples[6])*len(self.NSamples[7]))
+            
         output = pd.DataFrame(output, columns=['ID', 'Count', 'radius'])
         end_1 = time.time()
         print('    - crystal building completed.')
@@ -265,22 +272,40 @@ def CrystalBuilderMainPolymer(
 
     build_dir(OutDir + VaspInp)  # .split('/')[-1])
 
-    samples = NSamples - 1
-    tm = np.around(
-        np.arange(
-            0,
-            max(xyz_coordinates[3].values)
-            - min(xyz_coordinates[3].values)
-            + (max(xyz_coordinates[3].values) - min(xyz_coordinates[3].values))
-            / samples,
-            (max(xyz_coordinates[3].values) - min(xyz_coordinates[3].values)) / samples,
-        ),
-        decimals=2,
-    )
-    rm1 = np.around(np.arange(0, 180 + (180 / samples), 180 / samples), decimals=1)
-    rm2 = np.around(
-        np.arange(0, 180 + (180 / samples), 180 / samples), decimals=1
-    )  # 0 and 180 degree creates problems
+    if isinstance(NSamples, int):
+        samples = NSamples - 1
+        tm = np.around(
+            np.arange(
+                0,
+                max(xyz_coordinates[3].values)
+                - min(xyz_coordinates[3].values)
+                + (max(xyz_coordinates[3].values) - min(xyz_coordinates[3].values))
+                / samples,
+                (max(xyz_coordinates[3].values) - min(xyz_coordinates[3].values)) / samples,
+            ),
+            decimals=2,
+        )
+        rm1 = np.around(np.arange(0, 180 + (180 / samples), 180 / samples), decimals=1)
+        rm2 = np.around(
+            np.arange(0, 360 + (360 / samples), 360 / samples), decimals=1
+        )  # 0 and 180 degree creates problems
+
+        # Total samples
+        samp = [tm, rm1, rm2]
+        # Number of digits in total number of crystal models
+        digits = bd.len_digit_number(NSamples * NSamples * NSamples)
+
+    elif isinstance(NSamples, list):
+        if len(NSamples) == 3 and isinstance(NSamples[0], list) is True:
+            samp = NSamples.copy()
+            # Number of digits in total number of crystal models
+            digits = bd.len_digit_number(len(samp[0]) * len(samp[1]) * len(samp[2]))
+        else:
+            print("There is an error in inputs: Check 'NSamples'")
+            exit()
+    else:
+        print("There is an error in inputs: Check 'NSamples'")
+        exit()
 
     first_poly = Center_XY_r(xyz_coordinates, 0.0, 0.0)
 
@@ -308,9 +333,9 @@ def CrystalBuilderMainPolymer(
     digits = bd.len_digit_number(NSamples ** 3)
 
     count = 0
-    for i in tm:
-        for j in rm1:
-            for k in rm2:
+    for i in samp[0]:
+        for j in samp[1]:
+            for k in samp[2]:
                 second_poly_tl = tl(xyz_coordinates, i)
                 second_poly_rm1 = rotateXY(second_poly_tl, j)
                 second_poly_rm2 = Center_XY_r(second_poly_rm1, k, radius)
@@ -378,25 +403,43 @@ def CrystalBuilderMain(
 
     build_dir(OutDir + VaspInp)  # .split('/')[-1])
 
-    samples = NSamples - 1
-    tm = np.around(
-        np.arange(
-            0,
-            max(xyz_coordinates[3].values)
-            - min(xyz_coordinates[3].values)
-            + (max(xyz_coordinates[3].values) - min(xyz_coordinates[3].values))
-            / samples,
-            (max(xyz_coordinates[3].values) - min(xyz_coordinates[3].values)) / samples,
-        ),
-        decimals=2,
-    )
-    rm1 = np.around(np.arange(0, 180 + (180 / samples), 180 / samples), decimals=1)
-    rm2 = np.around(
-        np.arange(0, 180 + (180 / samples), 180 / samples), decimals=1
-    )  # 0 and 180 degree creates problems
-    rm3 = np.around(
-        np.arange(0, 360 + (360 / samples), 360 / samples), decimals=1
-    )  # Rotation in X and Y axes
+    if isinstance(NSamples, int):
+        samples = NSamples - 1
+        tm = np.around(
+            np.arange(
+                0,
+                max(xyz_coordinates[3].values)
+                - min(xyz_coordinates[3].values)
+                + (max(xyz_coordinates[3].values) - min(xyz_coordinates[3].values))
+                / samples,
+                (max(xyz_coordinates[3].values) - min(xyz_coordinates[3].values)) / samples,
+            ),
+            decimals=2,
+        )
+        rm1 = np.around(np.arange(0, 180 + (180 / samples), 180 / samples), decimals=1)
+        rm2 = np.around(
+            np.arange(0, 360 + (360 / samples), 360 / samples), decimals=1
+        )  # Rotation in X and Y axes
+
+        # Total samples
+        samp = [tm,rm1,rm2,rm2,rm2,rm2,rm2,rm2]
+
+        # Number of digits in total number of crystal models
+        digits = bd.len_digit_number(NSamples ** 8)
+
+    elif isinstance(NSamples, list):
+        if len(NSamples) == 8 and isinstance(NSamples[0], list) is True:
+            samp = NSamples.copy()
+
+            # Number of digits in total number of crystal models
+            digits = bd.len_digit_number(len(samp[0])*len(samp[1])*len(samp[2])*len(samp[3])*len(samp[4])*len(samp[5])*len(samp[6])*len(samp[7])) 
+
+        else:
+            print("There is an error in inputs: Check 'NSamples'")
+            exit()
+    else:
+        print("There is an error in inputs: Check 'NSamples'")
+        exit()
 
     first_poly = Center_XY_r(xyz_coordinates, 0.0, 0.0)
 
@@ -421,17 +464,17 @@ def CrystalBuilderMain(
         radius = float(Input_radius)
 
     # Number of digits in total number of crystal models
-    digits = bd.len_digit_number(NSamples ** 4)
+    #digits = bd.len_digit_number(NSamples ** 8)
 
     count = 0
-    for i in tm:  # Second poly
-        for j in rm1:  # Second poly
-            for k in rm2:  # Second poly
-                for aX in rm3:  # Second poly
-                    for aY in rm3:  # Second poly
-                        for bX in rm3:  # First poly
-                            for bY in rm3:  # First poly
-                                for bZ in rm3:  # First poly
+    for i in samp[0]:  # Second poly
+        for j in samp[2]:  # Second poly
+            for k in samp[1]:  # Second poly
+                for aX in samp[3]:  # Second poly
+                    for aY in samp[4]:  # Second poly
+                        for bX in samp[5]:  # First poly
+                            for bY in samp[6]:  # First poly
+                                for bZ in samp[7]:  # First poly
 
                                     first_poly_bX = bd.rotateXYZOrigin(
                                         first_poly, bX, 0.0, 0.0

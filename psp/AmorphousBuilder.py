@@ -6,7 +6,7 @@ import os
 import psp.PSP_lib as bd
 from openbabel import openbabel as ob
 from subprocess import call
-
+import glob
 # from scipy.optimize import minimize
 from optimparallel import minimize_parallel
 import psp.MoleculeBuilder as mb
@@ -21,6 +21,7 @@ class Builder:
         NumMole="Num",
         Length="Len",
         NumConf="NumConf",
+        NumModel=1,
         LeftCap="LeftCap",
         RightCap="RightCap",
         Loop="Loop",
@@ -40,8 +41,9 @@ class Builder:
         self.NumMole = NumMole
         self.Length = Length
         self.NumConf = NumConf
-        self.LeftCap = (LeftCap,)
-        self.RightCap = (RightCap,)
+        self.NumModel = NumModel
+        self.LeftCap = LeftCap
+        self.RightCap = RightCap
         self.Loop = Loop
         self.OutFile = OutFile
         self.OutDir = os.path.join(OutDir, "")
