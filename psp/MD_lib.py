@@ -865,7 +865,7 @@ def get_type_from_antechamber(
         )
         fr = open(temp_ac_fname, "r")
     except BaseException:
-        print('Error running Antechamber with the mol2 file, switch to using pdb file')
+        print('Error running Antechamber with the mol2 file, switch to using pdb file.')
         temp_pdb_fname = 'temp.pdb'
         s.write_pdb(temp_pdb_fname)
         subprocess.call(

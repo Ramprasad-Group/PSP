@@ -588,7 +588,17 @@ class Builder:
 
             f = forcefield.Gaff2()
             if atom_typing == 'pysimm':
-                s.apply_forcefield(f, charges='gasteiger')
+                try:
+                    print("Pysimm applying force field for {}.".format(mol2_file))
+                    s.apply_forcefield(f, charges='gasteiger')
+                except BaseException:
+                    print('Error applying force field with the mol2 file, switch to using cml file.')
+                    call('babel -ipdb {0}.pdb -ocml {0}.cml'.format(os.path.join(self.OutDir_xyz, output_prefix)), shell=True)
+                    s = system.read_cml('{}.cml'.format(os.path.join(self.OutDir_xyz, output_prefix)))
+                    for b in s.bonds:
+                        if b.a.bonds.count == 3 and b.b.bonds.count == 3:
+                            b.order = 4
+                    s.apply_forcefield(f, charges='gasteiger')
             elif atom_typing == 'antechamber':
                 MDlib.get_type_from_antechamber(s, mol2_file, 'gaff2', f, swap_dict)
                 s.pair_style = 'lj'
