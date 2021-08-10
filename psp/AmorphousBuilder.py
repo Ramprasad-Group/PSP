@@ -592,9 +592,18 @@ class Builder:
                     print("Pysimm applying force field for {}.".format(mol2_file))
                     s.apply_forcefield(f, charges='gasteiger')
                 except BaseException:
-                    print('Error applying force field with the mol2 file, switch to using cml file.')
-                    call('babel -ipdb {0}.pdb -ocml {0}.cml'.format(os.path.join(self.OutDir_xyz, output_prefix)), shell=True)
-                    s = system.read_cml('{}.cml'.format(os.path.join(self.OutDir_xyz, output_prefix)))
+                    print(
+                        'Error applying force field with the mol2 file, switch to using cml file.'
+                    )
+                    call(
+                        'babel -ipdb {0}.pdb -ocml {0}.cml'.format(
+                            os.path.join(self.OutDir_xyz, output_prefix)
+                        ),
+                        shell=True,
+                    )
+                    s = system.read_cml(
+                        '{}.cml'.format(os.path.join(self.OutDir_xyz, output_prefix))
+                    )
                     for b in s.bonds:
                         if b.a.bonds.count == 3 and b.b.bonds.count == 3:
                             b.order = 4
