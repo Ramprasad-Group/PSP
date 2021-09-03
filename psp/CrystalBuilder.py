@@ -177,6 +177,7 @@ def create_crystal_vasp(
     basis_vec,
     file_info,
     cry_info,
+    MinAtomicDis,
     Polymer=True,
 ):
     crystal_struc = pd.DataFrame()
@@ -191,20 +192,20 @@ def create_crystal_vasp(
         )
         row1 += int(Num_atom[col].values[1])
 
-    dist = cdist(crystal_struc[[1, 2, 3]].values, crystal_struc[[1, 2, 3]].values)
+    #dist = cdist(crystal_struc[[1, 2, 3]].values, crystal_struc[[1, 2, 3]].values)
 
-    for i in np.arange(dist.shape[0]):
-        for j in np.arange(dist.shape[1]):
-            if i != j:
-                if dist[i, j] < 0.8:
-                    print(i, j, dist[i, j])
+    #for i in np.arange(dist.shape[0]):
+    #    for j in np.arange(dist.shape[1]):
+    #        if i != j:
+    #            if dist[i, j] < 0.8:
+    #                print(i, j, dist[i, j])
 
     #   if (dist < 0.3).any():
     #       print(filename)
 
     Crystal_Num_atom = Num_atom.copy()
     Crystal_Num_atom.loc[1] = 2 * Crystal_Num_atom.loc[1].astype(int)
-    keep_space = 2.5  # in angstrom
+    keep_space = MinAtomicDis  # in angstrom
 
     crystal_struc[1] = crystal_struc[1] - crystal_struc[1].min() + keep_space / 2
     crystal_struc[2] = crystal_struc[2] - crystal_struc[2].min() + keep_space / 2
@@ -212,10 +213,9 @@ def create_crystal_vasp(
     with open(filename, 'w') as f:
         f.write(file_info + ' (' + cry_info + ')\n')
         f.write('1.0' + '\n')
-        #        print('a',crystal_struc[0].max(),crystal_struc[0].min())
-        #        print('b',crystal_struc[1].max(), crystal_struc[1].min())
         a_vec = crystal_struc[1].max() - crystal_struc[1].min() + keep_space
         b_vec = crystal_struc[2].max() - crystal_struc[2].min() + keep_space
+
         if Polymer is True:
             c_vec = basis_vec.loc[2, 2]
         else:
@@ -314,6 +314,7 @@ def CrystalBuilderMainPolymer(
 
         # Total samples
         samp = [tm, rm1, rm2]
+
         # Number of digits in total number of crystal models
         digits = bd.len_digit_number(NSamples * NSamples * NSamples)
 
@@ -351,53 +352,78 @@ def CrystalBuilderMainPolymer(
     else:
         radius = float(Input_radius)
 
-    # Number of digits in total number of crystal models
-    digits = bd.len_digit_number(NSamples ** 3)
+        # Number of digits in total number of crystal models
+        #digits = bd.len_digit_number(NSamples ** 3)
 
     count = 0
     for i in samp[0]:
-        for j in samp[1]:
-            for k in samp[2]:
+        for j in samp[2]:
+            for k in samp[1]:
                 second_poly_tl = tl(xyz_coordinates, i)
                 second_poly_rm1 = rotateXY(second_poly_tl, j)
                 second_poly_rm2 = Center_XY_r(second_poly_rm1, k, radius)
 
-                # Build a Trimer
-                second_poly_rm2_2 = second_poly_rm2.copy()
-                second_poly_rm2_3 = second_poly_rm2.copy()
-                second_poly_rm2_2[3] = second_poly_rm2_2[3] + float(basis_vec.loc[2, 2])
-                second_poly_rm2_3[3] = second_poly_rm2_3[3] - float(basis_vec.loc[2, 2])
-                second_poly_dimer = pd.concat(
-                    [second_poly_rm2, second_poly_rm2_2, second_poly_rm2_3]
-                )
-
-                # Calculate distance between atoms in first_unit and second_unit
-                dist = cdist(
-                    first_poly[[1, 2, 3]].values, second_poly_dimer[[1, 2, 3]].values
-                )
-                dist = dist[~np.isnan(dist)]
-                if (dist > 2.0).all():
-                    count += 1
-                    create_crystal_vasp(
-                        os.path.join(
-                            OutDir,
-                            VaspInp,
-                            'cryst_out-' + str(count).zfill(digits) + '.vasp',
-                        ),
-                        first_poly,
-                        second_poly_rm2,
-                        Num_atom,
-                        basis_vec,
-                        file_info,
-                        'CrystalBuilder Info:: Translation: '
-                        + str(i)
-                        + '; '
-                        + 'Rotation 1 '
-                        + str(j)
-                        + '; '
-                        + 'Rotation 2 '
-                        + str(k),
+                if Input_radius == 'auto':
+                    # Calculate distance between atoms in first_unit and second_unit
+                    dist = cdist(
+                        first_poly[[1, 2, 3]].values,
+                        second_poly_rm2[[1, 2, 3]].values,
                     )
+                    dist[np.isnan(dist)] = 0.0
+                    dist = dist.flatten()
+
+                    adj_radius = radius - (min(dist) - MinAtomicDis)
+                    second_poly_rm2 = Center_XY_r(second_poly_rm1, k, adj_radius)
+
+                    dist = cdist(
+                        first_poly[[1, 2, 3]].values,
+                        second_poly_rm2[[1, 2, 3]].values,
+                    )
+                    dist[np.isnan(dist)] = 0.0
+                    dist = dist.flatten()
+                    while min(dist) < MinAtomicDis or min(dist) >= MinAtomicDis + 0.5:
+                        if min(dist) < MinAtomicDis:
+                            adj_radius += 0.4
+                            second_poly_rm2 = Center_XY_r(second_poly_rm1, k, adj_radius)
+                            dist = cdist(
+                                first_poly[[1, 2, 3]].values,
+                                second_poly_rm2[[1, 2, 3]].values,
+                            )
+                            dist[np.isnan(dist)] = 0.0
+                            dist = dist.flatten()
+                        elif min(dist) >= MinAtomicDis + 0.5:
+                            adj_radius -= 0.4
+                            if adj_radius < 0.5:
+                                break
+                            second_poly_rm2 = Center_XY_r(second_poly_rm1, k, adj_radius)
+                            dist = cdist(
+                                first_poly[[1, 2, 3]].values,
+                                second_poly_rm2[[1, 2, 3]].values,
+                            )
+                            dist[np.isnan(dist)] = 0.0
+                            dist = dist.flatten()
+
+                count += 1
+                create_crystal_vasp(
+                    os.path.join(
+                        OutDir,
+                        VaspInp,
+                        'cryst_out-' + str(count).zfill(digits) + '.vasp',
+                    ),
+                    first_poly,
+                    second_poly_rm2,
+                    Num_atom,
+                    basis_vec,
+                    file_info,
+                    'CrystalBuilder Info:: Translation: '
+                    + str(i)
+                    + '; '
+                    + 'Rotation 1 '
+                    + str(j)
+                    + '; '
+                    + 'Rotation 2 '
+                    + str(k), MinAtomicDis
+                )
 
     if Optimize is True:
         bd.screen_Candidates(
@@ -520,49 +546,88 @@ def CrystalBuilderMain(
 
                                     second_poly_tl = tl(xyz_coordinates, i)
                                     second_poly_rm1 = rotateXY(second_poly_tl, j)
-                                    second_poly_rm2 = Center_XY_r(
-                                        second_poly_rm1, k, radius
+                                    second_poly_rm2_aX = bd.rotateXYZOrigin(
+                                        second_poly_rm1, aX, 0.0, 0.0
                                     )
-                                    second_poly_rm3_aX = bd.rotateXYZOrigin(
-                                        second_poly_rm2, aX, 0.0, 0.0
+                                    second_poly_rm2_aY = bd.rotateXYZOrigin(
+                                        second_poly_rm2_aX, 0.0, aY, 0.0
                                     )
-                                    second_poly_moved = bd.rotateXYZOrigin(
-                                        second_poly_rm3_aX, 0.0, aY, 0.0
-                                    )
+                                    second_poly_moved = Center_XY_r(second_poly_rm2_aY, k, radius)
+
+                                    if Input_radius == 'auto':
+                                        # Calculate distance between atoms in first_unit and second_unit
+                                        dist = cdist(
+                                            first_poly_moved[[1, 2, 3]].values,
+                                            second_poly_moved[[1, 2, 3]].values,
+                                        )
+                                        dist[np.isnan(dist)] = 0.0
+                                        dist = dist.flatten()
+
+                                        adj_radius = radius - (min(dist) - MinAtomicDis)
+                                        second_poly_moved = Center_XY_r(second_poly_rm2_aY, k, adj_radius)
+
+                                        dist = cdist(
+                                            first_poly_moved[[1, 2, 3]].values,
+                                            second_poly_moved[[1, 2, 3]].values,
+                                        )
+                                        dist[np.isnan(dist)] = 0.0
+                                        dist = dist.flatten()
+                                        while min(dist) < MinAtomicDis or min(dist) >= MinAtomicDis + 0.5:
+                                            if min(dist) < MinAtomicDis:
+                                                adj_radius += 0.4
+                                                second_poly_moved = Center_XY_r(second_poly_rm2_aY, k, adj_radius)
+                                                dist = cdist(
+                                                    first_poly_moved[[1, 2, 3]].values,
+                                                    second_poly_moved[[1, 2, 3]].values,
+                                                )
+                                                dist[np.isnan(dist)] = 0.0
+                                                dist = dist.flatten()
+                                            elif min(dist) >= MinAtomicDis + 0.5:
+                                                adj_radius -= 0.4
+                                                if adj_radius < 0.5:
+                                                    break
+                                                second_poly_moved = Center_XY_r(second_poly_rm2_aY, k, adj_radius)
+                                                dist = cdist(
+                                                    first_poly_moved[[1, 2, 3]].values,
+                                                    second_poly_moved[[1, 2, 3]].values,
+                                                )
+                                                dist[np.isnan(dist)] = 0.0
+                                                dist = dist.flatten()
+
 
                                     # Calculate distance between atoms in first_unit and second_unit
-                                    dist = cdist(
-                                        first_poly_moved[[1, 2, 3]].values,
-                                        second_poly_moved[[1, 2, 3]].values,
-                                    )
-                                    dist[np.isnan(dist)] = 0.0
-                                    dist = dist.flatten()
+                                    #dist = cdist(
+                                    #    first_poly_moved[[1, 2, 3]].values,
+                                    #    second_poly_moved[[1, 2, 3]].values,
+                                    #)
+                                    #dist[np.isnan(dist)] = 0.0
+                                    #dist = dist.flatten()
 
-                                    if min(dist) > 2.0:
-                                        count += 1
-                                        create_crystal_vasp(
-                                            os.path.join(
-                                                OutDir,
-                                                VaspInp,
-                                                'cryst_out-'
-                                                + str(count).zfill(digits)
-                                                + '.vasp',
-                                            ),
-                                            first_poly_moved,
-                                            second_poly_moved,
-                                            Num_atom,
-                                            basis_vec,
-                                            file_info,
-                                            'CrystalBuilder Info:: Translation: '
-                                            + str(i)
-                                            + '; '
-                                            + 'Rotation 1 '
-                                            + str(j)
-                                            + '; '
-                                            + 'Rotation 2 '
-                                            + str(k),
-                                            Polymer=False,
-                                        )
+                                    #if min(dist) > 2.0:
+                                    count += 1
+                                    create_crystal_vasp(
+                                        os.path.join(
+                                            OutDir,
+                                            VaspInp,
+                                            'cryst_out-'
+                                            + str(count).zfill(digits)
+                                            + '.vasp',
+                                        ),
+                                        first_poly_moved,
+                                        second_poly_moved,
+                                        Num_atom,
+                                        basis_vec,
+                                        file_info,
+                                        'CrystalBuilder Info:: Translation: '
+                                        + str(i)
+                                        + '; '
+                                        + 'Rotation 1 '
+                                        + str(j)
+                                        + '; '
+                                        + 'Rotation 2 '
+                                        + str(k), MinAtomicDis,
+                                        Polymer=False,
+                                    )
 
     if Optimize is True:
         bd.screen_Candidates(

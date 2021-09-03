@@ -9,10 +9,11 @@ from subprocess import call
 import glob
 
 # from scipy.optimize import minimize
-from optimparallel import minimize_parallel
+# from optimparallel import minimize_parallel
 import psp.MoleculeBuilder as mb
 import random
 
+obConversion = ob.OBConversion()
 
 class Builder:
     def __init__(
@@ -570,12 +571,18 @@ class Builder:
             _conf = 1  # read in only the first conformer
             output_prefix = "{}_N{}_C{}".format(_id, _length, _conf)
             mol2_file = os.path.join(self.OutDir_xyz, "{}.mol2".format(output_prefix))
-            call(
-                'babel -ipdb {0}.pdb -omol2 {0}.mol2'.format(
-                    os.path.join(self.OutDir_xyz, output_prefix)
-                ),
-                shell=True,
-            )
+
+            obConversion.SetInAndOutFormats("pdb", "mol2")
+            mol = ob.OBMol()
+            obConversion.ReadFile(mol, os.path.join(self.OutDir_xyz, output_prefix)+'.pdb')
+            obConversion.WriteFile(mol,os.path.join(self.OutDir_xyz, output_prefix)+'.mol2')
+
+            #call(
+            #    'babel -ipdb {0}.pdb -omol2 {0}.mol2'.format(
+            #        os.path.join(self.OutDir_xyz, output_prefix)
+            #    ),
+            #    shell=True,
+            #)
             data_fname = os.path.join(
                 self.OutDir_pysimm, "{}.lmp".format(output_prefix)
             )
@@ -595,12 +602,19 @@ class Builder:
                     print(
                         'Error applying force field with the mol2 file, switch to using cml file.'
                     )
-                    call(
-                        'babel -ipdb {0}.pdb -ocml {0}.cml'.format(
-                            os.path.join(self.OutDir_xyz, output_prefix)
-                        ),
-                        shell=True,
-                    )
+
+                    obConversion.SetInAndOutFormats("pdb", "cml")
+                    mol = ob.OBMol()
+                    obConversion.ReadFile(mol, os.path.join(self.OutDir_xyz, output_prefix) + '.pdb')
+                    obConversion.WriteFile(mol, os.path.join(self.OutDir_xyz, output_prefix) + '.cml')
+
+                    #call(
+                    #    'babel -ipdb {0}.pdb -ocml {0}.cml'.format(
+                    #        os.path.join(self.OutDir_xyz, output_prefix)
+                    #    ),
+                    #    shell=True,
+                    #)
+
                     s = system.read_cml(
                         '{}.cml'.format(os.path.join(self.OutDir_xyz, output_prefix))
                     )
