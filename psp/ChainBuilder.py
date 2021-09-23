@@ -7,10 +7,11 @@ import shutil
 import time
 import multiprocessing
 from joblib import Parallel, delayed
+import psp.output_lib as lib
+from tqdm import tqdm
 
 obConversion = ob.OBConversion()
 obConversion.SetInAndOutFormats("mol", "xyz")
-
 
 class Builder:
     def __init__(
@@ -45,17 +46,35 @@ class Builder:
         self.IntraChainCorr = IntraChainCorr
         self.Tol_ChainCorr = Tol_ChainCorr
 
-        if self.Method in ['SA', 'Dimer']:
-            print('    - polymer chain building started (', self.Method, ') ...')
-        else:
-            print("Error: please check keyword for method")
+        if self.Method not in ['SA', 'Dimer']:
+#            print('    - polymer chain building started (', self.Method, ') ...')
+#        else:
+            print("Error: please check keyword for * method ")
             print("SA == simulated annealing")
-            print("SMART == Constraint optimization")
             print("Dimer == dimerization")
             exit()
 
     # list of molecules name and CORRECT/WRONG
     def BuildChain(self):
+        start_1 = time.time()
+        lib.print_psp_info()  # Print PSP info
+        lib.print_input("ChainBuilder", self.Dataframe)
+        if self.NCores <= 0:
+            ncore_print = 'All'
+        else:
+            ncore_print = self.NCores
+        if self.Method != 'SA':
+            self.Steps = 'NA'
+            self.Substeps = 'NA'
+
+        print("\n", "Additional information: ", "\n",
+              "Length of oligomers: ", self.Length, "\n",
+              "Method: ", self.Method, "| Steps: ", self.Steps, "| Substeps: ", self.Substeps, "\n",
+              "Intrachain correction: ", self.IntraChainCorr, "\n",
+              "Tolerance for intrachain correction: ", self.Tol_ChainCorr, "\n",
+              "Number of cores: ", ncore_print, "\n",
+              "Output directory: ", self.OutDir, "\n")
+
         # Input Parameters
         intense = np.arange(-180, 180, 10)
         medium = [
@@ -92,7 +111,6 @@ class Builder:
         vasp_out_dir = os.path.join(self.OutDir, "")
         bd.build_dir(vasp_out_dir)
 
-        start_1 = time.time()
         list_out_xyz = 'output_CB.csv'
         chk_tri = []
         ID = self.ID_col
@@ -105,7 +123,7 @@ class Builder:
 
         if self.NCores == 0:
             self.NCores = multiprocessing.cpu_count() - 1
-
+        print("\n Polymer chain building started...\n")
         result = Parallel(n_jobs=self.NCores)(
             delayed(bd.build_polymer)(
                 unit_name,
@@ -125,21 +143,12 @@ class Builder:
                 self.IntraChainCorr,
                 self.Tol_ChainCorr,
             )
-            for unit_name in df[ID].values
+            for unit_name in tqdm(df[ID].values)
         )
         for i in result:
-            chk_tri.append([i[0], i[1], i[2]])
+            chk_tri.append([i[0], i[1]]) #i[2]
 
-        end_1 = time.time()
-        print("")
-        print('    - polymer chain building completed.')
-        print(
-            '    - polymer chain building time: ',
-            np.round((end_1 - start_1) / 60, 2),
-            ' minutes',
-        )
-
-        chk_tri = pd.DataFrame(chk_tri, columns=['ID', 'Result', 'Conformers'])
+        chk_tri = pd.DataFrame(chk_tri, columns=['ID', 'Result']) #'Conformers'
         chk_tri.to_csv(list_out_xyz)
 
         # Delete empty directory
@@ -150,4 +159,7 @@ class Builder:
         # Delete work directory
         if os.path.isdir('work_dir/'):
             shutil.rmtree('work_dir/')
+
+        end_1 = time.time()
+        lib.print_out(chk_tri, "Polymer chain", np.round((end_1 - start_1) / 60, 2))
         return chk_tri

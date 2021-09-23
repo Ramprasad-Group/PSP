@@ -1,13 +1,12 @@
 import numpy as np
 import pandas as pd
-import psp.PSP_lib as bd
+import psp.PSP2_lib as lib
 import os
 import shutil
 import time
 import multiprocessing
 from joblib import Parallel, delayed
-import psp.output_lib as lib
-from tqdm import tqdm
+
 
 class Builder:
     def __init__(
@@ -25,8 +24,6 @@ class Builder:
         Loop=False,
         IrrStruc=False,
         OPLS=False,
-        Subscript=False,
-
     ):
         self.ID_col = ID_col
         self.SMILES_col = SMILES_col
@@ -41,27 +38,9 @@ class Builder:
         self.Loop = Loop
         self.IrrStruc = IrrStruc
         self.OPLS = OPLS
-        self.Subscript = Subscript
 
     # list of molecules name and CORRECT/WRONG
     def Build(self):
-        if self.Subscript is False:
-            lib.print_psp_info() # Print PSP info
-        lib.print_input("MoleculeBuilder", self.Dataframe)
-        if self.NCores <= 0:
-            ncore_print='All'
-        else:
-            ncore_print=self.NCores
-
-        print("\n", "Additional information: ", "\n",
-        "Length of oligomers: ", self.Length, "\n",
-        "Number of conformers: ", self.NumConf, "\n",
-        "Loop model: ", self.Loop, "\n",
-        "Run short MD simulation: ", self.IrrStruc, "\n",
-        "Generate OPLS parameter file: ", self.OPLS, "\n",
-        "Intermolecular distance in POSCAR: ", self.Inter_Mol_Dis, "\n",
-        "Number of cores: ", ncore_print, "\n",
-        "Output Directory: ", self.OutDir, "\n")
 
         # location of directory for VASP inputs (polymers) and build a directory
         out_dir = self.OutDir + '/'
@@ -91,9 +70,9 @@ class Builder:
             self.NCores = 1
         else:
             NCores_opt = 1
-        print("\n 3D model building started...\n")
+
         result = Parallel(n_jobs=self.NCores)(
-            delayed(bd.build_3D)(
+            delayed(lib.build_network)(
                 unit_name,
                 df,
                 self.ID_col,
@@ -110,12 +89,21 @@ class Builder:
                 self.OPLS,
                 NCores_opt,
             )
-            for unit_name in tqdm(df[self.ID_col].values)
+            for unit_name in df[self.ID_col].values
         )
         # print(result)
         # exit()
         for i in result:
             chk_tri.append([i[0], i[1], i[2]])
+
+        end_1 = time.time()
+        print("")
+        print('      3D model building completed.')
+        print(
+            '      3D model building time: ',
+            np.round((end_1 - start_1) / 60, 2),
+            ' minutes',
+        )
 
         chk_tri = pd.DataFrame(chk_tri, columns=['ID', 'Result', 'SMILES'])
         chk_tri.to_csv(list_out_xyz)
@@ -126,6 +114,4 @@ class Builder:
         if os.path.isdir('work_dir/'):
             shutil.rmtree('work_dir/')
 
-        end_1 = time.time()
-        lib.print_out(chk_tri, "3D model", np.round((end_1 - start_1) / 60, 2), self.Subscript)
         return chk_tri
