@@ -28,11 +28,12 @@ def print_psp_info():
     print(" Harikrishna Sahu, Joseph H. Montoya, Kuan-Hsuan Shen, Rampi Ramprasad, Tran Doan Huan")
     print(" --------------------------------------------------------------------------------------------------- ")
 
-def print_input(builder, input_file):
+def print_input(builder, input_file=pd.DataFrame()):
     print(" ", builder, " started...")
-    print(" ----------------------------------------------- INPUT --------------------------------------------- ")
-    input_file.index = np.arange(1, len(input_file) + 1)
-    print(input_file.to_markdown())
+    if not input_file.empty:
+        print(" ----------------------------------------------- INPUT --------------------------------------------- ")
+        input_file.index = np.arange(1, len(input_file) + 1)
+        print(input_file.to_markdown())
 
 def print_out(output_file, model_name, time, subscript=False):
     print("\n", model_name, "building completed.\n")

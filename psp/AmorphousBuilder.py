@@ -163,7 +163,7 @@ class Builder:
 
         ind_mol_count = [0] * len(NumConf_list)
         count_model = 0
-        for model in tqdm(range(1, self.NumModel + 1)):
+        for model in tqdm(range(1, self.NumModel + 1), desc='Number of models'):
             if self.NumModel > 1:
                 print("MODEL ", model)
                 packmol_outdir_model = self.OutDir_packmol[:-1] + '_' + str(model) + "/"
@@ -284,6 +284,7 @@ class Builder:
         lib.print_out(pd.DataFrame(), "Amorphous model", np.round((end_1 - start_1) / 60, 2))
 
     def get_opls(self, output_fname='amor_opls.lmps'):
+        print("\nGenerating OPLS parameter file ...\n")
         system_pdb_fname = os.path.join(self.OutDir_packmol, "packmol.pdb")
         r = MDlib.get_coord_from_pdb(system_pdb_fname)
 
@@ -384,10 +385,12 @@ class Builder:
 
         lammps_output = os.path.join(self.OutDir, output_fname)
         MDlib.write_lammps_ouput(lammps_output, r, self.box_size, system_stats, dicts)
+        print("\nOPLS parameter file generated.")
 
     def get_gaff2(
         self, output_fname='amor_gaff2.lmps', atom_typing='pysimm', swap_dict=None
     ):
+        print("\nGenerating GAFF2 parameter file ...\n")
         system_pdb_fname = os.path.join(self.OutDir_packmol, "packmol.pdb")
         r = MDlib.get_coord_from_pdb(system_pdb_fname)
 
@@ -454,13 +457,6 @@ class Builder:
                     obConversion.ReadFile(mol, os.path.join(self.OutDir_xyz, output_prefix) + '.pdb')
                     obConversion.WriteFile(mol, os.path.join(self.OutDir_xyz, output_prefix) + '.cml')
 
-                    #call(
-                    #    'babel -ipdb {0}.pdb -ocml {0}.cml'.format(
-                    #        os.path.join(self.OutDir_xyz, output_prefix)
-                    #    ),
-                    #    shell=True,
-                    #)
-
                     s = system.read_cml(
                         '{}.cml'.format(os.path.join(self.OutDir_xyz, output_prefix))
                     )
@@ -469,6 +465,7 @@ class Builder:
                             b.order = 4
                     s.apply_forcefield(f, charges='gasteiger')
             elif atom_typing == 'antechamber':
+                print("Antechamber working on {}".format(mol2_file))
                 MDlib.get_type_from_antechamber(s, mol2_file, 'gaff2', f, swap_dict)
                 s.pair_style = 'lj'
                 s.apply_forcefield(f, charges='gasteiger', skip_ptypes=True)
@@ -538,3 +535,4 @@ class Builder:
 
         lammps_output = os.path.join(self.OutDir, output_fname)
         MDlib.write_lammps_ouput(lammps_output, r, self.box_size, system_stats, dicts)
+        print("\nGAFF2 parameter file generated.")

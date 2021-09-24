@@ -14,8 +14,8 @@ mol = mb.Builder(
     NumConf=1,
     Loop=False,
     NCores=-1,
-    IrrStruc=False,
-    OPLS=True
+    IrrStruc=True,
+    OPLS=False
 )
 results = mol.Build()
-print(results)
+#print(results)

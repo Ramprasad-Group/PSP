@@ -6,7 +6,8 @@ import time
 import multiprocessing
 from joblib import Parallel, delayed
 import psp.PSP_lib as bd
-
+import psp.output_lib as lib
+from tqdm import tqdm
 
 class Builder:
     def __init__(
@@ -33,6 +34,24 @@ class Builder:
 
     def BuildCrystal(self):
         start_1 = time.time()
+        lib.print_psp_info()  # Print PSP info
+        lib.print_input("CrystalBuilder")
+        if self.Optimize is False:
+            self.NumCandidate == 'All'
+        if self.NCores <= 0:
+            ncore_print='All'
+        else:
+            ncore_print=self.NCores
+
+        print(" ----------------------------------------------- INPUT --------------------------------------------- ", "\n",
+              "List of chain models (POSCAR): ", self.VaspInp_list, "\n",
+              "Are they infinite polymer chains?: ", self.Polymer, "\n",
+              "Number of samples: ", self.NSamples, "\n",
+              "Optimize models: ", self.Optimize, "\n",
+              "Number of models to be selected: ", self.NumCandidate, "\n",
+              "Minimum atomic distance (angstrom): ", self.MinAtomicDis, "\n",
+              "Number of cores: ", ncore_print, "\n",
+              "Output directory: ", self.OutDir, "\n")
 
         build_dir(self.OutDir)
         # result = []
@@ -46,6 +65,38 @@ class Builder:
         #    NCores, NCores_opt = NCores_opt, NCores
 
         if self.Polymer is True:
+            if isinstance(self.NSamples, int):
+                print(
+                    ' maximum number of possible crustals for each polymer chain: ',
+                    self.NSamples * self.NSamples * self.NSamples,
+                "\n")
+            else:
+                print(
+                    ' maximum number of possible crustals for each polymer chain: ',
+                    len(self.NSamples[0])
+                    * len(self.NSamples[1])
+                    * len(self.NSamples[2]),
+                "\n")
+        else:
+            if isinstance(self.NSamples, int):
+                print(
+                    ' maximum number of possible crustals for each chain: ',
+                    self.NSamples ** 8,
+                "\n")
+            else:
+                print(
+                    ' maximum number of possible crustals for each polymer chain: ',
+                    len(self.NSamples[0])
+                    * len(self.NSamples[1])
+                    * len(self.NSamples[2])
+                    * len(self.NSamples[3])
+                    * len(self.NSamples[4])
+                    * len(self.NSamples[5])
+                    * len(self.NSamples[6])
+                    * len(self.NSamples[7]),
+                "\n")
+
+        if self.Polymer is True:
             result = Parallel(n_jobs=NCores)(
                 delayed(CrystalBuilderMainPolymer)(
                     VaspInp,
@@ -57,7 +108,7 @@ class Builder:
                     self.NumCandidate,
                     NCores_opt,
                 )
-                for VaspInp in self.VaspInp_list
+                for VaspInp in tqdm(self.VaspInp_list, desc="Job submitted", colour='green')
             )
         else:
             result = Parallel(n_jobs=NCores)(
@@ -71,55 +122,25 @@ class Builder:
                     self.NumCandidate,
                     NCores_opt,
                 )
-                for VaspInp in self.VaspInp_list
+                for VaspInp in tqdm(self.VaspInp_list, desc="Polymer chain", colour='green')
             )
 
         output = []
         for i in result:
             output.append([i[0].replace('.vasp', ''), i[1], i[2]])
 
-        print("")
-        print('    - crystal builder started for %s ' % i[0])
-        if self.Polymer is True:
-            if isinstance(self.NSamples, int):
-                print(
-                    'maximum number of possible crustals for each polymer chain: ',
-                    self.NSamples * self.NSamples * self.NSamples,
-                )
-            else:
-                print(
-                    'maximum number of possible crustals for each polymer chain: ',
-                    len(self.NSamples[0])
-                    * len(self.NSamples[1])
-                    * len(self.NSamples[2]),
-                )
-        else:
-            if isinstance(self.NSamples, int):
-                print(
-                    'maximum number of possible crustals for each chain: ',
-                    self.NSamples ** 8,
-                )
-            else:
-                print(
-                    'maximum number of possible crustals for each polymer chain: ',
-                    len(self.NSamples[0])
-                    * len(self.NSamples[1])
-                    * len(self.NSamples[2])
-                    * len(self.NSamples[3])
-                    * len(self.NSamples[4])
-                    * len(self.NSamples[5])
-                    * len(self.NSamples[6])
-                    * len(self.NSamples[7]),
-                )
+        #print("")
+        #print('    - crystal builder started for %s ' % i[0])
 
         output = pd.DataFrame(output, columns=['ID', 'Count', 'radius'])
         end_1 = time.time()
-        print('    - crystal building completed.')
-        print(
-            '    - crystal builing time: ',
-            np.round((end_1 - start_1) / 60, 2),
-            ' minutes',
-        )
+        #print('    - crystal building completed.')
+        #print(
+        #    '    - crystal builing time: ',
+        #    np.round((end_1 - start_1) / 60, 2),
+        #    ' minutes',
+        #)
+        lib.print_out(output, "Crystal model", np.round((end_1 - start_1) / 60, 2))
         return output
 
 
@@ -290,7 +311,7 @@ def CrystalBuilderMainPolymer(
         VaspInp.replace('.vasp', '') + '.vasp'
     )
     VaspInp = VaspInp.split('/')[-1].replace('.vasp', '')
-
+    print(" Crystal model building started for", VaspInp, "...")
     build_dir(OutDir + VaspInp)  # .split('/')[-1])
 
     if isinstance(NSamples, int):
@@ -356,7 +377,7 @@ def CrystalBuilderMainPolymer(
         #digits = bd.len_digit_number(NSamples ** 3)
 
     count = 0
-    for i in samp[0]:
+    for i in tqdm(samp[0], desc=VaspInp + " Generating models", colour='green'):
         for j in samp[2]:
             for k in samp[1]:
                 second_poly_tl = tl(xyz_coordinates, i)
@@ -424,12 +445,13 @@ def CrystalBuilderMainPolymer(
                     + 'Rotation 2 '
                     + str(k), MinAtomicDis
                 )
-
+    print(" Crystal model building completed for", VaspInp)
     if Optimize is True:
+        print(" Optimizing crystal models started for", VaspInp, "...")
         bd.screen_Candidates(
             OutDir + VaspInp, NumCandidate=NumCandidate, NCores_opt=NCores_opt
         )
-
+        print(" Optimizing crystal models completed for", VaspInp)
     return VaspInp, count, radius
 
 
@@ -448,7 +470,7 @@ def CrystalBuilderMain(
         VaspInp.replace('.vasp', '') + '.vasp'
     )
     VaspInp = VaspInp.split('/')[-1].replace('.vasp', '')
-
+    print(" Crystal model building started for", VaspInp, "...")
     build_dir(OutDir + VaspInp)  # .split('/')[-1])
 
     if isinstance(NSamples, int):
@@ -525,7 +547,7 @@ def CrystalBuilderMain(
     # digits = bd.len_digit_number(NSamples ** 8)
 
     count = 0
-    for i in samp[0]:  # Second poly
+    for i in tqdm(samp[0], desc=VaspInp + " Generating models", colour='green'):  # Second poly
         for j in samp[2]:  # Second poly
             for k in samp[1]:  # Second poly
                 for aX in samp[3]:  # Second poly
@@ -628,10 +650,12 @@ def CrystalBuilderMain(
                                         + str(k), MinAtomicDis,
                                         Polymer=False,
                                     )
-
+    print(" Crystal model building completed for", VaspInp)
     if Optimize is True:
+        print(" Optimizing crystal models started for", VaspInp, "...")
         bd.screen_Candidates(
             OutDir + VaspInp, NumCandidate=NumCandidate, NCores_opt=NCores_opt
         )
+        print(" Optimizing crystal models completed for", VaspInp)
 
     return VaspInp, count, radius

@@ -143,7 +143,7 @@ class Builder:
                 self.IntraChainCorr,
                 self.Tol_ChainCorr,
             )
-            for unit_name in tqdm(df[ID].values)
+            for unit_name in tqdm(df[ID].values, desc='Job submitted', colour='green')
         )
         for i in result:
             chk_tri.append([i[0], i[1]]) #i[2]

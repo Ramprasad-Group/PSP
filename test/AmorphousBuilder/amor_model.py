@@ -9,6 +9,7 @@ amor = ab.Builder(
     OutDir='PE_tests',
     Length='Len',
     NumConf='NumConf',
+    NumModel=4,
     LeftCap = "LeftCap",
     RightCap = "RightCap",
     Loop='Loop',
@@ -18,4 +19,5 @@ amor = ab.Builder(
     #box_size=[0.0,20,0.0,20,0.0,20]
 )
 amor.Build()
-amor.get_opls(output_fname='amor_opls.lmps')
+#amor.get_opls(output_fname='amor_opls.lmps')
+#amor.get_gaff2(output_fname='amor_gaff2.lmps', atom_typing='antechamber')

@@ -110,7 +110,7 @@ class Builder:
                 self.OPLS,
                 NCores_opt,
             )
-            for unit_name in tqdm(df[self.ID_col].values)
+            for unit_name in tqdm(df[self.ID_col].values, desc='Job submitted', colour='green')
         )
         # print(result)
         # exit()

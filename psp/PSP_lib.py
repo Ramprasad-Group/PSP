@@ -2602,6 +2602,7 @@ def gen_conf_xyz_vasp(
 
         # Generate OPLS parameter file
         if n == 1 and OPLS is True:
+            print(unit_name, ": Generating OPLS parameter file ...")
             if os.path.exists(outfile_name + '.pdb'):
                 try:
                     call(
@@ -2610,6 +2611,7 @@ def gen_conf_xyz_vasp(
                         ),
                         shell=True,
                     )
+                    print(unit_name, ": OPLS parameter file generated.")
                 except BaseException:
                     print('problem running LigParGen for {}.pdb.'.format(outfile_name))
 
@@ -2620,10 +2622,11 @@ def gen_conf_xyz_vasp(
                 confId=cid,
             )
         else:
+            print("\n",unit_name + '_N' + str(ln) + '_C' + str(n), ": Performing a short MD simulation using PySIMM and LAMMPS ...\n")
             disorder_struc(
                 unit_name + '_N' + str(ln) + '_C' + str(n), out_dir, NCores_opt
             )
-
+            print("\n", unit_name + '_N' + str(ln) + '_C' + str(n), ": MD simulation normally terminated.\n")
         unit = pd.read_csv(
             out_dir + unit_name + '_N' + str(ln) + '_C' + str(n) + '.xyz',
             header=None,
