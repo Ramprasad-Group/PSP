@@ -11,6 +11,7 @@ from openbabel import openbabel as ob
 from rdkit import RDLogger
 from scipy.spatial.distance import cdist
 from subprocess import call
+import psp.MD_lib as MDlib
 
 # from pysimm import system, lmps, forcefield
 
@@ -1294,6 +1295,7 @@ def build_polymer(
     IntraChainCorr,
     Tol_ChainCorr,
 ):
+    print(" Chain model building started for", unit_name, "...")
     vasp_out_dir_indi = vasp_out_dir + unit_name + '/'
     build_dir(vasp_out_dir_indi)
 
@@ -1453,10 +1455,12 @@ def build_polymer(
                 )
 
         if SN >= num_conf:
+            print(" Chain model building completed for", unit_name, ".")
             return unit_name, 'SUCCESS', SN
 
     # Simulated Annealing
     if method == 'SA' and SN < num_conf:
+        print(" Entering simulated annealing steps", unit_name, "...")
         #  Find single bonds and rotate
         single_bond = single_bonds(unit_name, unit, xyz_tmp_dir)
 
@@ -1591,12 +1595,14 @@ def build_polymer(
                             oligomer,
                         )
                 if SN >= num_conf:
+                    print(" Chain model building completed for", unit_name, ".")
                     return unit_name, 'SUCCESS', SN
                 else:
                     #  Find single bonds and rotate
                     single_bond = single_bonds(unit_name, unit, xyz_tmp_dir)
 
         if isempty is True and SN > 0:
+            print(" Chain model building completed for", unit_name, ".")
             return unit_name, 'SUCCESS', SN
         if isempty is True and SN == 0:
             return unit_name, 'FAILURE', 0
@@ -1768,6 +1774,7 @@ def build_polymer(
                     print(unit_name, "Couldn't find an acceptable dimer.")
                     return unit_name, 'FAILURE', 0
                 elif isempty is True and SN > 0:
+                    print(" Chain model building completed for", unit_name, ".")
                     return unit_name, 'SUCCESS', SN
 
                 # Generate XYZ file
@@ -1888,6 +1895,7 @@ def build_polymer(
                     print(unit_name, "No rotatable single bonds in dimer")
                     return unit_name, 'FAILURE', 0
                 elif isempty is True and SN > 0:
+                    print(" Chain model building completed for", unit_name, ".")
                     return unit_name, 'SUCCESS', SN
 
                 results = an.SA(
@@ -2021,6 +2029,7 @@ def build_polymer(
                             break
 
     elif method == 'Dimer' and SN < num_conf:
+        print(" Generating dimers", unit_name, "...")
         SN = 0
         for angle in rot_angles_dimer:
             unit1 = unit.copy()
@@ -2075,6 +2084,7 @@ def build_polymer(
 
                         if SN == num_conf:
                             break
+    print(" Chain model building completed for", unit_name, ".")
     return unit_name, decision, SN
 
 
@@ -2093,6 +2103,8 @@ def build_3D(
     loop,
     IrrStruc,
     OPLS,
+    GAFF2,
+    atom_typing_,
     NCores_opt,
 ):
     LCap_ = False
@@ -2216,6 +2228,8 @@ def build_3D(
             IrrStruc,
             NCores_opt,
             OPLS,
+            GAFF2,
+            atom_typing_,
         )
 
         if NumC == 0 and ln == Length[-1]:
@@ -2571,7 +2585,17 @@ def OB_smi_2_xyz_vasp(
 # INPUT: ID, mol without Hydrogen atom, row indices of dummy and connecting atoms, directory
 # OUTPUT: XYZ coordinates of the optimized molecule
 def gen_conf_xyz_vasp(
-    unit_name, m1, out_dir, ln, Nconf, Inter_Mol_Dis, IrrStruc, NCores_opt, OPLS
+    unit_name,
+    m1,
+    out_dir,
+    ln,
+    Nconf,
+    Inter_Mol_Dis,
+    IrrStruc,
+    NCores_opt,
+    OPLS,
+    GAFF2,
+    atom_typing_,
 ):
     m2 = Chem.AddHs(m1)
     NAttempt = 10000
@@ -2597,8 +2621,23 @@ def gen_conf_xyz_vasp(
 
         outfile_name = out_dir + unit_name + '_N' + str(ln) + '_C' + str(n)
 
-        # Generate pdb file
-        Chem.MolToPDBFile(m2, outfile_name + '.pdb', confId=cid)
+        if IrrStruc is False:
+            Chem.MolToPDBFile(
+                m2, outfile_name + '.pdb', confId=cid
+            )  # Generate pdb file
+            Chem.MolToXYZFile(
+                m2, outfile_name + '.xyz', confId=cid
+            )  # Generate pdb file
+        else:
+            print(
+                "\n",
+                outfile_name,
+                ": Performing a short MD simulation using PySIMM and LAMMPS ...\n",
+            )
+            disorder_struc(
+                unit_name + '_N' + str(ln) + '_C' + str(n), out_dir, NCores_opt
+            )
+            print("\n", outfile_name, ": MD simulation normally terminated.\n")
 
         # Generate OPLS parameter file
         if n == 1 and OPLS is True:
@@ -2614,33 +2653,29 @@ def gen_conf_xyz_vasp(
                     print(unit_name, ": OPLS parameter file generated.")
                 except BaseException:
                     print('problem running LigParGen for {}.pdb.'.format(outfile_name))
+        if GAFF2 is True:
+            get_gaff2(outfile_name, out_dir, atom_typing=atom_typing_)
 
-        if IrrStruc is False:
-            Chem.MolToXYZFile(
-                m2,
-                out_dir + unit_name + '_N' + str(ln) + '_C' + str(n) + '.xyz',
-                confId=cid,
-            )
-        else:
-            print("\n",unit_name + '_N' + str(ln) + '_C' + str(n), ": Performing a short MD simulation using PySIMM and LAMMPS ...\n")
-            disorder_struc(
-                unit_name + '_N' + str(ln) + '_C' + str(n), out_dir, NCores_opt
-            )
-            print("\n", unit_name + '_N' + str(ln) + '_C' + str(n), ": MD simulation normally terminated.\n")
         unit = pd.read_csv(
-            out_dir + unit_name + '_N' + str(ln) + '_C' + str(n) + '.xyz',
-            header=None,
-            skiprows=2,
-            delim_whitespace=True,
+            outfile_name + '.xyz', header=None, skiprows=2, delim_whitespace=True,
         )
         gen_molecule_vasp(
-            unit_name,
-            unit,
-            0,
-            0,
-            Inter_Mol_Dis,
-            out_dir + unit_name + '_N' + str(ln) + '_C' + str(n) + '.vasp',
+            unit_name, unit, 0, 0, Inter_Mol_Dis, outfile_name + '.vasp',
         )
+
+        MDlib.gen_sys_data(
+            outfile_name + ".lmp",
+            unit,
+            "",
+            unit[1].min(),
+            unit[1].max(),
+            unit[2].min(),
+            unit[2].max(),
+            unit[3].min(),
+            unit[3].max(),
+            False,
+        )
+
         if n == Nconf:
             break
 
@@ -2811,3 +2846,52 @@ def del_tmp_files():
         os.remove("clu.pdb")
     if os.path.exists("LL"):
         os.remove("LL")
+
+
+def get_gaff2(outfile_name, out_dir, atom_typing='pysimm'):
+    print("\nGenerating GAFF2 parameter file ...\n")
+    r = MDlib.get_coord_from_pdb(outfile_name + ".pdb")
+    from pysimm import system, forcefield
+
+    obConversion.SetInAndOutFormats("pdb", "mol2")
+    mol = ob.OBMol()
+    obConversion.ReadFile(mol, outfile_name + '.pdb')
+    obConversion.WriteFile(mol, outfile_name + '.mol2')
+
+    data_fname = outfile_name + '_gaff2.lmp'
+
+    try:
+        print("Pysimm working on {}".format(outfile_name + '.mol2'))
+        s = system.read_mol2(outfile_name + '.mol2')
+    except BaseException:
+        print('problem reading {} for Pysimm.'.format(outfile_name + '.mol2'))
+
+    f = forcefield.Gaff2()
+    if atom_typing == 'pysimm':
+        try:
+            print("Pysimm applying force field for {}.".format(outfile_name + '.mol2'))
+            s.apply_forcefield(f, charges='gasteiger')
+        except BaseException:
+            print(
+                'Error applying force field with the mol2 file, switch to using cml file.'
+            )
+
+            obConversion.SetInAndOutFormats("pdb", "cml")
+            mol = ob.OBMol()
+            obConversion.ReadFile(mol, outfile_name + '.pdb')
+            obConversion.WriteFile(mol, outfile_name + '.cml')
+
+            s = system.read_cml(outfile_name + '.cml')
+            for b in s.bonds:
+                if b.a.bonds.count == 3 and b.b.bonds.count == 3:
+                    b.order = 4
+            s.apply_forcefield(f, charges='gasteiger')
+    elif atom_typing == 'antechamber':
+        print("Antechamber working on {}".format(outfile_name + '.mol2'))
+        MDlib.get_type_from_antechamber(s, outfile_name + '.mol2', 'gaff2', f)
+        s.pair_style = 'lj'
+        s.apply_forcefield(f, charges='gasteiger', skip_ptypes=True)
+    else:
+        print('Invalid atom typing option, please select pysimm or antechamber.')
+    s.write_lammps(data_fname)
+    print("\nGAFF2 parameter file generated.")

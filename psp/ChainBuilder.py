@@ -13,6 +13,7 @@ from tqdm import tqdm
 obConversion = ob.OBConversion()
 obConversion.SetInAndOutFormats("mol", "xyz")
 
+
 class Builder:
     def __init__(
         self,
@@ -47,8 +48,8 @@ class Builder:
         self.Tol_ChainCorr = Tol_ChainCorr
 
         if self.Method not in ['SA', 'Dimer']:
-#            print('    - polymer chain building started (', self.Method, ') ...')
-#        else:
+            #            print('    - polymer chain building started (', self.Method, ') ...')
+            #        else:
             print("Error: please check keyword for * method ")
             print("SA == simulated annealing")
             print("Dimer == dimerization")
@@ -67,13 +68,33 @@ class Builder:
             self.Steps = 'NA'
             self.Substeps = 'NA'
 
-        print("\n", "Additional information: ", "\n",
-              "Length of oligomers: ", self.Length, "\n",
-              "Method: ", self.Method, "| Steps: ", self.Steps, "| Substeps: ", self.Substeps, "\n",
-              "Intrachain correction: ", self.IntraChainCorr, "\n",
-              "Tolerance for intrachain correction: ", self.Tol_ChainCorr, "\n",
-              "Number of cores: ", ncore_print, "\n",
-              "Output directory: ", self.OutDir, "\n")
+        print(
+            "\n",
+            "Additional information: ",
+            "\n",
+            "Length of oligomers: ",
+            self.Length,
+            "\n",
+            "Method: ",
+            self.Method,
+            "| Steps: ",
+            self.Steps,
+            "| Substeps: ",
+            self.Substeps,
+            "\n",
+            "Intrachain correction: ",
+            self.IntraChainCorr,
+            "\n",
+            "Tolerance for intrachain correction: ",
+            self.Tol_ChainCorr,
+            "\n",
+            "Number of cores: ",
+            ncore_print,
+            "\n",
+            "Output directory: ",
+            self.OutDir,
+            "\n",
+        )
 
         # Input Parameters
         intense = np.arange(-180, 180, 10)
@@ -143,12 +164,14 @@ class Builder:
                 self.IntraChainCorr,
                 self.Tol_ChainCorr,
             )
-            for unit_name in tqdm(df[ID].values, desc='Job submitted', colour='green')
+            for unit_name in tqdm(
+                df[ID].values, desc='Building models ...', colour='green'
+            )
         )
         for i in result:
-            chk_tri.append([i[0], i[1]]) #i[2]
+            chk_tri.append([i[0], i[1]])  # i[2]
 
-        chk_tri = pd.DataFrame(chk_tri, columns=['ID', 'Result']) #'Conformers'
+        chk_tri = pd.DataFrame(chk_tri, columns=['ID', 'Result'])  # Conformers
         chk_tri.to_csv(list_out_xyz)
 
         # Delete empty directory

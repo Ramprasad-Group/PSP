@@ -15,6 +15,7 @@ import random
 
 obConversion = ob.OBConversion()
 
+
 class Builder:
     def __init__(
         self,
@@ -70,12 +71,26 @@ class Builder:
         else:
             box_type_ = "Rectangular"
 
-        print("\n", "Additional information: ", "\n",
-              "Number of models: ", self.NumModel, "\n",
-              "Density (g/cm3): ", self.density, "\n",
-              "Tolerance distance (angstrom): ", self.tol_dis, "\n",
-              "Box type: ", box_type_, "\n",
-              "Output directory: ", self.OutDir, "\n")
+        print(
+            "\n",
+            "Additional information: ",
+            "\n",
+            "Number of models: ",
+            self.NumModel,
+            "\n",
+            "Density (g/cm3): ",
+            self.density,
+            "\n",
+            "Tolerance distance (angstrom): ",
+            self.tol_dis,
+            "\n",
+            "Box type: ",
+            box_type_,
+            "\n",
+            "Output directory: ",
+            self.OutDir,
+            "\n",
+        )
 
         # location of directory for VASP inputs (polymers) and build a directory
         bd.build_dir(self.OutDir)
@@ -163,7 +178,7 @@ class Builder:
 
         ind_mol_count = [0] * len(NumConf_list)
         count_model = 0
-        for model in tqdm(range(1, self.NumModel + 1), desc='Number of models'):
+        for model in tqdm(range(1, self.NumModel + 1), desc='Building models ...'):
             if self.NumModel > 1:
                 print("MODEL ", model)
                 packmol_outdir_model = self.OutDir_packmol[:-1] + '_' + str(model) + "/"
@@ -281,7 +296,9 @@ class Builder:
                 self.BondInfo,
             )
         end_1 = time.time()
-        lib.print_out(pd.DataFrame(), "Amorphous model", np.round((end_1 - start_1) / 60, 2))
+        lib.print_out(
+            pd.DataFrame(), "Amorphous model", np.round((end_1 - start_1) / 60, 2)
+        )
 
     def get_opls(self, output_fname='amor_opls.lmps'):
         print("\nGenerating OPLS parameter file ...\n")
@@ -423,15 +440,13 @@ class Builder:
 
             obConversion.SetInAndOutFormats("pdb", "mol2")
             mol = ob.OBMol()
-            obConversion.ReadFile(mol, os.path.join(self.OutDir_xyz, output_prefix)+'.pdb')
-            obConversion.WriteFile(mol,os.path.join(self.OutDir_xyz, output_prefix)+'.mol2')
+            obConversion.ReadFile(
+                mol, os.path.join(self.OutDir_xyz, output_prefix) + '.pdb'
+            )
+            obConversion.WriteFile(
+                mol, os.path.join(self.OutDir_xyz, output_prefix) + '.mol2'
+            )
 
-            #call(
-            #    'babel -ipdb {0}.pdb -omol2 {0}.mol2'.format(
-            #        os.path.join(self.OutDir_xyz, output_prefix)
-            #    ),
-            #    shell=True,
-            #)
             data_fname = os.path.join(
                 self.OutDir_pysimm, "{}.lmp".format(output_prefix)
             )
@@ -454,8 +469,12 @@ class Builder:
 
                     obConversion.SetInAndOutFormats("pdb", "cml")
                     mol = ob.OBMol()
-                    obConversion.ReadFile(mol, os.path.join(self.OutDir_xyz, output_prefix) + '.pdb')
-                    obConversion.WriteFile(mol, os.path.join(self.OutDir_xyz, output_prefix) + '.cml')
+                    obConversion.ReadFile(
+                        mol, os.path.join(self.OutDir_xyz, output_prefix) + '.pdb'
+                    )
+                    obConversion.WriteFile(
+                        mol, os.path.join(self.OutDir_xyz, output_prefix) + '.cml'
+                    )
 
                     s = system.read_cml(
                         '{}.cml'.format(os.path.join(self.OutDir_xyz, output_prefix))

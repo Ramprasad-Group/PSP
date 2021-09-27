@@ -9,6 +9,7 @@ import psp.PSP_lib as bd
 import psp.output_lib as lib
 from tqdm import tqdm
 
+
 class Builder:
     def __init__(
         self,
@@ -39,19 +40,38 @@ class Builder:
         if self.Optimize is False:
             self.NumCandidate == 'All'
         if self.NCores <= 0:
-            ncore_print='All'
+            ncore_print = 'All'
         else:
-            ncore_print=self.NCores
+            ncore_print = self.NCores
 
-        print(" ----------------------------------------------- INPUT --------------------------------------------- ", "\n",
-              "List of chain models (POSCAR): ", self.VaspInp_list, "\n",
-              "Are they infinite polymer chains?: ", self.Polymer, "\n",
-              "Number of samples: ", self.NSamples, "\n",
-              "Optimize models: ", self.Optimize, "\n",
-              "Number of models to be selected: ", self.NumCandidate, "\n",
-              "Minimum atomic distance (angstrom): ", self.MinAtomicDis, "\n",
-              "Number of cores: ", ncore_print, "\n",
-              "Output directory: ", self.OutDir, "\n")
+        print(
+            " ----------------------------------------------- INPUT --------------------------------------------- ",
+            "\n",
+            "List of chain models (POSCAR): ",
+            self.VaspInp_list,
+            "\n",
+            "Are they infinite polymer chains?: ",
+            self.Polymer,
+            "\n",
+            "Number of samples: ",
+            self.NSamples,
+            "\n",
+            "Optimize models: ",
+            self.Optimize,
+            "\n",
+            "Number of models to be selected: ",
+            self.NumCandidate,
+            "\n",
+            "Minimum atomic distance (angstrom): ",
+            self.MinAtomicDis,
+            "\n",
+            "Number of cores: ",
+            ncore_print,
+            "\n",
+            "Output directory: ",
+            self.OutDir,
+            "\n",
+        )
 
         build_dir(self.OutDir)
         # result = []
@@ -69,20 +89,23 @@ class Builder:
                 print(
                     ' maximum number of possible crustals for each polymer chain: ',
                     self.NSamples * self.NSamples * self.NSamples,
-                "\n")
+                    "\n",
+                )
             else:
                 print(
                     ' maximum number of possible crustals for each polymer chain: ',
                     len(self.NSamples[0])
                     * len(self.NSamples[1])
                     * len(self.NSamples[2]),
-                "\n")
+                    "\n",
+                )
         else:
             if isinstance(self.NSamples, int):
                 print(
                     ' maximum number of possible crustals for each chain: ',
                     self.NSamples ** 8,
-                "\n")
+                    "\n",
+                )
             else:
                 print(
                     ' maximum number of possible crustals for each polymer chain: ',
@@ -94,7 +117,8 @@ class Builder:
                     * len(self.NSamples[5])
                     * len(self.NSamples[6])
                     * len(self.NSamples[7]),
-                "\n")
+                    "\n",
+                )
 
         if self.Polymer is True:
             result = Parallel(n_jobs=NCores)(
@@ -108,7 +132,9 @@ class Builder:
                     self.NumCandidate,
                     NCores_opt,
                 )
-                for VaspInp in tqdm(self.VaspInp_list, desc="Job submitted", colour='green')
+                for VaspInp in tqdm(
+                    self.VaspInp_list, desc="Building models ...", colour='green'
+                )
             )
         else:
             result = Parallel(n_jobs=NCores)(
@@ -122,24 +148,17 @@ class Builder:
                     self.NumCandidate,
                     NCores_opt,
                 )
-                for VaspInp in tqdm(self.VaspInp_list, desc="Polymer chain", colour='green')
+                for VaspInp in tqdm(
+                    self.VaspInp_list, desc="Building models ...", colour='green'
+                )
             )
 
         output = []
         for i in result:
             output.append([i[0].replace('.vasp', ''), i[1], i[2]])
 
-        #print("")
-        #print('    - crystal builder started for %s ' % i[0])
-
         output = pd.DataFrame(output, columns=['ID', 'Count', 'radius'])
         end_1 = time.time()
-        #print('    - crystal building completed.')
-        #print(
-        #    '    - crystal builing time: ',
-        #    np.round((end_1 - start_1) / 60, 2),
-        #    ' minutes',
-        #)
         lib.print_out(output, "Crystal model", np.round((end_1 - start_1) / 60, 2))
         return output
 
@@ -213,9 +232,9 @@ def create_crystal_vasp(
         )
         row1 += int(Num_atom[col].values[1])
 
-    #dist = cdist(crystal_struc[[1, 2, 3]].values, crystal_struc[[1, 2, 3]].values)
+    # dist = cdist(crystal_struc[[1, 2, 3]].values, crystal_struc[[1, 2, 3]].values)
 
-    #for i in np.arange(dist.shape[0]):
+    # for i in np.arange(dist.shape[0]):
     #    for j in np.arange(dist.shape[1]):
     #        if i != j:
     #            if dist[i, j] < 0.8:
@@ -374,10 +393,10 @@ def CrystalBuilderMainPolymer(
         radius = float(Input_radius)
 
         # Number of digits in total number of crystal models
-        #digits = bd.len_digit_number(NSamples ** 3)
+        # digits = bd.len_digit_number(NSamples ** 3)
 
     count = 0
-    for i in tqdm(samp[0], desc=VaspInp + " Generating models", colour='green'):
+    for i in tqdm(samp[0], desc=VaspInp, colour='green'):
         for j in samp[2]:
             for k in samp[1]:
                 second_poly_tl = tl(xyz_coordinates, i)
@@ -387,8 +406,7 @@ def CrystalBuilderMainPolymer(
                 if Input_radius == 'auto':
                     # Calculate distance between atoms in first_unit and second_unit
                     dist = cdist(
-                        first_poly[[1, 2, 3]].values,
-                        second_poly_rm2[[1, 2, 3]].values,
+                        first_poly[[1, 2, 3]].values, second_poly_rm2[[1, 2, 3]].values,
                     )
                     dist[np.isnan(dist)] = 0.0
                     dist = dist.flatten()
@@ -397,15 +415,16 @@ def CrystalBuilderMainPolymer(
                     second_poly_rm2 = Center_XY_r(second_poly_rm1, k, adj_radius)
 
                     dist = cdist(
-                        first_poly[[1, 2, 3]].values,
-                        second_poly_rm2[[1, 2, 3]].values,
+                        first_poly[[1, 2, 3]].values, second_poly_rm2[[1, 2, 3]].values,
                     )
                     dist[np.isnan(dist)] = 0.0
                     dist = dist.flatten()
                     while min(dist) < MinAtomicDis or min(dist) >= MinAtomicDis + 0.5:
                         if min(dist) < MinAtomicDis:
                             adj_radius += 0.4
-                            second_poly_rm2 = Center_XY_r(second_poly_rm1, k, adj_radius)
+                            second_poly_rm2 = Center_XY_r(
+                                second_poly_rm1, k, adj_radius
+                            )
                             dist = cdist(
                                 first_poly[[1, 2, 3]].values,
                                 second_poly_rm2[[1, 2, 3]].values,
@@ -416,7 +435,9 @@ def CrystalBuilderMainPolymer(
                             adj_radius -= 0.4
                             if adj_radius < 0.5:
                                 break
-                            second_poly_rm2 = Center_XY_r(second_poly_rm1, k, adj_radius)
+                            second_poly_rm2 = Center_XY_r(
+                                second_poly_rm1, k, adj_radius
+                            )
                             dist = cdist(
                                 first_poly[[1, 2, 3]].values,
                                 second_poly_rm2[[1, 2, 3]].values,
@@ -443,7 +464,8 @@ def CrystalBuilderMainPolymer(
                     + str(j)
                     + '; '
                     + 'Rotation 2 '
-                    + str(k), MinAtomicDis
+                    + str(k),
+                    MinAtomicDis,
                 )
     print(" Crystal model building completed for", VaspInp)
     if Optimize is True:
@@ -547,7 +569,9 @@ def CrystalBuilderMain(
     # digits = bd.len_digit_number(NSamples ** 8)
 
     count = 0
-    for i in tqdm(samp[0], desc=VaspInp + " Generating models", colour='green'):  # Second poly
+    for i in tqdm(
+        samp[0], desc=VaspInp + " Generating models", colour='green'
+    ):  # Second poly
         for j in samp[2]:  # Second poly
             for k in samp[1]:  # Second poly
                 for aX in samp[3]:  # Second poly
@@ -574,7 +598,9 @@ def CrystalBuilderMain(
                                     second_poly_rm2_aY = bd.rotateXYZOrigin(
                                         second_poly_rm2_aX, 0.0, aY, 0.0
                                     )
-                                    second_poly_moved = Center_XY_r(second_poly_rm2_aY, k, radius)
+                                    second_poly_moved = Center_XY_r(
+                                        second_poly_rm2_aY, k, radius
+                                    )
 
                                     if Input_radius == 'auto':
                                         # Calculate distance between atoms in first_unit and second_unit
@@ -586,7 +612,9 @@ def CrystalBuilderMain(
                                         dist = dist.flatten()
 
                                         adj_radius = radius - (min(dist) - MinAtomicDis)
-                                        second_poly_moved = Center_XY_r(second_poly_rm2_aY, k, adj_radius)
+                                        second_poly_moved = Center_XY_r(
+                                            second_poly_rm2_aY, k, adj_radius
+                                        )
 
                                         dist = cdist(
                                             first_poly_moved[[1, 2, 3]].values,
@@ -594,10 +622,15 @@ def CrystalBuilderMain(
                                         )
                                         dist[np.isnan(dist)] = 0.0
                                         dist = dist.flatten()
-                                        while min(dist) < MinAtomicDis or min(dist) >= MinAtomicDis + 0.5:
+                                        while (
+                                            min(dist) < MinAtomicDis
+                                            or min(dist) >= MinAtomicDis + 0.5
+                                        ):
                                             if min(dist) < MinAtomicDis:
                                                 adj_radius += 0.4
-                                                second_poly_moved = Center_XY_r(second_poly_rm2_aY, k, adj_radius)
+                                                second_poly_moved = Center_XY_r(
+                                                    second_poly_rm2_aY, k, adj_radius
+                                                )
                                                 dist = cdist(
                                                     first_poly_moved[[1, 2, 3]].values,
                                                     second_poly_moved[[1, 2, 3]].values,
@@ -608,7 +641,9 @@ def CrystalBuilderMain(
                                                 adj_radius -= 0.4
                                                 if adj_radius < 0.5:
                                                     break
-                                                second_poly_moved = Center_XY_r(second_poly_rm2_aY, k, adj_radius)
+                                                second_poly_moved = Center_XY_r(
+                                                    second_poly_rm2_aY, k, adj_radius
+                                                )
                                                 dist = cdist(
                                                     first_poly_moved[[1, 2, 3]].values,
                                                     second_poly_moved[[1, 2, 3]].values,
@@ -616,16 +651,15 @@ def CrystalBuilderMain(
                                                 dist[np.isnan(dist)] = 0.0
                                                 dist = dist.flatten()
 
-
                                     # Calculate distance between atoms in first_unit and second_unit
-                                    #dist = cdist(
+                                    # dist = cdist(
                                     #    first_poly_moved[[1, 2, 3]].values,
                                     #    second_poly_moved[[1, 2, 3]].values,
-                                    #)
-                                    #dist[np.isnan(dist)] = 0.0
-                                    #dist = dist.flatten()
+                                    # )
+                                    # dist[np.isnan(dist)] = 0.0
+                                    # dist = dist.flatten()
 
-                                    #if min(dist) > 2.0:
+                                    # if min(dist) > 2.0:
                                     count += 1
                                     create_crystal_vasp(
                                         os.path.join(
@@ -647,7 +681,8 @@ def CrystalBuilderMain(
                                         + str(j)
                                         + '; '
                                         + 'Rotation 2 '
-                                        + str(k), MinAtomicDis,
+                                        + str(k),
+                                        MinAtomicDis,
                                         Polymer=False,
                                     )
     print(" Crystal model building completed for", VaspInp)

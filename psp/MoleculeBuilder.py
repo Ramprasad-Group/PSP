@@ -9,6 +9,7 @@ from joblib import Parallel, delayed
 import psp.output_lib as lib
 from tqdm import tqdm
 
+
 class Builder:
     def __init__(
         self,
@@ -25,8 +26,9 @@ class Builder:
         Loop=False,
         IrrStruc=False,
         OPLS=False,
+        GAFF2=False,
+        GAFF2_atom_typing='pysimm',
         Subscript=False,
-
     ):
         self.ID_col = ID_col
         self.SMILES_col = SMILES_col
@@ -41,27 +43,49 @@ class Builder:
         self.Loop = Loop
         self.IrrStruc = IrrStruc
         self.OPLS = OPLS
+        self.GAFF2 = GAFF2
+        self.GAFF2_atom_typing = GAFF2_atom_typing
         self.Subscript = Subscript
 
     # list of molecules name and CORRECT/WRONG
     def Build(self):
         if self.Subscript is False:
-            lib.print_psp_info() # Print PSP info
+            lib.print_psp_info()  # Print PSP info
         lib.print_input("MoleculeBuilder", self.Dataframe)
         if self.NCores <= 0:
-            ncore_print='All'
+            ncore_print = 'All'
         else:
-            ncore_print=self.NCores
+            ncore_print = self.NCores
 
-        print("\n", "Additional information: ", "\n",
-        "Length of oligomers: ", self.Length, "\n",
-        "Number of conformers: ", self.NumConf, "\n",
-        "Loop model: ", self.Loop, "\n",
-        "Run short MD simulation: ", self.IrrStruc, "\n",
-        "Generate OPLS parameter file: ", self.OPLS, "\n",
-        "Intermolecular distance in POSCAR: ", self.Inter_Mol_Dis, "\n",
-        "Number of cores: ", ncore_print, "\n",
-        "Output Directory: ", self.OutDir, "\n")
+        print(
+            "\n",
+            "Additional information: ",
+            "\n",
+            "Length of oligomers: ",
+            self.Length,
+            "\n",
+            "Number of conformers: ",
+            self.NumConf,
+            "\n",
+            "Loop model: ",
+            self.Loop,
+            "\n",
+            "Run short MD simulation: ",
+            self.IrrStruc,
+            "\n",
+            "Generate OPLS parameter file: ",
+            self.OPLS,
+            "\n",
+            "Intermolecular distance in POSCAR: ",
+            self.Inter_Mol_Dis,
+            "\n",
+            "Number of cores: ",
+            ncore_print,
+            "\n",
+            "Output Directory: ",
+            self.OutDir,
+            "\n",
+        )
 
         # location of directory for VASP inputs (polymers) and build a directory
         out_dir = self.OutDir + '/'
@@ -108,9 +132,13 @@ class Builder:
                 self.Loop,
                 self.IrrStruc,
                 self.OPLS,
+                self.GAFF2,
+                self.GAFF2_atom_typing,
                 NCores_opt,
             )
-            for unit_name in tqdm(df[self.ID_col].values, desc='Job submitted', colour='green')
+            for unit_name in tqdm(
+                df[self.ID_col].values, desc='Building models ...', colour='green'
+            )
         )
         # print(result)
         # exit()
@@ -127,5 +155,7 @@ class Builder:
             shutil.rmtree('work_dir/')
 
         end_1 = time.time()
-        lib.print_out(chk_tri, "3D model", np.round((end_1 - start_1) / 60, 2), self.Subscript)
+        lib.print_out(
+            chk_tri, "3D model", np.round((end_1 - start_1) / 60, 2), self.Subscript
+        )
         return chk_tri
