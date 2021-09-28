@@ -27,6 +27,7 @@ jobs:
         run: |
           conda install -c conda-forge rdkit openbabel==3.1.1
           conda install -c conda-forge tqdm
+          conda install -c conda-forge tabulate
           #git clone https://github.com/polysimtools/pysimm
           #sudo python pysimm/complete_install.py --pysimm $PWD
           #source ~/.bashrc
