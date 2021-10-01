@@ -1,6 +1,6 @@
-import pkg_resources
 import numpy as np
 import pandas as pd
+# import pkg_resources
 
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
@@ -35,7 +35,7 @@ def print_psp_info():
     print(
         " --------------------------------------------------------------------------------------------------- "
     )
-    version = pkg_resources.require("PolymerStructurePredictor")[0].version
+    version = '1.0.0' # pkg_resources.require("PolymerStructurePredictor")[0].version
     print(
         "          ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **          "
     )
@@ -58,7 +58,7 @@ def print_psp_info():
     )
     print(" With contributions from (in alphabetic order): ")
     print(
-        " Harikrishna Sahu, Joseph H. Montoya, Kuan-Hsuan Shen, Rampi Ramprasad, Tran Doan Huan"
+        " Harikrishna Sahu, Joseph H. Montoya, Kuan-Hsuan Shen, Rampi Ramprasad, Huan Tran"
     )
     print(
         " --------------------------------------------------------------------------------------------------- "
