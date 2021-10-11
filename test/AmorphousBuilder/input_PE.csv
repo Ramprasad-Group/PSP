@@ -1,2 +1,2 @@
-ID,smiles,Len,Num,NumConf,Loop
-CC25,[*]CC[*],5,4,1,False
+ID,smiles,Len,Num,Loop
+CC25,[*]CC[*],20,80,False

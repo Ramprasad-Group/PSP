@@ -1,0 +1,4 @@
+ID,smiles
+Mol1,C13C=CC(C2C=CC1N=C2OC)N=C3OC
+PE,[*]CC[*]
+PVC,C(C([*])Cl)[*]
