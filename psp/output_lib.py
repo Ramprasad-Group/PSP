@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+
 # import pkg_resources
 
 pd.set_option('display.max_rows', None)
@@ -35,7 +36,7 @@ def print_psp_info():
     print(
         " --------------------------------------------------------------------------------------------------- "
     )
-    version = '1.0.0' # pkg_resources.require("PolymerStructurePredictor")[0].version
+    version = '1.0.0'  # pkg_resources.require("PolymerStructurePredictor")[0].version
     print(
         "          ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **          "
     )

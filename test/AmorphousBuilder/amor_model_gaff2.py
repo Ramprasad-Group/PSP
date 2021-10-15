@@ -1,7 +1,7 @@
 import pandas as pd
 import psp.AmorphousBuilder as ab
 
-input_df = pd.read_csv("input_amor1.csv", low_memory=False)
+input_df = pd.read_csv("input_amor.csv", low_memory=False)
 amor = ab.Builder(
     input_df,
     ID_col="ID",

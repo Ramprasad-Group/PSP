@@ -2667,13 +2667,14 @@ def gen_conf_xyz_vasp(
             outfile_name + ".lmp",
             unit,
             "",
-            unit[1].min(),
-            unit[1].max(),
-            unit[2].min(),
-            unit[2].max(),
-            unit[3].min(),
-            unit[3].max(),
+            unit[1].min() - Inter_Mol_Dis / 2,
+            unit[1].max() + Inter_Mol_Dis / 2,
+            unit[2].min() - Inter_Mol_Dis / 2,
+            unit[2].max() + Inter_Mol_Dis / 2,
+            unit[3].min() - Inter_Mol_Dis / 2,
+            unit[3].max() + Inter_Mol_Dis / 2,
             False,
+            Inter_Mol_Dis=Inter_Mol_Dis,
         )
 
         if n == Nconf:
