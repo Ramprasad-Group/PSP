@@ -225,7 +225,6 @@ class Builder:
                 zmin + fix_dis,
                 zmax - fix_dis,
             )
-
             # PACKMOL calculation
             command = (
                 packmol_path + " < " + os.path.join(packmol_outdir_model, "packmol.inp")

@@ -511,11 +511,11 @@ def gen_sys_data(
     BondInfo,
     Inter_Mol_Dis=0.0,
 ):  # lammps data file
-
     # move unit to the center of a box
-    unit[1] = unit[1] - unit[1].min() + Inter_Mol_Dis / 2
-    unit[2] = unit[2] - unit[2].min() + Inter_Mol_Dis / 2
-    unit[3] = unit[3] - unit[3].min() + Inter_Mol_Dis / 2
+    if Inter_Mol_Dis > 0.0:
+        unit[1] = unit[1] - unit[1].min() + Inter_Mol_Dis / 2
+        unit[2] = unit[2] - unit[2].min() + Inter_Mol_Dis / 2
+        unit[3] = unit[3] - unit[3].min() + Inter_Mol_Dis / 2
 
     unit = unit.sort_values(by=[0])
     new_atom_num = list(unit.index)

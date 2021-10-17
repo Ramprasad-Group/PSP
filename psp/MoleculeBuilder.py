@@ -137,7 +137,7 @@ class Builder:
                 NCores_opt,
             )
             for unit_name in tqdm(
-                df[self.ID_col].values, desc='Building models ...', colour='green'
+                df[self.ID_col].values, desc='Building models ...',
             )
         )
         # print(result)

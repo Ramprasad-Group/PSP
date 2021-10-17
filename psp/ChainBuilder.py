@@ -165,7 +165,7 @@ class Builder:
                 self.Tol_ChainCorr,
             )
             for unit_name in tqdm(
-                df[ID].values, desc='Building models ...', colour='green'
+                df[ID].values, desc='Building models ...',
             )
         )
         for i in result:
