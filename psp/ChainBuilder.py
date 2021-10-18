@@ -164,9 +164,7 @@ class Builder:
                 self.IntraChainCorr,
                 self.Tol_ChainCorr,
             )
-            for unit_name in tqdm(
-                df[ID].values, desc='Building models ...',
-            )
+            for unit_name in tqdm(df[ID].values, desc='Building models ...',)
         )
         for i in result:
             chk_tri.append([i[0], i[1]])  # i[2]

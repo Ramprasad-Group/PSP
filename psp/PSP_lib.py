@@ -477,7 +477,9 @@ def gen_xyz(filename, unit):
 # INPUT: name of VASP directory, name of a monomer, XYZ-coordinates, row numbers for dummy and
 # connecting atoms , chemical name of dummy atom, Serial number
 # OUTPUT: Generates a VASP input file
-def gen_vasp(vasp_dir, unit_name, unit, dum1, dum2, atom1, atom2, dum, unit_dis, SN=0, length=0):
+def gen_vasp(
+    vasp_dir, unit_name, unit, dum1, dum2, atom1, atom2, dum, unit_dis, SN=0, length=0
+):
     add_dis = add_dis_func(unit, atom1, atom2)
 
     unit = trans_origin(unit, atom2)
@@ -486,14 +488,24 @@ def gen_vasp(vasp_dir, unit_name, unit, dum1, dum2, atom1, atom2, dum, unit_dis,
 
     keep_space = 12
 
-    if SN == 0 and length==0:
+    if SN == 0 and length == 0:
         file_name = vasp_dir + unit_name.replace('.xyz', '') + '.vasp'
-    elif SN == 0 and length!=0:
-        file_name = vasp_dir + unit_name.replace('.xyz', '') + '_N' + str(length) + '.vasp'
-    elif SN != 0 and  length==0:
+    elif SN == 0 and length != 0:
+        file_name = (
+            vasp_dir + unit_name.replace('.xyz', '') + '_N' + str(length) + '.vasp'
+        )
+    elif SN != 0 and length == 0:
         file_name = vasp_dir + unit_name.replace('.xyz', '') + '_C' + str(SN) + '.vasp'
     else:
-        file_name = vasp_dir + unit_name.replace('.xyz', '') + '_N' + str(length) + '_C' + str(SN) + '.vasp'
+        file_name = (
+            vasp_dir
+            + unit_name.replace('.xyz', '')
+            + '_N'
+            + str(length)
+            + '_C'
+            + str(SN)
+            + '.vasp'
+        )
 
     file = open(file_name, 'w+')
     file.write('### ' + str(unit_name) + ' ###\n')
@@ -1454,9 +1466,19 @@ def build_polymer(
                 oligomer = oligomer.drop([dum1_oligo, dum2_oligo])
 
                 if SN > 1:
-                    xyz_file_name = vasp_out_dir_indi + unit_name + '_' + str(SN) + '_N' + str(oligo_len) + '.xyz'
+                    xyz_file_name = (
+                        vasp_out_dir_indi
+                        + unit_name
+                        + '_'
+                        + str(SN)
+                        + '_N'
+                        + str(oligo_len)
+                        + '.xyz'
+                    )
                 else:
-                    xyz_file_name = vasp_out_dir_indi + unit_name + '_N' + str(oligo_len) + '.xyz'
+                    xyz_file_name = (
+                        vasp_out_dir_indi + unit_name + '_N' + str(oligo_len) + '.xyz'
+                    )
 
                 gen_xyz(xyz_file_name, oligomer)
 
@@ -1591,10 +1613,23 @@ def build_polymer(
                         oligomer = oligomer.drop([dum1_oligo, dum2_oligo])
 
                         if SN > 1:
-                            xyz_file_name = vasp_out_dir_indi + unit_name + '_' + str(SN) + '_N' + str(
-                                oligo_len) + '.xyz'
+                            xyz_file_name = (
+                                vasp_out_dir_indi
+                                + unit_name
+                                + '_'
+                                + str(SN)
+                                + '_N'
+                                + str(oligo_len)
+                                + '.xyz'
+                            )
                         else:
-                            xyz_file_name = vasp_out_dir_indi + unit_name + '_N' + str(oligo_len) + '.xyz'
+                            xyz_file_name = (
+                                vasp_out_dir_indi
+                                + unit_name
+                                + '_N'
+                                + str(oligo_len)
+                                + '.xyz'
+                            )
 
                         gen_xyz(xyz_file_name, oligomer)
 
@@ -1733,10 +1768,23 @@ def build_polymer(
                         oligomer = oligomer.drop([dum1_oligo, dum2_oligo])
 
                         if SN > 1:
-                            xyz_file_name = vasp_out_dir_indi + unit_name + '_' + str(SN) + '_N' + str(
-                                oligo_len) + '.xyz'
+                            xyz_file_name = (
+                                vasp_out_dir_indi
+                                + unit_name
+                                + '_'
+                                + str(SN)
+                                + '_N'
+                                + str(oligo_len)
+                                + '.xyz'
+                            )
                         else:
-                            xyz_file_name = vasp_out_dir_indi + unit_name + '_N' + str(oligo_len) + '.xyz'
+                            xyz_file_name = (
+                                vasp_out_dir_indi
+                                + unit_name
+                                + '_N'
+                                + str(oligo_len)
+                                + '.xyz'
+                            )
 
                         gen_xyz(xyz_file_name, oligomer)
 
@@ -1868,9 +1916,23 @@ def build_polymer(
                             # Remove dummy atoms
                             oligomer = oligomer.drop([dum1_oligo, dum2_oligo])
                             if SN > 1:
-                                xyz_file_name = vasp_out_dir_indi + unit_name + '_' + str(SN) + '_N' + str(oligo_len) + '.xyz'
+                                xyz_file_name = (
+                                    vasp_out_dir_indi
+                                    + unit_name
+                                    + '_'
+                                    + str(SN)
+                                    + '_N'
+                                    + str(oligo_len)
+                                    + '.xyz'
+                                )
                             else:
-                                xyz_file_name = vasp_out_dir_indi + unit_name + '_N' + str(oligo_len) + '.xyz'
+                                xyz_file_name = (
+                                    vasp_out_dir_indi
+                                    + unit_name
+                                    + '_N'
+                                    + str(oligo_len)
+                                    + '.xyz'
+                                )
 
                             gen_xyz(xyz_file_name, oligomer)
 
@@ -2011,10 +2073,23 @@ def build_polymer(
                                 oligomer = oligomer.drop([dum1_oligo, dum2_oligo])
 
                                 if SN > 1:
-                                    xyz_file_name = vasp_out_dir_indi + unit_name + '_' + str(SN) + '_N' + str(
-                                        oligo_len) + '.xyz'
+                                    xyz_file_name = (
+                                        vasp_out_dir_indi
+                                        + unit_name
+                                        + '_'
+                                        + str(SN)
+                                        + '_N'
+                                        + str(oligo_len)
+                                        + '.xyz'
+                                    )
                                 else:
-                                    xyz_file_name = vasp_out_dir_indi + unit_name + '_N' + str(oligo_len) + '.xyz'
+                                    xyz_file_name = (
+                                        vasp_out_dir_indi
+                                        + unit_name
+                                        + '_N'
+                                        + str(oligo_len)
+                                        + '.xyz'
+                                    )
 
                                 gen_xyz(xyz_file_name, oligomer)
 

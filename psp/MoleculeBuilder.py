@@ -136,9 +136,7 @@ class Builder:
                 self.GAFF2_atom_typing,
                 NCores_opt,
             )
-            for unit_name in tqdm(
-                df[self.ID_col].values, desc='Building models ...',
-            )
+            for unit_name in tqdm(df[self.ID_col].values, desc='Building models ...',)
         )
         # print(result)
         # exit()
