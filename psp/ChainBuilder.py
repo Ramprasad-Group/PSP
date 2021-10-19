@@ -30,6 +30,7 @@ class Builder:
         SMILES_col='smiles',
         IntraChainCorr=1,
         Tol_ChainCorr=50,
+        Inter_Chain_Dis=12,
         OutDir='chains',
     ):
         self.ID_col = ID_col
@@ -46,6 +47,7 @@ class Builder:
         self.Method = Method
         self.IntraChainCorr = IntraChainCorr
         self.Tol_ChainCorr = Tol_ChainCorr
+        self.Inter_Chain_Dis = Inter_Chain_Dis
 
         if self.Method not in ['SA', 'Dimer']:
             #            print('    - polymer chain building started (', self.Method, ') ...')
@@ -163,6 +165,7 @@ class Builder:
                 self.Method,
                 self.IntraChainCorr,
                 self.Tol_ChainCorr,
+                self.Inter_Chain_Dis,
             )
             for unit_name in tqdm(df[ID].values, desc='Building models ...',)
         )

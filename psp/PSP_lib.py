@@ -478,15 +478,25 @@ def gen_xyz(filename, unit):
 # connecting atoms , chemical name of dummy atom, Serial number
 # OUTPUT: Generates a VASP input file
 def gen_vasp(
-    vasp_dir, unit_name, unit, dum1, dum2, atom1, atom2, dum, unit_dis, SN=0, length=0
+    vasp_dir,
+    unit_name,
+    unit,
+    dum1,
+    dum2,
+    atom1,
+    atom2,
+    dum,
+    unit_dis,
+    SN=0,
+    length=0,
+    Inter_Chain_Dis=12,
+    Polymer=False,
 ):
     add_dis = add_dis_func(unit, atom1, atom2)
 
     unit = trans_origin(unit, atom2)
     unit = alignZ(unit, atom2, dum1)
     unit = unit.sort_values(by=[0])
-
-    keep_space = 12
 
     if SN == 0 and length == 0:
         file_name = vasp_dir + unit_name.replace('.xyz', '') + '.vasp'
@@ -510,15 +520,24 @@ def gen_vasp(
     file = open(file_name, 'w+')
     file.write('### ' + str(unit_name) + ' ###\n')
     file.write('1\n')
-    a_vec = unit[1].max() - unit[1].min() + keep_space
-    b_vec = unit[2].max() - unit[2].min() + keep_space
 
-    c_vec = unit.loc[dum1][3] + unit_dis + add_dis  #
+    # Get the size of the box
+    a_vec = unit[1].max() - unit[1].min() + Inter_Chain_Dis
+    b_vec = unit[2].max() - unit[2].min() + Inter_Chain_Dis
+
+    if Polymer:
+        c_vec = unit.loc[dum1][3] + unit_dis + add_dis  #
+    else:
+        c_vec = unit[3].max() - unit[3].min() + Inter_Chain_Dis
 
     # move unit to the center of a box
-    unit[1] = unit[1] - unit[1].min() + keep_space / 2
-    unit[2] = unit[2] - unit[2].min() + keep_space / 2
-    unit[3] = unit[3] + (1.68 + unit_dis + add_dis) / 2
+    unit[1] = unit[1] - unit[1].min() + Inter_Chain_Dis / 2
+    unit[2] = unit[2] - unit[2].min() + Inter_Chain_Dis / 2
+
+    if Polymer:
+        unit[3] = unit[3] + (1.68 + unit_dis + add_dis) / 2
+    else:
+        unit[3] = unit[3] - unit[3].min() + Inter_Chain_Dis / 2
 
     unit = unit.drop([dum1, dum2])
     file.write(' ' + str(a_vec) + ' ' + str(0.0) + ' ' + str(0.0) + '\n')
@@ -1316,6 +1335,7 @@ def build_polymer(
     method,
     IntraChainCorr,
     Tol_ChainCorr,
+    Inter_Chain_Dis,
 ):
     print(" Chain model building started for", unit_name, "...")
     vasp_out_dir_indi = vasp_out_dir + unit_name + '/'
@@ -1428,6 +1448,8 @@ def build_polymer(
                 atom2,
                 dum,
                 unit_dis,
+                Inter_Chain_Dis=Inter_Chain_Dis,
+                Polymer=True,
             )
 
         if len(oligo_list) > 0:
@@ -1458,8 +1480,9 @@ def build_polymer(
                     atom1_oligo,
                     atom2_oligo,
                     dum,
-                    unit_dis + 5.0,
+                    unit_dis,
                     length=oligo_len,
+                    Inter_Chain_Dis=Inter_Chain_Dis,
                 )
 
                 # Remove dummy atoms
@@ -1575,6 +1598,8 @@ def build_polymer(
                         atom2,
                         dum,
                         unit_dis,
+                        Inter_Chain_Dis=Inter_Chain_Dis,
+                        Polymer=True,
                     )
 
                 if len(oligo_list) > 0:
@@ -1605,8 +1630,9 @@ def build_polymer(
                             atom1_oligo,
                             atom2_oligo,
                             dum,
-                            unit_dis + 5.0,
+                            unit_dis,
                             length=oligo_len,
+                            Inter_Chain_Dis=Inter_Chain_Dis,
                         )
 
                         # Remove dummy atoms
@@ -1730,6 +1756,8 @@ def build_polymer(
                         atom2,
                         dum,
                         unit_dis,
+                        Inter_Chain_Dis=Inter_Chain_Dis,
+                        Polymer=True,
                     )
 
                 if len(oligo_list) > 0:
@@ -1760,8 +1788,9 @@ def build_polymer(
                             atom1_oligo,
                             atom2_oligo,
                             dum,
-                            unit_dis + 5.0,
+                            unit_dis,
                             length=oligo_len,
+                            Inter_Chain_Dis=Inter_Chain_Dis,
                         )
 
                         # Remove dummy atoms
@@ -1879,6 +1908,8 @@ def build_polymer(
                             atom2_2nd,
                             dum,
                             unit_dis,
+                            Inter_Chain_Dis=Inter_Chain_Dis,
+                            Polymer=True,
                         )
 
                     if len(oligo_list) > 0:
@@ -1909,8 +1940,9 @@ def build_polymer(
                                 atom1_oligo,
                                 atom2_oligo,
                                 dum,
-                                unit_dis + 5.0,
+                                unit_dis,
                                 length=oligo_len,
+                                Inter_Chain_Dis=Inter_Chain_Dis,
                             )
 
                             # Remove dummy atoms
@@ -2035,6 +2067,8 @@ def build_polymer(
                                 atom2_2nd,
                                 dum,
                                 unit_dis,
+                                Inter_Chain_Dis=Inter_Chain_Dis,
+                                Polymer=True,
                             )
 
                         if len(oligo_list) > 0:
@@ -2065,8 +2099,9 @@ def build_polymer(
                                     atom1_oligo,
                                     atom2_oligo,
                                     dum,
-                                    unit_dis + 5.0,
+                                    unit_dis,
                                     length=oligo_len,
+                                    Inter_Chain_Dis=Inter_Chain_Dis,
                                 )
 
                                 # Remove dummy atoms
@@ -2147,6 +2182,8 @@ def build_polymer(
                                 atom2_2nd,
                                 dum,
                                 unit_dis,
+                                Inter_Chain_Dis=Inter_Chain_Dis,
+                                Polymer=True,
                             )
 
                         if SN == num_conf:
