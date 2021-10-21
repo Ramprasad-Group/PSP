@@ -516,6 +516,10 @@ def gen_sys_data(
         unit[1] = unit[1] - unit[1].min() + Inter_Mol_Dis / 2
         unit[2] = unit[2] - unit[2].min() + Inter_Mol_Dis / 2
         unit[3] = unit[3] - unit[3].min() + Inter_Mol_Dis / 2
+    else:
+    	unit[1] = unit[1] - unit[1].min()
+    	unit[2] = unit[2] - unit[2].min()
+    	unit[3] = unit[3] - unit[3].min()
 
     unit = unit.sort_values(by=[0])
     new_atom_num = list(unit.index)
@@ -529,9 +533,9 @@ def gen_sys_data(
     if BondInfo is True:
         file.write(str(packmol_bond.shape[0]) + ' bonds\n')
     file.write(str(len(list(unit_ele[0].values))) + ' atom types\n')
-    file.write(str(xmin) + ' ' + str(xmax) + ' xlo xhi\n')
-    file.write(str(ymin) + ' ' + str(ymax) + ' ylo yhi\n')
-    file.write(str(zmin) + ' ' + str(zmax) + ' zlo zhi\n\n')
+    file.write(str(0.0) + ' ' + str(xmax-xmin) + ' xlo xhi\n')
+    file.write(str(0.0) + ' ' + str(ymax-ymin) + ' ylo yhi\n')
+    file.write(str(0.0) + ' ' + str(zmax-zmin) + ' zlo zhi\n\n')
 
     ele_list = []
     ele_mass = []
