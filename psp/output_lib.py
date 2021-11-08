@@ -46,20 +46,24 @@ def print_psp_info():
         "                    ",
     )
     print(
-        "                                 Directorship: Rampi Ramprasad                                      "
+        "                                   Developed at Ramprasad Group                                      "
     )
     print(
         "           Materials Science and Engineering, Georgia Institute of Technology, Atlanta, US           "
     )
+    print("")
     print(
         "           Cite this work as:                                                                "
     )
     print(
-        "          ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **          "
+        "           H. Sahu, K-H. Shen, J. H. Montoya, H. Tran, R. Ramprasad, PSP: A python toolkit           "
     )
-    print(" With contributions from (in alphabetic order): ")
     print(
-        " Harikrishna Sahu, Joseph H. Montoya, Kuan-Hsuan Shen, Rampi Ramprasad, Huan Tran"
+        "           for predicting 3D models of polymers, journal name, volume, page, 2022.                   "
+    )
+
+    print(
+        "          ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **          "
     )
     print(
         " --------------------------------------------------------------------------------------------------- "
