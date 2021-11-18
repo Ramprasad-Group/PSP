@@ -3,27 +3,14 @@ import pandas as pd
 import psp.simulated_annealing as an
 import math
 import os
-
-# import copy
+from LigParGen import Converter
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from openbabel import openbabel as ob
 from rdkit import RDLogger
 from scipy.spatial.distance import cdist
-from subprocess import call
 import psp.MD_lib as MDlib
-
-# from pysimm import system, lmps, forcefield
-
-# from openbabel import pybel as pb
-# from pymatgen.io import babel
 import glob
-
-# import multiprocessing
-# from joblib import Parallel, delayed
-
-# from joblib import wrap_non_picklable_objects
-# import time
 
 RDLogger.DisableLog('rdApp.*')
 
@@ -2748,12 +2735,8 @@ def gen_conf_xyz_vasp(
             print(unit_name, ": Generating OPLS parameter file ...")
             if os.path.exists(outfile_name + '.pdb'):
                 try:
-                    call(
-                        "LigParGen -p {}.pdb -r {} -c 0 -o 0 -l".format(
-                            outfile_name, outfile_name
-                        ),
-                        shell=True,
-                    )
+                    Converter.convert(pdb=outfile_name+'.pdb', resname=outfile_name+'_opls',
+                                      charge=0, opt=0, outdir='.')
                     print(unit_name, ": OPLS parameter file generated.")
                 except BaseException:
                     print('problem running LigParGen for {}.pdb.'.format(outfile_name))

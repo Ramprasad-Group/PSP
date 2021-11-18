@@ -5,11 +5,10 @@ import time
 import os
 import psp.PSP_lib as bd
 from openbabel import openbabel as ob
-from subprocess import call
 import glob
 import psp.output_lib as lib
 from tqdm import tqdm
-
+from LigParGen import Converter
 import psp.MoleculeBuilder as mb
 import random
 
@@ -332,12 +331,8 @@ class Builder:
 
             try:
                 print("LigParGen working on {}.pdb".format(output_prefix))
-                call(
-                    "LigParGen -p {0}{1}.pdb -r {1} -c 0 -o 0 -l".format(
-                        self.OutDir_xyz, output_prefix
-                    ),
-                    shell=True,
-                )
+                Converter.convert(pdb=os.path.join(self.OutDir_xyz, output_prefix + '.pdb'),
+                                  resname=output_prefix, charge=0, opt=0, outdir='.')
                 os.rename(lig_output_fname, data_fname)
             except BaseException:
                 print('problem running LigParGen for {}.pdb.'.format(output_prefix))

@@ -52,6 +52,8 @@ class Builder:
         if self.Subscript is False:
             lib.print_psp_info()  # Print PSP info
         lib.print_input("MoleculeBuilder", self.Dataframe)
+        if self.OPLS is True:
+            self.NCores = 1
         if self.NCores <= 0:
             ncore_print = 'All'
         else:
