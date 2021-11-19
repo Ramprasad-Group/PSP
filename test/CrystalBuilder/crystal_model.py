@@ -3,7 +3,7 @@ import glob
 import psp.ChainBuilder as ChB
 import psp.CrystalBuilder as CrB
 
-df_smiles = pd.read_csv("input_chain.csv", low_memory=False)  # fingerprinted data
+df_smiles = pd.read_csv("input_chain.csv")
 
 chain_builder = ChB.Builder(
     Dataframe=df_smiles,

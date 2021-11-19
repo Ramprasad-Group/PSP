@@ -1,0 +1,13 @@
+LigParGen scripts included with the PSP package were taken from LigParGenv2.1 (https://pypi.org/project/LigParGen/#description) and modified to make them compatible with the PSP package.
+
+Details of the original distribution:
+Author: Leela S. Dodda, Matthew C. Robinson
+License: MIT
+Email: leela.dodda@yale.edu,matthew.robinson@yale.edu
+Homepage: https://bitbucket.org/leelasd/ligpargen_2017_sep18/src/master/
+
+We have updated the original LigParGen source code to include the following features:
+(1) Able to store output files in a user-defined directory.
+(2) Compatible with the recent versions of Open Babel (v3.1.1), NetworkX (v2.5), and pandas (v1.2.4) libraries.
+(3) Generate a data file for the LAMMPS package only.
+(4) Delete all temporary files.

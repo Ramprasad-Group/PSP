@@ -1,7 +1,7 @@
 import pandas as pd
 import psp.MoleculeBuilder as mb
 
-df_smiles = pd.read_csv("linear_oligomer.csv", low_memory=False)
+df_smiles = pd.read_csv("linear_oligomer.csv")
 
 mol = mb.Builder(
     df_smiles,
@@ -11,7 +11,7 @@ mol = mb.Builder(
     RightCap ='RightCap',
     OutDir='models',
     Inter_Mol_Dis=6,
-    Length=[1,3],#16
+    Length=[1,3],
     NumConf=1,
     Loop=False,
     NCores=1,

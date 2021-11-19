@@ -1,7 +1,7 @@
 import pandas as pd
 import psp.ChainBuilder as ChB
 
-df_smiles = pd.read_csv("input_chain.csv", low_memory=False)
+df_smiles = pd.read_csv("input_chain.csv")
 chain_builder = ChB.Builder(
     Dataframe=df_smiles,
     ID_col="PID",

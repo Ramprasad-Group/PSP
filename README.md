@@ -40,7 +40,7 @@ LAMMPS can be installed separately or along with PySIMM. Make sure to add the Py
 
 Following that, source your ~/.bashrc file.  PSP will look for PATHs for PACKMOL, PySIMM, and LAMMPS while performing its tasks.
 
-PSP requires LigParGen 2.1 installed in a local server that needs BOSS as well as the following packages (1) Openbabel 2.4, (2) Network 1.11, (3) pandas 0.25.1. The following link has a detailed description of the installation: [http://zarbi.chem.yale.edu/ligpargen](http://zarbi.chem.yale.edu/ligpargen/). The user either needs to modify the LigParGen source codes or replace them with the supplied ones to store the output files in the desired directory instead of the default \tmp directory. The modified source code is available at www.
+LigParGen and its dependencies: LigParGen requires the BOSS executable. Obtain a copy of it and set $BOSSdir variable in bash. For more information, see [http://zarbi.chem.yale.edu/ligpargen](http://zarbi.chem.yale.edu/ligpargen) and [http://zarbi.chem.yale.edu/software.html](http://zarbi.chem.yale.edu/software.html). To make LigParGen compatible with PSP, we updated it to include the following features: (1) the ability to store the output files in a user-defined directory; and (2) compatibility with the recent versions of Open Babel (v3.1.1), NetworkX (v2.5), and pandas (v1.2.4). Take note that we have not yet installed NetworkX; ensure that this is done. The updated LigParGen source code is redistributed as part of the PSP package. 
 
 Once all dependencies are installed, clone the PSP repository and install it using the *setup.py* included in the package.
 

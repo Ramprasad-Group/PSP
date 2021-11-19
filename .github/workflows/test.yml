@@ -32,6 +32,7 @@ jobs:
           #sudo python pysimm/complete_install.py --pysimm $PWD
           #source ~/.bashrc
           python -m pip install --upgrade pip
+          pip install networkx
           pip install -e .
       - name: pytest
         shell: bash -l {0}
