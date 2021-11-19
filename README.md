@@ -28,7 +28,7 @@ PSP requires the following packages to be installed in order to function properl
 * [PACKMOL](http://leandro.iqm.unicamp.br/m3g/packmol/home.shtml) v20.2.2
 * [PySIMM](https://pysimm.org/) v0.2.3
 * [LAMMPS](https://docs.lammps.org/Manual.html)
-* [LigParGen dependencies](http://zarbi.chem.yale.edu/ligpargen/)
+* [LigParGen] dependencies(http://zarbi.chem.yale.edu/ligpargen/)
 
 It should be noted that all dependencies must be installed separately and tested to ensure that they all function. We recommend using Anaconda python, and creating a fresh conda environment for PSP (e. g. `conda create -n MY_ENV_NAME`).
 
