@@ -1,0 +1,2 @@
+ID,smiles,Mwt,CopolymerType,Nunits,LeftCap,RightCap,define_BB
+test,A:[L1]CCCCCC[L2],0,UserDefined,5,C(Cl)(Cl)(Cl)[*],C(F)(F)(F)[*],A
