@@ -10,6 +10,7 @@ from joblib import Parallel, delayed
 import psp.output_lib as out_lib
 from tqdm import tqdm
 
+
 class Builder:
     def __init__(
         self,
@@ -19,10 +20,11 @@ class Builder:
         SMILES_col='smiles',
         LeftCap='LeftCap',
         RightCap='RightCap',
-        Nunits_col='Nunits', # list of numbers (ratios); follow the order of building blocks
-        Mwt_col='Mwt_polymer', # if > 0, then Nunits will be determined from molar mass of building blocks and Mwt_polymer
-        Copoly_type_col='Copoly_type', # 'homo', # homo, alternating, block, graft, random
+        Nunits_col='Nunits',  # list of numbers (ratios); follow the order of building blocks
+        Mwt_col='Mwt_polymer',  # if > 0, then Nunits will be determined from molar mass of BB and Mwt
+        Copoly_type_col='Copoly_type',  # 'homo', # homo, alternating, block, graft, random
         define_BB_col='define_BB',
+        Loop_col='Loop',
         OutDir='copolymer_models',
         Inter_Mol_Dis=6,
         IrrStruc=False,
@@ -43,6 +45,7 @@ class Builder:
         self.Dataframe = Dataframe
         self.NCores = NCores
         self.Inter_Mol_Dis = Inter_Mol_Dis
+        self.Loop_col = Loop_col
         self.IrrStruc = IrrStruc
         self.OPLS = OPLS
         self.GAFF2 = GAFF2
@@ -120,14 +123,17 @@ class Builder:
                 self.Copoly_type_col,
                 self.define_BB_col,
                 self.Inter_Mol_Dis,
+                self.Loop_col,
                 self.IrrStruc,
                 self.OPLS,
                 self.GAFF2,
                 self.GAFF2_atom_typing,
                 NCores_opt,
-                out_dir
+                out_dir,
             )
-            for unit_name in tqdm(df[self.ID_col].values, desc='Building copolymers ...',)
+            for unit_name in tqdm(
+                df[self.ID_col].values, desc='Building copolymers ...',
+            )
         )
 
         for i in result:
@@ -144,6 +150,9 @@ class Builder:
 
         end_1 = time.time()
         out_lib.print_out(
-            chk_tri, "Copolymer models", np.round((end_1 - start_1) / 60, 2), self.Subscript
+            chk_tri,
+            "Copolymer models",
+            np.round((end_1 - start_1) / 60, 2),
+            self.Subscript,
         )
         return chk_tri

@@ -5,19 +5,22 @@ import re
 import pandas as pd
 import os
 import psp.PSP_lib as bd
-from copy import copy
+
 obConversion = ob.OBConversion()
 ff = ob.OBForceField.FindForceField('UFF')
+
 
 def is_nan(x):
     return x != x
 
+
 def optimize_geometry(mol1):
     ff.Setup(mol1)
-    ff.ConjugateGradients(1000)
+    ff.ConjugateGradients(100000)
     ff.SteepestDescent(100)
     ff.UpdateCoordinates(mol1)
     return mol1
+
 
 # Get Idx for dummy atom
 def get_linking_Idx(m, dum, iso_dum):
@@ -36,6 +39,7 @@ def get3DfromRDKitmol(m, dir_xyz, unit_name):
     AllChem.EmbedMolecule(m2)
     AllChem.UFFOptimizeMolecule(m2, maxIters=200)
     Chem.MolToXYZFile(m2, dir_xyz + '/' + unit_name + '.xyz')
+
 
 def build_network(pd_Idx, dum, mol1, mol2, mol_list):
     builder = ob.OBBuilder()
@@ -62,7 +66,9 @@ def build_network(pd_Idx, dum, mol1, mol2, mol_list):
 
     # Delete H atom from mol2/smi2
     if smi1_Idx[0] < smi2_Idx[0]:
-        mol1.DeleteAtom(mol1.GetAtom(smi2_Idx[0])) # One H atom deleted from smi1; so -1 is added
+        mol1.DeleteAtom(
+            mol1.GetAtom(smi2_Idx[0])
+        )  # One H atom deleted from smi1; so -1 is added
     else:
         mol1.DeleteAtom(mol1.GetAtom(smi2_Idx[0] + 1))
 
@@ -75,7 +81,6 @@ def build_network(pd_Idx, dum, mol1, mol2, mol_list):
     ff.SteepestDescent(100)
     ff.UpdateCoordinates(mol1)
     return mol1, mol1, pd_Idx
-
 
 
 def update_df_IDx(pd_Idx, mol1, mol_list, pd_Idx_ind, Id_smi1, Id_smi2):
@@ -102,43 +107,49 @@ def update_df_IDx(pd_Idx, mol1, mol_list, pd_Idx_ind, Id_smi1, Id_smi2):
 
     # Find out number of H atoms removed
     if Id_smi1 in mol_list:
-        mol_list_smi1 = mol_list[:mol_list.index(Id_smi1)]
+        mol_list_smi1 = mol_list[: mol_list.index(Id_smi1)]
     else:
         mol_list_smi1 = []
 
     if Id_smi2 in mol_list:
-        mol_list_smi2 = mol_list[:mol_list.index(Id_smi2)]
+        mol_list_smi2 = mol_list[: mol_list.index(Id_smi2)]
     else:
         mol_list_smi2 = []
 
     # Get index for the first row that has smi1 or smi2
     smi1_start_id_list = [pd_Idx[pd_Idx['smi1'] == Id_smi1].head(1).index.values[0]]
     try:
-        smi1_start_id_list += [pd_Idx[pd_Idx['smi2'] == Id_smi1].head(1).index.values[0]]
-    except:
+        smi1_start_id_list += [
+            pd_Idx[pd_Idx['smi2'] == Id_smi1].head(1).index.values[0]
+        ]
+    except Exception:
         pass
     smi1_start_id = min(smi1_start_id_list)
 
     smi2_start_id_list = [pd_Idx[pd_Idx['smi2'] == Id_smi2].head(1).index.values[0]]
     try:
-        smi2_start_id_list += [pd_Idx[pd_Idx['smi1'] == Id_smi2].head(1).index.values[0]]
-    except:
+        smi2_start_id_list += [
+            pd_Idx[pd_Idx['smi1'] == Id_smi2].head(1).index.values[0]
+        ]
+    except Exception:
         pass
     smi2_start_id = min(smi2_start_id_list)
 
     # Get pd starting form first smi1(smi2) to the current index
-    pd_Idx_smi1_start = pd_Idx[smi1_start_id:pd_Idx_ind.index.values[0]]
-    pd_Idx_smi2_start = pd_Idx[smi2_start_id:pd_Idx_ind.index.values[0]]
+    pd_Idx_smi1_start = pd_Idx[smi1_start_id: pd_Idx_ind.index.values[0]]
+    pd_Idx_smi2_start = pd_Idx[smi2_start_id: pd_Idx_ind.index.values[0]]
 
-    count_delH_smi1=0
-    count_delH_smi2=0 # 1 is added for removal of H atoms from corresponding smi1/mol1
-    smi1_dum,smi1_link = 0,0
-    smi2_dum, smi2_link = 0,0
+    count_delH_smi1 = 0
+    count_delH_smi2 = (
+        0  # 1 is added for removal of H atoms from corresponding smi1/mol1
+    )
+    smi1_dum, smi1_link = 0, 0
+    smi2_dum, smi2_link = 0, 0
 
     # Number of H atoms removed that affect smi1 Idx
     for index1, row1 in pd_Idx_smi1_start.iterrows():
         if row1['smi1'] in mol_list_smi1:
-            count_delH_smi1 +=1
+            count_delH_smi1 += 1
         if row1['smi2'] in mol_list_smi1:
             count_delH_smi1 += 1
         if row1['smi1'] == Id_smi1:
@@ -155,9 +166,9 @@ def update_df_IDx(pd_Idx, mol1, mol_list, pd_Idx_ind, Id_smi1, Id_smi2):
     # Number of H atoms removed that affect smi2 Idx
     for index2, row2 in pd_Idx_smi2_start.iterrows():
         if row2['smi1'] in mol_list_smi2:
-            count_delH_smi2 +=1
+            count_delH_smi2 += 1
         if row2['smi2'] in mol_list_smi2:
-            count_delH_smi2 +=1
+            count_delH_smi2 += 1
         if row2['smi1'] == Id_smi2:
             if row2['frag1'][0] < pd_Idx.at[pd_Idx_ind.index.values[0], 'frag2'][0]:
                 smi2_dum += 1
@@ -170,9 +181,12 @@ def update_df_IDx(pd_Idx, mol1, mol_list, pd_Idx_ind, Id_smi1, Id_smi2):
                 smi2_link += 1
 
     # Adjust of Idx for other molecular fragments
-    pd_Idx.at[pd_Idx_ind.index.values[0], 'frag1'] = [x - count_delH_smi1 for x in pd_Idx.at[pd_Idx_ind.index.values[0], 'frag1']]
-    pd_Idx.at[pd_Idx_ind.index.values[0], 'frag2'] = [x - count_delH_smi2 for x in
-                                                      pd_Idx.at[pd_Idx_ind.index.values[0], 'frag2']]
+    pd_Idx.at[pd_Idx_ind.index.values[0], 'frag1'] = [
+        x - count_delH_smi1 for x in pd_Idx.at[pd_Idx_ind.index.values[0], 'frag1']
+    ]
+    pd_Idx.at[pd_Idx_ind.index.values[0], 'frag2'] = [
+        x - count_delH_smi2 for x in pd_Idx.at[pd_Idx_ind.index.values[0], 'frag2']
+    ]
     # Adjust of Idx for the same molecular fragments
     pd_Idx.at[pd_Idx_ind.index.values[0], 'frag1'][0] -= smi1_dum
     pd_Idx.at[pd_Idx_ind.index.values[0], 'frag1'][1] -= smi1_link
@@ -181,10 +195,23 @@ def update_df_IDx(pd_Idx, mol1, mol_list, pd_Idx_ind, Id_smi1, Id_smi2):
     pd_Idx.at[pd_Idx_ind.index.values[0], 'frag2'][1] -= smi2_link
     return pd_Idx
 
-def build_pn(unit_name,df_smiles,id,smiles,inter_mol_dis,irr_struc,opls,gaff2,GAFF2_atom_typing,ncore_opt,out_dir):
+
+def build_pn(
+    unit_name,
+    df_smiles,
+    id,
+    smiles,
+    inter_mol_dis,
+    irr_struc,
+    opls,
+    gaff2,
+    GAFF2_atom_typing,
+    ncore_opt,
+    out_dir,
+):
     result = 'FAILURE'
     # location of input XYZ files
-    xyz_in_dir = 'work_dir/'+unit_name
+    xyz_in_dir = 'work_dir/' + unit_name
     bd.build_dir(xyz_in_dir)
 
     # Get SMILES
@@ -200,13 +227,17 @@ def build_pn(unit_name,df_smiles,id,smiles,inter_mol_dis,irr_struc,opls,gaff2,GA
             mol_list.append(row['smi1'])
 
         # Combine mol1/smi1 and mol2/smi2
-        OBMol_list[row['smi1']], OBMol_list[row['smi2']], pd_Idx = build_network(pd_Idx, row['dum'],
-                                                                             OBMol_list[row['smi1']],
-                                                                             OBMol_list[row['smi2']], mol_list)
+        OBMol_list[row['smi1']], OBMol_list[row['smi2']], pd_Idx = build_network(
+            pd_Idx,
+            row['dum'],
+            OBMol_list[row['smi1']],
+            OBMol_list[row['smi2']],
+            mol_list,
+        )
 
         if index == pd_Idx.index[-1]:
             # Generate Geometry of the polymer network
-            out_xyz = os.path.join(out_dir, unit_name+'.xyz')
+            out_xyz = os.path.join(out_dir, unit_name + '.xyz')
             obConversion.WriteFile(OBMol_list[row['smi1']], out_xyz)
             result = 'SUCCESS'
         else:
@@ -217,8 +248,9 @@ def build_pn(unit_name,df_smiles,id,smiles,inter_mol_dis,irr_struc,opls,gaff2,GA
                 mol_list = mol_list + [row['smi2']]
     return unit_name, result
 
-def get_Idx_mol(unit_name,smiles_each):
-    L_count = len(list(set(re.findall(r"\[L(.*?)]",smiles_each))))
+
+def get_Idx_mol(unit_name, smiles_each):
+    L_count = len(list(set(re.findall(r"\[L(.*?)]", smiles_each))))
     dum = 'H'
 
     smi_list = smiles_each.split(".")
@@ -232,8 +264,10 @@ def get_Idx_mol(unit_name,smiles_each):
         smi_copy = []
         for j in range(len(smi_list)):
             if smi_list[j].find('[L' + str(i) + ']') != -1:  # Contains given substring
-                smi_copy.append(smi_list[j]) # saved to varify the input SMILES
-                smi_list[j] = smi_list[j].replace('[L' + str(i) + ']', '[' + str(i + 4) + dum + ']', 1)
+                smi_copy.append(smi_list[j])  # saved to varify the input SMILES
+                smi_list[j] = smi_list[j].replace(
+                    '[L' + str(i) + ']', '[' + str(i + 4) + dum + ']', 1
+                )
                 smi_link_list_ind.append(j)
         smi1_list.append(smi_link_list_ind[0])
         if len(smi_link_list_ind) == 2:
@@ -242,7 +276,9 @@ def get_Idx_mol(unit_name,smiles_each):
             smi2_list.append(None)
         else:
             print("Error in SMILES: (1) The same dummy atom found in > 2 places")
-            print("               : (2) The same dummy atom found in >= 2 places in a single SMILES")
+            print(
+                "               : (2) The same dummy atom found in >= 2 places in a single SMILES"
+            )
             print("               : Each dummy atom defines a bond between two atoms.")
             exit()
 
@@ -253,10 +289,14 @@ def get_Idx_mol(unit_name,smiles_each):
 
     frag1_Idx, frag2_Idx = [], []
     for index, row in pd_Idx.iterrows():
-        a, b = get_linking_Idx(Chem.MolFromSmiles(smi_list[row['smi1']]), dum, row['dum'])
+        a, b = get_linking_Idx(
+            Chem.MolFromSmiles(smi_list[row['smi1']]), dum, row['dum']
+        )
         frag1_Idx.append([a, b])
         if row['smi2'] is not None:
-            c, d = get_linking_Idx(Chem.MolFromSmiles(smi_list[row['smi2']]), dum, row['dum'])
+            c, d = get_linking_Idx(
+                Chem.MolFromSmiles(smi_list[row['smi2']]), dum, row['dum']
+            )
             frag2_Idx.append([c, d])
         else:
             frag2_Idx.append([None, None])
@@ -267,14 +307,17 @@ def get_Idx_mol(unit_name,smiles_each):
     obConversion.SetInFormat("xyz")
     OBMol_list = []
     for i in range(len(smi_list)):
-        get3DfromRDKitmol(Chem.MolFromSmiles(smi_list[i]), 'work_dir/'+unit_name, str(i))
-        path_xyz = os.path.join('work_dir/'+unit_name, str(i) + '.xyz')
+        get3DfromRDKitmol(
+            Chem.MolFromSmiles(smi_list[i]), 'work_dir/' + unit_name, str(i)
+        )
+        path_xyz = os.path.join('work_dir/' + unit_name, str(i) + '.xyz')
         mol = ob.OBMol()
         obConversion.ReadFile(mol, path_xyz)
         OBMol_list.append(mol)
     return pd_Idx, OBMol_list
 
-def end_cap(unit_name,OBMol,link1,link2,leftcap,rightcap):
+
+def end_cap(unit_name, OBMol, link1, link2, leftcap, rightcap):
     obConversion.SetInFormat("xyz")
     builder = ob.OBBuilder()
     builder.SetKeepRings()
@@ -286,7 +329,7 @@ def end_cap(unit_name,OBMol,link1,link2,leftcap,rightcap):
     a_right, b_right = get_linking_Idx(Chem.MolFromSmiles(rightcap), 'H', '5H')
 
     # Generate OBmol
-    get3DfromRDKitmol(Chem.MolFromSmiles(leftcap), 'work_dir/'+unit_name, 'leftcap')
+    get3DfromRDKitmol(Chem.MolFromSmiles(leftcap), 'work_dir/' + unit_name, 'leftcap')
     get3DfromRDKitmol(Chem.MolFromSmiles(rightcap), 'work_dir/' + unit_name, 'rightcap')
 
     path_xyz_left = os.path.join('work_dir/' + unit_name, 'leftcap.xyz')
@@ -304,9 +347,9 @@ def end_cap(unit_name,OBMol,link1,link2,leftcap,rightcap):
 
     # Adjust linking atom IDx
     if a_left < b_left:
-        b_left -=1
+        b_left -= 1
     if a_right < b_right:
-        b_right -=1
+        b_right -= 1
 
     # Number atoms in leftcap and oligomer
     n_left = mol_left.NumAtoms()
@@ -320,12 +363,32 @@ def end_cap(unit_name,OBMol,link1,link2,leftcap,rightcap):
         link1, link2 = link2, link1
 
     # Add bonds
-    builder.Connect(mol_left, b_left + 1,  n_left + link1 + 1)
+    builder.Connect(mol_left, b_left + 1, n_left + link1 + 1)
     builder.Connect(mol_left, n_left + link2 + 1, n_left + n_oligo + b_right + 1)
 
     return mol_left
 
-def build_copoly(unit_name,df_smiles,ID,SMILES,LeftCap,RightCap,Nunits,Mwt,Copoly_type,define_BB,Inter_Mol_Dis,IrrStruc,OPLS,GAFF2,GAFF2_atom_typing,NCores_opt,out_dir):
+
+def build_copoly(
+    unit_name,
+    df_smiles,
+    ID,
+    SMILES,
+    LeftCap,
+    RightCap,
+    Nunits,
+    Mwt,
+    Copoly_type,
+    define_BB,
+    Inter_Mol_Dis,
+    Loop,
+    IrrStruc,
+    OPLS,
+    GAFF2,
+    GAFF2_atom_typing,
+    NCores_opt,
+    out_dir,
+):
     result = 'FAILURE'
 
     # number building blocks
@@ -334,7 +397,7 @@ def build_copoly(unit_name,df_smiles,ID,SMILES,LeftCap,RightCap,Nunits,Mwt,Copol
         if type(Nunits) == int or type(Nunits) == float:
             Nunits = [Nunits]
         else:
-            Nunits = Nunits.strip().replace("[","").replace("]","").split(",")
+            Nunits = Nunits.strip().replace("[", "").replace("]", "").split(",")
     else:
         Nunits = [1]
 
@@ -349,6 +412,10 @@ def build_copoly(unit_name,df_smiles,ID,SMILES,LeftCap,RightCap,Nunits,Mwt,Copol
     smiles_dict = {}
     for smi in smiles_each.strip().split(';'):
         smiles_dict[smi.split(':')[0]] = smi.split(':')[1]
+
+    # Is Loop?
+    if Loop in df_smiles.columns:
+        Loop = eval(str(df_smiles[df_smiles[ID] == unit_name][Loop].values[0]))
 
     if LeftCap in df_smiles.columns:
         smiles_LCap_ = df_smiles[df_smiles[ID] == unit_name][LeftCap].values[0]
@@ -371,35 +438,53 @@ def build_copoly(unit_name,df_smiles,ID,SMILES,LeftCap,RightCap,Nunits,Mwt,Copol
         Copoly_type = 'UserDefined'
 
     # Define building blocks
+    blocks_dict = {}
     if define_BB in df_smiles.columns:
         define_BB_ = df_smiles[df_smiles[ID] == unit_name][define_BB].values[0]
-        define_BB_ = define_BB_.split('-')
+        define_BB_ = define_BB_.split(':')
+        for block in range(len(define_BB_)):
+            blocks_dict[block] = define_BB_[block].split('-')
+
     else:
         define_BB_ = list(smiles_dict.keys())
         define_BB_.sort()
+        blocks_dict[0] = define_BB_
 
     # location of input XYZ files
     xyz_in_dir = 'work_dir/' + unit_name
     bd.build_dir(xyz_in_dir)
 
     # Get details of dummy and connecting atoms of all fragments and OBmol of them
-    OBMol_dict={}
-    pd_Idx_dict={}
+    OBMol_dict = {}
+    pd_Idx_dict = {}
     for key in smiles_dict:
-        xyz_in_dir_key = 'work_dir/' + unit_name + '_'+key
+        xyz_in_dir_key = 'work_dir/' + unit_name + '_' + key
         bd.build_dir(xyz_in_dir_key)
-        pd_Idx_dict[key], OBMol_dict[key] = get_Idx_mol(unit_name+'_'+key, smiles_dict[key])
+        pd_Idx_dict[key], OBMol_dict[key] = get_Idx_mol(
+            unit_name + '_' + key, smiles_dict[key]
+        )
 
     if Copoly_type == 'UserDefined':
-        OBMol, first, second = build_user_defined_poly(define_BB_, pd_Idx_dict, OBMol_dict, Nunits[0])
-        OBMol = end_cap(unit_name,OBMol,first,second,smiles_LCap_,smiles_RCap_)
+        OBMol, first, second = build_user_defined_poly(
+            blocks_dict, pd_Idx_dict, OBMol_dict, Nunits
+        )
+        if Loop:
+            OBMol = build_loop(OBMol, first, second)
+        else:
+            OBMol = end_cap(unit_name, OBMol, first, second, smiles_LCap_, smiles_RCap_)
         OBMol = optimize_geometry(OBMol)
         out_xyz = os.path.join(out_dir, unit_name + '.xyz')
         obConversion.WriteFile(OBMol, out_xyz)
         result = 'SUCCESS'
     return unit_name, result
 
-def combine_AB(Amol,Bmol,second_A,first_B,second_B):
+
+def build_loop(OBMol, first, second):
+    OBMol.AddBond(first + 1, second + 1, 1)
+    return OBMol
+
+
+def combine_AB(Amol, Bmol, second_A, first_B, second_B):
     builder = ob.OBBuilder()
     builder.SetKeepRings()
 
@@ -407,8 +492,9 @@ def combine_AB(Amol,Bmol,second_A,first_B,second_B):
     n_Amol = Amol.NumAtoms()
 
     Amol += Bmol
-    builder.Connect(Amol, second_A+1, first_B + n_Amol + 1)
+    builder.Connect(Amol, second_A + 1, first_B + n_Amol + 1)
     return Amol, second_B + n_Amol
+
 
 def combine_A_ntimes(OBMol, first, second, n):
     builder = ob.OBBuilder()
@@ -417,19 +503,21 @@ def combine_A_ntimes(OBMol, first, second, n):
     n_OBmol = OBMol.NumAtoms()
 
     # Reorder first and second linking atoms
-    if second > first:
+    if second < first:
         first, second = second, first
 
     main_obmol = ob.OBMol()
     main_obmol += OBMol
-    for i in range(n-1):
+    for i in range(n - 1):
         main_obmol += OBMol
-        builder.Connect(main_obmol, second + 1, first + (i+1)*n_OBmol + 1)
+        builder.Connect(main_obmol, second + 1, first + (i + 1) * n_OBmol + 1)
         second = second + n_OBmol
+
     return main_obmol, first, second
 
-def remove_H_get_links(df,OBMol):
-    OBMol_copy = ob.OBMol() # otherwise it will update the orginal OBMol
+
+def remove_H_get_links(df, OBMol):
+    OBMol_copy = ob.OBMol()  # otherwise it will update the orginal OBMol
     OBMol_copy += OBMol
 
     # Delete dummy H atoms
@@ -465,15 +553,34 @@ def remove_H_get_links(df,OBMol):
 
     return OBMol_copy, first_atom, second_atom
 
-def build_user_defined_poly(define_BB_, pd_Idx_dict, OBMol_dict, Nunits):
-    main_obmol, first_A, second_A = remove_H_get_links(pd_Idx_dict[define_BB_[0]],OBMol_dict[define_BB_[0]][0]) # NOTE: it doesn't accept '.' in SMILES
-    if len(define_BB_) > 1:
-        for i in range(1, len(define_BB_)):
-            obmol, first_B, second_B = remove_H_get_links(pd_Idx_dict[define_BB_[i]],OBMol_dict[define_BB_[i]][0])
-            main_obmol, second_A = combine_AB(main_obmol, obmol, second_A, first_B, second_B)
-    main_obmol, first, second = combine_A_ntimes(main_obmol, first_A, second_A, Nunits)
-    return main_obmol, first, second
 
+def build_user_defined_poly(blocks_dict, pd_Idx_dict, OBMol_dict, Nunits):
+    final_obmol = ob.OBMol()
+    count_blocks, blockA_first, blockA_second = 0, 0, 0
+    for key in blocks_dict:
+        count_blocks += 1
+        main_obmol, first_A, second_A = remove_H_get_links(
+            pd_Idx_dict[blocks_dict[key][0]], OBMol_dict[blocks_dict[key][0]][0]
+        )  # NOTE: it doesn't accept '.' in SMILES
+        if len(blocks_dict[key]) > 1:
+            for i in range(1, len(blocks_dict[key])):
+                obmol, first_B, second_B = remove_H_get_links(
+                    pd_Idx_dict[blocks_dict[key][i]], OBMol_dict[blocks_dict[key][i]][0]
+                )
+                main_obmol, second_A = combine_AB(
+                    main_obmol, obmol, second_A, first_B, second_B
+                )
+        main_obmol, first, second = combine_A_ntimes(
+            main_obmol, first_A, second_A, Nunits[key]
+        )
 
-
-
+        # Connect blocks
+        if count_blocks > 1:
+            final_obmol, blockA_second = combine_AB(
+                final_obmol, main_obmol, blockA_second, first, second
+            )
+        else:
+            final_obmol += main_obmol
+            blockA_first = first
+            blockA_second = second
+    return final_obmol, blockA_first, blockA_second

@@ -8,7 +8,7 @@ mol = nb.Builder(
     ID_col="ID",
     SMILES_col="smi",
     OutDir='model_networks',
-    NCores=2,
+    NCores=1,
 )
 results = mol.Build()
 

@@ -1,2 +1,2 @@
-ID,smiles,Mwt,CopolymerType,Nunits,LeftCap,RightCap,define_BB
-test,A:[L1]CCCCCC[L2],0,UserDefined,5,C(Cl)(Cl)(Cl)[*],C(F)(F)(F)[*],A
+ID,smiles,Mwt,CopolymerType,Nunits,LeftCap,RightCap,define_BB,Loop
+test,A:[L1]CCCCCC[L2];B:[L1]c1ccc([L2])cc1;C:[L1]C1CCC([L2])C1;D:[L1]C1C2C([L2])C12,0,UserDefined,"[2,5,9]",C(Cl)(Cl)(Cl)[*],C(F)(F)(F)[*],A-B:C:D,True

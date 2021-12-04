@@ -10,6 +10,7 @@ from joblib import Parallel, delayed
 import psp.output_lib as out_lib
 from tqdm import tqdm
 
+
 class Builder:
     def __init__(
         self,
@@ -107,9 +108,11 @@ class Builder:
                 self.GAFF2,
                 self.GAFF2_atom_typing,
                 NCores_opt,
-                out_dir
+                out_dir,
             )
-            for unit_name in tqdm(df[self.ID_col].values, desc='Building polymer networks ...',)
+            for unit_name in tqdm(
+                df[self.ID_col].values, desc='Building polymer networks ...',
+            )
         )
 
         for i in result:
@@ -126,6 +129,9 @@ class Builder:
 
         end_1 = time.time()
         out_lib.print_out(
-            chk_tri, "Polymer networks", np.round((end_1 - start_1) / 60, 2), self.Subscript
+            chk_tri,
+            "Polymer networks",
+            np.round((end_1 - start_1) / 60, 2),
+            self.Subscript,
         )
         return chk_tri
