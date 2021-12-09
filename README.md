@@ -1,8 +1,8 @@
 # PolymerStructurePredictor (PSP)
 
-PSP is an autonomous model generator that can build a hierarchy of polymer models starting from oligomer/infinite polymer chains to sophisticated amorphous models, using a simplified molecular-input line-entry system (SMILES) of polymers. This toolkit allows users to tune several parameters to manage the quality of models and computational cost and produce an OPLS parameter file if desired. Models can be utilized as the starting geometry for physics-based simulations, allowing for complete automation in polymer discovery. 
+Three-dimensional atomic-level models of polymers are necessary prerequisites for physics-based simulation studies. Polymer structure predictor (PSP) is capable of generating a hierarchy of polymer models, ranging from oligomers to infinite chains to crystals to amorphous models, using a simplified molecular-input line-entry system (SMILES) string of the polymer repeat unit as the primary input. The output structures and accompanying force field (GAFF2/OPLS-AA) parameter files are provided for downstream DFT and MD simulations.
 
->PSP generates models for monomers, linear and loop oligomers, infinite polymer chains, crystal, and amorphous structures from a SMILES string.
+>PSP generates models for monomers, linear and loop oligomers, infinite polymer chains, crystal, and amorphous structures using SMILES strings.
 
 ## Contributors
 * Harikrishna Sahu
@@ -13,13 +13,8 @@ PSP is an autonomous model generator that can build a hierarchy of polymer model
 
 ## License & copyright
 Ramprasad Group, Georgia Tech, USA
-
-Licensed under the [MIT License](LICENSE). 
-
-## Documentation, Discussion and Contribution
-* PSP documents are available on [Ramprasad Group website](http://ramprasad.mse.gatech.edu/).
-* Mailing list:
-* Issues: 
+[Ramprasad Group website](http://ramprasad.mse.gatech.edu/)
+Licensed under the [MIT License](LICENSE).
 
 ## Installation
 PSP requires the following packages to be installed in order to function properly:
