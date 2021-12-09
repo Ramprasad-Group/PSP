@@ -34,9 +34,9 @@ The deatiled intructions for the installation of PACKMOL package can be found at
 
 LAMMPS can be installed separately or along with PySIMM. Make sure to add the PySIMM package to your PYTHONPATH and add PySIMM and LAMMPS command-line tools to your PATH as mentioned in the PySIMM documentation.
 
-Ambertools is available as a conda package and can be installed using the instructions provided in the following links: [https://ambermd.org/AmberTools.php](https://ambermd.org/AmberTools.php). Make sure to include the path for the antechamber executable as an environment variable "ANTECHAMBER\_EXEC" in ~/.bashrc file.
+Ambertools is available as a conda package and can be installed using the instructions provided in the following links: [https://ambermd.org/AmberTools.php](https://ambermd.org/AmberTools.php). Make sure to include the path for the Antechamber executable as an environment variable "ANTECHAMBER\_EXEC" in ~/.bashrc file.
 
-Following that, source your ~/.bashrc file.  PSP will look for PATHs for PACKMOL, PySIMM, and LAMMPS while performing its tasks.
+Following that, source your ~/.bashrc file.  PSP will look for PATHs for PACKMOL, PySIMM, LAMMPS, and Antechamber while performing its tasks.
 
 LigParGen and its dependencies: LigParGen requires the BOSS executable. Obtain a copy of it and set $BOSSdir variable in bash. For more information, see [http://zarbi.chem.yale.edu/ligpargen](http://zarbi.chem.yale.edu/ligpargen) and [http://zarbi.chem.yale.edu/software.html](http://zarbi.chem.yale.edu/software.html). To make LigParGen compatible with PSP, we updated it to include the following features: (1) the ability to store the output files in a user-defined directory; and (2) compatibility with the recent versions of Open Babel (v3.1.1), NetworkX (v2.5), and pandas (v1.2.4). Take note that we have not yet installed NetworkX; ensure that this is done. The updated LigParGen source code is redistributed as part of the PSP package. 
 
