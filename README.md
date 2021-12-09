@@ -28,7 +28,8 @@ PSP requires the following packages to be installed in order to function properl
 * [PACKMOL](http://leandro.iqm.unicamp.br/m3g/packmol/home.shtml) v20.2.2
 * [PySIMM](https://pysimm.org/) v0.2.3
 * [LAMMPS](https://docs.lammps.org/Manual.html)
-* [LigParGen] dependencies(http://zarbi.chem.yale.edu/ligpargen/)
+* [Ambertools](https://ambermd.org/AmberTools.php) v3.1.1
+* LigParGen dependencies[](http://zarbi.chem.yale.edu/ligpargen/)
 
 It should be noted that all dependencies must be installed separately and tested to ensure that they all function. We recommend using Anaconda python, and creating a fresh conda environment for PSP (e. g. `conda create -n MY_ENV_NAME`).
 
@@ -37,6 +38,8 @@ RDKit and OpenBabel are available as conda packages and can be installed using t
 The deatiled intructions for the installation of PACKMOL package can be found at the following URL: [http://leandro.iqm.unicamp.br/m3g/packmol/home.shtml](http://leandro.iqm.unicamp.br/m3g/packmol/home.shtml). Make sure to include the path for PACKMOL executable as an environment variable "PACKMOL\_EXEC" in ~/.bashrc file.
 
 LAMMPS can be installed separately or along with PySIMM. Make sure to add the PySIMM package to your PYTHONPATH and add PySIMM and LAMMPS command-line tools to your PATH as mentioned in the PySIMM documentation.
+
+Ambertools is available as a conda package and can be installed using the instructions provided in the following links: [https://ambermd.org/AmberTools.php](https://ambermd.org/AmberTools.php). Make sure to include the path for the antechamber executable as an environment variable "ANTECHAMBER\_EXEC" in ~/.bashrc file.
 
 Following that, source your ~/.bashrc file.  PSP will look for PATHs for PACKMOL, PySIMM, and LAMMPS while performing its tasks.
 
@@ -47,3 +50,5 @@ Once all dependencies are installed, clone the PSP repository and install it usi
 ```angular2
 python setup.py install
 ```
+>**NOTE**: A colab notebook that demonstrates the step-by-step installation procedure and installs PSP and its dependencies has been provided. 
+
