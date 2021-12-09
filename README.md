@@ -12,8 +12,8 @@ Three-dimensional atomic-level models of polymers are necessary prerequisites fo
 * Rampi Ramprasad
 
 ## License & copyright
-Ramprasad Group, Georgia Tech, USA
-[Ramprasad Group website](http://ramprasad.mse.gatech.edu/)
+Ramprasad Group, Georgia Tech, USA\
+[Ramprasad Group website](http://ramprasad.mse.gatech.edu/)\
 Licensed under the [MIT License](LICENSE).
 
 ## Installation
