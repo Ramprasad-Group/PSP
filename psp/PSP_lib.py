@@ -912,6 +912,9 @@ def build_dimer_rotate(
         unit_dimer = unit_dimer.loc[new_rows].reset_index(drop=True)
         dum1_2nd, atom1_2nd, atom2_2nd, dum2_2nd = 0, 1, 2, 3
 
+        gen_xyz('work_dir/' + unit_name + '.xyz', unit_dimer)
+        neigh_atoms_info_dimer = connec_info('work_dir/' + unit_name + '.xyz')
+
     except Exception:
         pass
 
@@ -1049,7 +1052,6 @@ def oligomer_build(
             oligomer = oligomer.append(
                 pd.DataFrame(['H'] + list(new_coord)).T, ignore_index=True
             )
-
     return oligomer, dum1, atom1, dum2_oligo, atom2_oligo
 
 
@@ -1399,6 +1401,10 @@ def build_polymer(
     dum1, atom1, atom2, dum2 = 0, 1, 2, 3
 
     gen_xyz(xyz_tmp_dir + unit_name + '_rearranged.xyz', unit)
+
+    # update neigh_atoms_info
+    neigh_atoms_info = connec_info(xyz_tmp_dir + unit_name + '_rearranged.xyz')
+
     # Stretch the repeating unit
     if IntraChainCorr == 1:
         unit, unit_init_xyz = MakePolymerStraight(
@@ -1549,6 +1555,10 @@ def build_polymer(
             dum1, atom1, atom2, dum2 = 0, 1, 2, 3
 
             gen_xyz(xyz_tmp_dir + unit_name + '_rearranged.xyz', unit)
+
+            # update neigh_atoms_info
+            neigh_atoms_info = connec_info(xyz_tmp_dir + unit_name + '_rearranged.xyz')
+
             # Stretch the repeating unit
             if IntraChainCorr == 1:
                 unit, unit_init_xyz = MakePolymerStraight(
@@ -1813,7 +1823,6 @@ def build_polymer(
                 unit = unit_copied.copy()
                 unit = trans_origin(unit, atom1)
                 unit = alignZ(unit, atom1, atom2)
-
                 (
                     unit_dimer,
                     neigh_atoms_info_dimer,
