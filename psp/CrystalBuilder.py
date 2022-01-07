@@ -133,7 +133,7 @@ class Builder:
                     NCores_opt,
                 )
                 for VaspInp in tqdm(
-                    self.VaspInp_list, desc="Building models ...", colour='green'
+                    self.VaspInp_list, desc="Building models ..."
                 )
             )
         else:
@@ -149,7 +149,7 @@ class Builder:
                     NCores_opt,
                 )
                 for VaspInp in tqdm(
-                    self.VaspInp_list, desc="Building models ...", colour='green'
+                    self.VaspInp_list, desc="Building models ..."
                 )
             )
 
@@ -396,7 +396,7 @@ def CrystalBuilderMainPolymer(
         # digits = bd.len_digit_number(NSamples ** 3)
 
     count = 0
-    for i in tqdm(samp[0], desc=VaspInp, colour='green'):
+    for i in tqdm(samp[0], desc=VaspInp):
         for j in samp[2]:
             for k in samp[1]:
                 second_poly_tl = tl(xyz_coordinates, i)
@@ -570,7 +570,7 @@ def CrystalBuilderMain(
 
     count = 0
     for i in tqdm(
-        samp[0], desc=VaspInp + " Generating models", colour='green'
+        samp[0], desc=VaspInp + " Generating models"
     ):  # Second poly
         for j in samp[2]:  # Second poly
             for k in samp[1]:  # Second poly
