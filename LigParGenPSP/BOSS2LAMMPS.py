@@ -13,8 +13,8 @@ argparse
 numpy
 """
 
-from LigParGen.BOSSReader import bossPdbAtom2Element, ucomb
-from LigParGen.BOSSReader import bossElement2Mass, tor_cent
+from LigParGenPSP.BOSSReader import bossPdbAtom2Element, ucomb
+from LigParGenPSP.BOSSReader import bossElement2Mass, tor_cent
 import pickle
 import pandas as pd
 import numpy as np

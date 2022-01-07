@@ -12,7 +12,7 @@ Created on Wed Jun 14 2017
 """
 import os
 import numpy as np
-from LigParGen.Vector_algebra import (
+from LigParGenPSP.Vector_algebra import (
     pairing_func,
     angle,
     dihedral,

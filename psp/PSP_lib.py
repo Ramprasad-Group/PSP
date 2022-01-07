@@ -3,7 +3,7 @@ import pandas as pd
 import psp.simulated_annealing as an
 import math
 import os
-from LigParGen import Converter
+from LigParGenPSP import Converter
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from openbabel import openbabel as ob

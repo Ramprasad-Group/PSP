@@ -1,6 +1,6 @@
-from LigParGen.BOSSReader import BOSSReader, CheckForHs
-from LigParGen.BOSS2LAMMPS import mainBOSS2LAMMPS
-from LigParGen.CreatZmat import GenMolRep
+from LigParGenPSP.BOSSReader import BOSSReader, CheckForHs
+from LigParGenPSP.BOSS2LAMMPS import mainBOSS2LAMMPS
+from LigParGenPSP.CreatZmat import GenMolRep
 import argparse
 import pickle
 import os
@@ -13,7 +13,7 @@ obConversion.SetInAndOutFormats("pdb", "mol")
 def main():
 
     parser = argparse.ArgumentParser(
-        prog='LigParGen',
+        prog='LigParGenPSP',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description="""
     Ligand Parameter Generator Based on
@@ -41,13 +41,13 @@ def main():
 
     ################################################
     if using MOL file
-    Usage: LigParGen -m phenol.mol    -r PHN -c 0 -o 0
+    Usage: LigParGenPSP -m phenol.mol    -r PHN -c 0 -o 0
 
     if using PDB file
-    Usage: LigParGen -p phenol.pdb    -r PHN -c 0 -o 0
+    Usage: LigParGenPSP -p phenol.pdb    -r PHN -c 0 -o 0
 
     if using BOSS SMILES CODE
-    Usage: LigParGen -s 'c1ccc(cc1)O' -r PHN -c 0 -o 0
+    Usage: LigParGenPSP -s 'c1ccc(cc1)O' -r PHN -c 0 -o 0
 
     REQUIREMENTS:
     BOSS (need to set BOSSdir in bashrc and cshrc)

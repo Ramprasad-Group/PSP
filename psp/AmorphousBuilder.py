@@ -8,7 +8,7 @@ from openbabel import openbabel as ob
 import glob
 import psp.output_lib as lib
 from tqdm import tqdm
-from LigParGen import Converter
+from LigParGenPSP import Converter
 import psp.MoleculeBuilder as mb
 import random
 
