@@ -5,6 +5,9 @@ import re
 import pandas as pd
 import os
 import psp.PSP_lib as bd
+import psp.MD_lib as MDlib
+from LigParGenPSP import Converter
+import random
 
 obConversion = ob.OBConversion()
 ff = ob.OBForceField.FindForceField('UFF')
@@ -218,7 +221,7 @@ def build_pn(
     smiles_each = df_smiles[df_smiles[id] == unit_name][smiles].values[0]
 
     # Get details of dummy and connecting atoms of all fragments and OBmol of them
-    pd_Idx, OBMol_list = get_Idx_mol(unit_name, smiles_each)
+    pd_Idx, OBMol_list, OBMol_Mwt = get_Idx_mol(unit_name, smiles_each)
 
     mol_list = []
     for index, row in pd_Idx.iterrows():
@@ -249,7 +252,7 @@ def build_pn(
     return unit_name, result
 
 
-def get_Idx_mol(unit_name, smiles_each):
+def get_Idx_mol(unit_name, smiles_each, Mwt_polymer=0):
     L_count = len(list(set(re.findall(r"\[L(.*?)]", smiles_each))))
     dum = 'H'
 
@@ -306,6 +309,7 @@ def get_Idx_mol(unit_name, smiles_each):
     # Get 3D geometry for each fragment
     obConversion.SetInFormat("xyz")
     OBMol_list = []
+    OBMol_Mwt = []
     for i in range(len(smi_list)):
         get3DfromRDKitmol(
             Chem.MolFromSmiles(smi_list[i]), 'work_dir/' + unit_name, str(i)
@@ -314,7 +318,9 @@ def get_Idx_mol(unit_name, smiles_each):
         mol = ob.OBMol()
         obConversion.ReadFile(mol, path_xyz)
         OBMol_list.append(mol)
-    return pd_Idx, OBMol_list
+        if Mwt_polymer != 0:
+            OBMol_Mwt.append(mol.GetMolWt())
+    return pd_Idx, OBMol_list, OBMol_Mwt
 
 
 def end_cap(unit_name, OBMol, link1, link2, leftcap, rightcap):
@@ -381,13 +387,13 @@ def build_copoly(
     Copoly_type,
     define_BB,
     Inter_Mol_Dis,
+    output_files,
     Loop,
     IrrStruc,
-    OPLS,
-    GAFF2,
     GAFF2_atom_typing,
     NCores_opt,
     out_dir,
+    seed,
 ):
     result = 'FAILURE'
 
@@ -401,10 +407,18 @@ def build_copoly(
     else:
         Nunits = [1]
 
+    # Check given Molwt in g/mol for the polymer
+    if Mwt in df_smiles.columns:
+        Mwt = int(df_smiles[df_smiles[ID] == unit_name][Mwt].values[0])
+    else:
+        Mwt = 0
+
     if Mwt == 0:
         Nunits = [int(item) for item in Nunits]
     else:
         Nunits = [float(item) for item in Nunits]
+        # Normalize against the sum to ensure that the sum is always 1.0
+        Nunits = [float(item) / sum(Nunits) * Mwt for item in Nunits]
 
     # Get SMILES of individual blocks
     smiles_each = df_smiles[df_smiles[ID] == unit_name][SMILES].values[0]
@@ -413,6 +427,29 @@ def build_copoly(
     for smi in smiles_each.strip().split(';'):
         smiles_dict[smi.split(':')[0]] = smi.split(':')[1]
 
+    # Generate an OBMol
+    OBMol = ob.OBMol()
+
+    # Get details of dummy and connecting atoms of all fragments and OBmol of them
+    OBMol_dict = {}
+    pd_Idx_dict = {}
+    OBMol_Mwt_dict = {}
+    for key in smiles_dict:
+        xyz_in_dir_key = 'work_dir/' + unit_name + '_' + key
+        bd.build_dir(xyz_in_dir_key)
+        pd_Idx_dict[key], OBMol_dict[key], OBMol_Mwt_dict[key] = get_Idx_mol(
+            unit_name + '_' + key, smiles_dict[key], Mwt_polymer=Mwt,
+        )
+
+    #    if Mwt != 0:
+    #        list_blocks = list(OBMol_Mwt_dict.keys())
+    #        list_blocks.sort() # Ratio defined in Nunits should follow the alphabetical order
+    #        for
+    #        print(Mwt)
+    #        print(Nunits)
+    #        print(OBMol_Mwt_dict)
+    #        print(list_blocks)
+    #    exit()
     # Is Loop?
     if Loop in df_smiles.columns:
         Loop = eval(str(df_smiles[df_smiles[ID] == unit_name][Loop].values[0]))
@@ -441,10 +478,56 @@ def build_copoly(
     blocks_dict = {}
     if define_BB in df_smiles.columns:
         define_BB_ = df_smiles[df_smiles[ID] == unit_name][define_BB].values[0]
-        define_BB_ = define_BB_.split(':')
-        for block in range(len(define_BB_)):
-            blocks_dict[block] = define_BB_[block].split('-')
+        if define_BB_ == 'R':
+            define_BB_ = list(smiles_dict.keys())
+            define_BB_.sort()
 
+            # If Mwt is provided, update Nunits
+            if Mwt != 0:
+                update_Nunits = []
+                for i in range(len(define_BB_)):
+                    update_Nunits.append(
+                        round(Nunits[i] / OBMol_Mwt_dict[define_BB_[i]][0])
+                    )
+                Nunits = update_Nunits
+
+            random_seq = []
+            for i in range(len(define_BB_)):
+                random_seq.extend([define_BB_[i]] * Nunits[i])
+                if isinstance(seed, int):
+                    random.seed(seed)
+                random.shuffle(random_seq)
+            blocks_dict[0] = random_seq
+            print("\n Polymer building blocks are arranged in the following order: ")
+            print("", '-'.join(random_seq))
+            print("\n")
+            Nunits = [1]
+        else:
+            define_BB_ = define_BB_.split(':')
+            total_units = []
+            for block in range(len(define_BB_)):
+                blocks_dict[block] = define_BB_[block].split('-')
+                total_units.extend(define_BB_[block].split('-'))
+            # print(OBMol_Mwt_dict)
+            # Calculate Mwt of each block repeating unit
+            if Mwt != 0:
+                unit_list = list(smiles_dict.keys())
+                unit_list.sort()
+                update_Nunits = []
+                for i in range(len(unit_list)):
+                    update_Nunits.append(
+                        round(Nunits[i] / OBMol_Mwt_dict[unit_list[i]][0])
+                    )
+
+                BB_count = []
+                for key in blocks_dict:
+                    BB_each_count = []
+                    for j in blocks_dict[key]:
+                        BB_each_count.append(
+                            update_Nunits[(ord(j) - 65)] * (1 / total_units.count(j))
+                        )
+                    BB_count.append(round(min(BB_each_count)))
+                Nunits = BB_count
     else:
         define_BB_ = list(smiles_dict.keys())
         define_BB_.sort()
@@ -453,16 +536,6 @@ def build_copoly(
     # location of input XYZ files
     xyz_in_dir = 'work_dir/' + unit_name
     bd.build_dir(xyz_in_dir)
-
-    # Get details of dummy and connecting atoms of all fragments and OBmol of them
-    OBMol_dict = {}
-    pd_Idx_dict = {}
-    for key in smiles_dict:
-        xyz_in_dir_key = 'work_dir/' + unit_name + '_' + key
-        bd.build_dir(xyz_in_dir_key)
-        pd_Idx_dict[key], OBMol_dict[key] = get_Idx_mol(
-            unit_name + '_' + key, smiles_dict[key]
-        )
 
     if Copoly_type == 'UserDefined':
         OBMol, first, second = build_user_defined_poly(
@@ -473,10 +546,98 @@ def build_copoly(
         else:
             OBMol = end_cap(unit_name, OBMol, first, second, smiles_LCap_, smiles_RCap_)
         OBMol = optimize_geometry(OBMol)
-        out_xyz = os.path.join(out_dir, unit_name + '.xyz')
-        obConversion.WriteFile(OBMol, out_xyz)
         result = 'SUCCESS'
+
+    if result == 'SUCCESS':
+        GenOutput(
+            unit_name, OBMol, output_files, out_dir, Inter_Mol_Dis, GAFF2_atom_typing
+        )
     return unit_name, result
+
+
+def GenOutput(
+    unitname, OBMol, list_output, output_dir, Inter_Mol_Dis, GAFF2_atom_typing
+):
+    # Genrate an XYZ file
+    obConversion.SetOutFormat('xyz')
+    OBMol.SetTitle("Generated by OpenBabel@PSP -- Output format: " + 'xyz')
+    out_filename = os.path.join(output_dir, unitname + '.xyz')
+    obConversion.WriteFile(OBMol, out_filename)
+
+    # Get Coordinates of the molecules
+    unit = pd.read_csv(out_filename, header=None, skiprows=2, delim_whitespace=True)
+
+    # Generate a POSCAR file
+    POSCAR_list = ['poscar', 'POSCAR', 'VASP', 'vasp']
+    if any(i in POSCAR_list for i in list_output):
+        out_filename = os.path.join(output_dir, unitname + '.vasp')
+        bd.gen_molecule_vasp(unitname, unit, 0, 0, Inter_Mol_Dis, out_filename)
+
+    # Generate a LAMMPS datafile
+    LAMMPS_list = ['LAMMPS', 'lammps', 'lmp']
+    if any(i in LAMMPS_list for i in list_output):
+        out_filename = os.path.join(output_dir, unitname + '.lmp')
+        MDlib.gen_sys_data(
+            out_filename,
+            unit,
+            "",
+            unit[1].min() - Inter_Mol_Dis / 2,
+            unit[1].max() + Inter_Mol_Dis / 2,
+            unit[2].min() - Inter_Mol_Dis / 2,
+            unit[2].max() + Inter_Mol_Dis / 2,
+            unit[3].min() - Inter_Mol_Dis / 2,
+            unit[3].max() + Inter_Mol_Dis / 2,
+            False,
+            Inter_Mol_Dis=Inter_Mol_Dis,
+        )
+
+    # Generate a LAMMPS GAFF2 datafile
+    GAFF_list = ['GAFF', 'GAFF2', 'gaff', 'gaff2']
+    if any(i in GAFF_list for i in list_output):
+        out_filename = os.path.join(output_dir, unitname)
+        bd.get_gaff2(out_filename, OBMol, atom_typing=GAFF2_atom_typing)
+
+    # Generate an LAMMPS OPLS datafile
+    OPLS_list = ['OPLS', 'OPLS-AA', 'opls', 'opls-aa']
+    if any(i in OPLS_list for i in list_output):
+        gen_opls_data(unitname, OBMol, output_dir, unitname)
+        OPLS_list.append('pdb')
+        OPLS_list.append('PDB')
+
+    output_generated = (
+        POSCAR_list + LAMMPS_list + GAFF_list + OPLS_list + ['xyz', 'XYZ']
+    )
+    for i in output_generated:
+        if i in list_output:
+            list_output.remove(i)
+    GenOutputOB(unitname, OBMol, list_output, output_dir)
+
+
+def gen_opls_data(unit_name, OBMol, output_dir, unitname):
+    # Generate a pdb file
+    obConversion.SetOutFormat('pdb')
+    OBMol.SetTitle("Generated by OpenBabel@PSP -- Output format: " + 'pdb')
+    out_filename_pdb = os.path.join(output_dir, unitname + '.pdb')
+    obConversion.WriteFile(OBMol, out_filename_pdb)
+
+    # Generate an opls parameter file
+    print(unit_name, ": Generating OPLS parameter file ...")
+    out_filename = os.path.join(output_dir, unitname + '_opls')
+    try:
+        Converter.convert(
+            pdb=out_filename_pdb, resname=out_filename, charge=0, opt=0, outdir='.'
+        )
+        print(unit_name, ": OPLS parameter file generated.")
+    except BaseException:
+        print('problem running LigParGen for :', out_filename_pdb)
+
+
+def GenOutputOB(unitname, OBMol, list_OB_output, output_dir):
+    for i in list_OB_output:
+        obConversion.SetOutFormat(i)
+        OBMol.SetTitle("Generated by OpenBabel@PSP -- Output format: " + i)
+        out_filename = os.path.join(output_dir, unitname + '.' + i)
+        obConversion.WriteFile(OBMol, out_filename)
 
 
 def build_loop(OBMol, first, second):

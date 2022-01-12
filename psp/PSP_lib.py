@@ -2744,8 +2744,13 @@ def gen_conf_xyz_vasp(
             print(unit_name, ": Generating OPLS parameter file ...")
             if os.path.exists(outfile_name + '.pdb'):
                 try:
-                    Converter.convert(pdb=outfile_name+'.pdb', resname=outfile_name+'_opls',
-                                      charge=0, opt=0, outdir='.')
+                    Converter.convert(
+                        pdb=outfile_name + '.pdb',
+                        resname=outfile_name + '_opls',
+                        charge=0,
+                        opt=0,
+                        outdir='.',
+                    )
                     print(unit_name, ": OPLS parameter file generated.")
                 except BaseException:
                     print('problem running LigParGen for {}.pdb.'.format(outfile_name))
@@ -2945,14 +2950,29 @@ def del_tmp_files():
         os.remove("LL")
 
 
-def get_gaff2(outfile_name, out_dir, atom_typing='pysimm'):
+def get_gaff2(outfile_name, mol, atom_typing='pysimm'):
     print("\nGenerating GAFF2 parameter file ...\n")
-    r = MDlib.get_coord_from_pdb(outfile_name + ".pdb")
+    # r = MDlib.get_coord_from_pdb(outfile_name + ".pdb")
     from pysimm import system, forcefield
 
     obConversion.SetInAndOutFormats("pdb", "mol2")
-    mol = ob.OBMol()
-    obConversion.ReadFile(mol, outfile_name + '.pdb')
+    if os.path.exists(outfile_name + '.pdb'):
+        mol = ob.OBMol()
+        obConversion.ReadFile(mol, outfile_name + '.pdb')
+    else:
+        try:
+            count_atoms = mol.NumAtoms()
+            if count_atoms > 0:
+                pass
+            else:
+                print("ERROR: Number of atoms = ", count_atoms)
+                print("Couldn't generate GAFF2 parameter file\n")
+                return
+        except BaseException:
+            print("ERROR: pdb file not found; OBMol not provided")
+            print("Couldn't generate GAFF2 parameter file\n")
+            return
+
     obConversion.WriteFile(mol, outfile_name + '.mol2')
 
     data_fname = outfile_name + '_gaff2.lmp'
@@ -2960,35 +2980,37 @@ def get_gaff2(outfile_name, out_dir, atom_typing='pysimm'):
     try:
         print("Pysimm working on {}".format(outfile_name + '.mol2'))
         s = system.read_mol2(outfile_name + '.mol2')
+
+        f = forcefield.Gaff2()
+        if atom_typing == 'pysimm':
+            try:
+                print(
+                    "Pysimm applying force field for {}.".format(outfile_name + '.mol2')
+                )
+                s.apply_forcefield(f, charges='gasteiger')
+            except BaseException:
+                print(
+                    'Error applying force field with the mol2 file, switch to using cml file.'
+                )
+
+                obConversion.SetInAndOutFormats("pdb", "cml")
+                mol = ob.OBMol()
+                obConversion.ReadFile(mol, outfile_name + '.pdb')
+                obConversion.WriteFile(mol, outfile_name + '.cml')
+
+                s = system.read_cml(outfile_name + '.cml')
+                for b in s.bonds:
+                    if b.a.bonds.count == 3 and b.b.bonds.count == 3:
+                        b.order = 4
+                s.apply_forcefield(f, charges='gasteiger')
+        elif atom_typing == 'antechamber':
+            print("Antechamber working on {}".format(outfile_name + '.mol2'))
+            MDlib.get_type_from_antechamber(s, outfile_name + '.mol2', 'gaff2', f)
+            s.pair_style = 'lj'
+            s.apply_forcefield(f, charges='gasteiger', skip_ptypes=True)
+        else:
+            print('Invalid atom typing option, please select pysimm or antechamber.')
+        s.write_lammps(data_fname)
+        print("\nGAFF2 parameter file generated.")
     except BaseException:
         print('problem reading {} for Pysimm.'.format(outfile_name + '.mol2'))
-
-    f = forcefield.Gaff2()
-    if atom_typing == 'pysimm':
-        try:
-            print("Pysimm applying force field for {}.".format(outfile_name + '.mol2'))
-            s.apply_forcefield(f, charges='gasteiger')
-        except BaseException:
-            print(
-                'Error applying force field with the mol2 file, switch to using cml file.'
-            )
-
-            obConversion.SetInAndOutFormats("pdb", "cml")
-            mol = ob.OBMol()
-            obConversion.ReadFile(mol, outfile_name + '.pdb')
-            obConversion.WriteFile(mol, outfile_name + '.cml')
-
-            s = system.read_cml(outfile_name + '.cml')
-            for b in s.bonds:
-                if b.a.bonds.count == 3 and b.b.bonds.count == 3:
-                    b.order = 4
-            s.apply_forcefield(f, charges='gasteiger')
-    elif atom_typing == 'antechamber':
-        print("Antechamber working on {}".format(outfile_name + '.mol2'))
-        MDlib.get_type_from_antechamber(s, outfile_name + '.mol2', 'gaff2', f)
-        s.pair_style = 'lj'
-        s.apply_forcefield(f, charges='gasteiger', skip_ptypes=True)
-    else:
-        print('Invalid atom typing option, please select pysimm or antechamber.')
-    s.write_lammps(data_fname)
-    print("\nGAFF2 parameter file generated.")

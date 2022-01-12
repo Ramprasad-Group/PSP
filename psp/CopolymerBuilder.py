@@ -27,11 +27,11 @@ class Builder:
         Loop_col='Loop',
         OutDir='copolymer_models',
         Inter_Mol_Dis=6,
+        Output=['xyz'],
         IrrStruc=False,
-        OPLS=False,
-        GAFF2=False,
         GAFF2_atom_typing='pysimm',
         Subscript=False,
+        seed=None,
     ):
         self.ID_col = ID_col
         self.SMILES_col = SMILES_col
@@ -45,12 +45,12 @@ class Builder:
         self.Dataframe = Dataframe
         self.NCores = NCores
         self.Inter_Mol_Dis = Inter_Mol_Dis
+        self.Output = Output
         self.Loop_col = Loop_col
         self.IrrStruc = IrrStruc
-        self.OPLS = OPLS
-        self.GAFF2 = GAFF2
         self.GAFF2_atom_typing = GAFF2_atom_typing
         self.Subscript = Subscript
+        self.seed = seed
 
     # list of molecules name and CORRECT/WRONG
     def Build(self):
@@ -58,7 +58,8 @@ class Builder:
             out_lib.print_psp_info()  # Print PSP info
         out_lib.print_input("NetworkBuilder", self.Dataframe)
 
-        if self.OPLS is True:
+        OPLS_list = ['OPLS', 'OPLS-AA', 'opls', 'opls-aa']
+        if any(i in OPLS_list for i in self.Output):
             self.NCores = 1
         if self.NCores <= 0:
             ncore_print = 'All'
@@ -69,11 +70,11 @@ class Builder:
             "\n",
             "Additional information: ",
             "\n",
+            "Output files: ",
+            self.Output,
+            "\n",
             "Run short MD simulation: ",
             self.IrrStruc,
-            "\n",
-            "Generate OPLS parameter file: ",
-            self.OPLS,
             "\n",
             "Intermolecular distance in POSCAR: ",
             self.Inter_Mol_Dis,
@@ -83,6 +84,9 @@ class Builder:
             "\n",
             "Output Directory: ",
             self.OutDir,
+            "\n",
+            "Random seed: ",
+            self.seed,
             "\n",
         )
 
@@ -123,13 +127,13 @@ class Builder:
                 self.Copoly_type_col,
                 self.define_BB_col,
                 self.Inter_Mol_Dis,
+                self.Output,
                 self.Loop_col,
                 self.IrrStruc,
-                self.OPLS,
-                self.GAFF2,
                 self.GAFF2_atom_typing,
                 NCores_opt,
                 out_dir,
+                self.seed,
             )
             for unit_name in tqdm(
                 df[self.ID_col].values, desc='Building copolymers ...',
