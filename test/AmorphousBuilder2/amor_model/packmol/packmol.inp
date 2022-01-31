@@ -1,0 +1,9 @@
+tolerance 2.0
+output amor_model/packmol/packmol.pdb
+filetype pdb
+
+structure amor_model/copolymer_models/test_C1.pdb
+  number 4
+  inside box 1.0 1.0 1.0 19.688360370515866 19.688360370515866 19.688360370515866
+end structure
+

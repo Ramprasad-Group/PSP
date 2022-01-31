@@ -1,0 +1,82 @@
+
+                        ---------  PPPPPP       SSSSSS    PPPPPP    ---------                        
+                -----------------  PP    PP   SS          PP    PP  -----------------                
+        -------------------------  PP    PP   SS          PP    PP  -------------------------        
+ --------------------------------  PPPPPP       SSSSS     PPPPPP    -------------------------------- 
+        -------------------------  PP                SS   PP        -------------------------        
+                -----------------  PP                SS   PP        -----------------                
+                        ---------  PP          SSSSSS     PP        ---------                        
+ --------------------------------------------------------------------------------------------------- 
+          ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **          
+                        Polymer Structure Predictor (PSP) version =  1.0.0                     
+                                   Developed at Ramprasad Group                                      
+           Materials Science and Engineering, Georgia Institute of Technology, Atlanta, US           
+
+           Cite this work as:                                                                
+           H. Sahu, K-H. Shen, J. H. Montoya, H. Tran, R. Ramprasad, PSP: A python toolkit           
+           for predicting 3D models of polymers, journal name, volume, page, 2022.                   
+          ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **          
+ --------------------------------------------------------------------------------------------------- 
+  AmorphousBuilder  started...
+ ----------------------------------------------- INPUT --------------------------------------------- 
+|    | ID   | smiles                                |   Mwt | Nunits   | LeftCap          | RightCap      | define_BB   | Loop   |   Num |   NumConf |
+|---:|:-----|:--------------------------------------|------:|:---------|:-----------------|:--------------|:------------|:-------|------:|----------:|
+|  1 | test | A:[L1]CCCCCC[L2];B:[L1]C1C2C([L2])C12 |     0 | [5]      | C(Cl)(Cl)(Cl)[*] | C(F)(F)(F)[*] | A-B         | False  |     4 |         1 |
+{'numConfs': 2, 'numThreads': 0, 'randomSeed': 2, 'ExpTorsionAnglePref': False, 'BasicKnowledge': False}
+
+ Additional information:  
+ Number of models:  1 
+ Density (g/cm3):  0.65 
+ Tolerance distance (angstrom):  2.0 
+ Box type:  Cubic 
+ Output directory:  amor_model/ 
+
+
+                        ---------  PPPPPP       SSSSSS    PPPPPP    ---------                        
+                -----------------  PP    PP   SS          PP    PP  -----------------                
+        -------------------------  PP    PP   SS          PP    PP  -------------------------        
+ --------------------------------  PPPPPP       SSSSS     PPPPPP    -------------------------------- 
+        -------------------------  PP                SS   PP        -------------------------        
+                -----------------  PP                SS   PP        -----------------                
+                        ---------  PP          SSSSSS     PP        ---------                        
+ --------------------------------------------------------------------------------------------------- 
+          ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **          
+                        Polymer Structure Predictor (PSP) version =  1.0.0                     
+                                   Developed at Ramprasad Group                                      
+           Materials Science and Engineering, Georgia Institute of Technology, Atlanta, US           
+
+           Cite this work as:                                                                
+           H. Sahu, K-H. Shen, J. H. Montoya, H. Tran, R. Ramprasad, PSP: A python toolkit           
+           for predicting 3D models of polymers, journal name, volume, page, 2022.                   
+          ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **          
+ --------------------------------------------------------------------------------------------------- 
+  NetworkBuilder  started...
+ ----------------------------------------------- INPUT --------------------------------------------- 
+|    | ID   | smiles                                |   Mwt | Nunits   | LeftCap          | RightCap      | define_BB   |   Loop |   Num |   NumConf |
+|---:|:-----|:--------------------------------------|------:|:---------|:-----------------|:--------------|:------------|-------:|------:|----------:|
+|  1 | test | A:[L1]CCCCCC[L2];B:[L1]C1C2C([L2])C12 |     0 | [5]      | C(Cl)(Cl)(Cl)[*] | C(F)(F)(F)[*] | A-B         |      0 |     4 |         1 |
+
+ Additional information:  
+ Output files:  ['xyz', 'pdb', 'smi'] 
+ Run short MD simulation:  False 
+ Intermolecular distance in POSCAR:  6 
+ Number of cores:  All 
+ Output Directory:  amor_model/copolymer_models/ 
+ Random seed:  (None,) 
+
+
+ Copolymer models building completed.
+
+ ----------------------------------------------- OUTPUT -------------------------------------------- 
+|    | ID   | Result   |
+|---:|:-----|:---------|
+|  1 | test | SUCCESS  |
+
+ Total run time (minutes):  0.29
+ ------------------------------------- PSP TERMINATED NORMALLY ------------------------------------- 
+
+ Amorphous model building completed.
+
+ Total run time (minutes):  0.59
+ ------------------------------------- PSP TERMINATED NORMALLY ------------------------------------- 
+Couldn't generate multiple conformers ............

@@ -26,12 +26,14 @@ class Builder:
         define_BB_col='define_BB',
         Loop_col='Loop',
         OutDir='copolymer_models',
+        NumConf=1,
         Inter_Mol_Dis=6,
         Output=['xyz'],
         IrrStruc=False,
         GAFF2_atom_typing='pysimm',
         Subscript=False,
         seed=None,
+        rdkit_conf_param={},
     ):
         self.ID_col = ID_col
         self.SMILES_col = SMILES_col
@@ -44,13 +46,15 @@ class Builder:
         self.OutDir = OutDir
         self.Dataframe = Dataframe
         self.NCores = NCores
+        self.NumConf = NumConf
         self.Inter_Mol_Dis = Inter_Mol_Dis
         self.Output = Output
         self.Loop_col = Loop_col
         self.IrrStruc = IrrStruc
         self.GAFF2_atom_typing = GAFF2_atom_typing
         self.Subscript = Subscript
-        self.seed = seed
+        self.seed = seed,
+        self.rdkit_conf_param = rdkit_conf_param,
 
     # list of molecules name and CORRECT/WRONG
     def Build(self):
@@ -126,6 +130,7 @@ class Builder:
                 self.Mwt_col,
                 self.Copoly_type_col,
                 self.define_BB_col,
+                self.NumConf,
                 self.Inter_Mol_Dis,
                 self.Output,
                 self.Loop_col,
@@ -134,6 +139,7 @@ class Builder:
                 NCores_opt,
                 out_dir,
                 self.seed,
+                self.rdkit_conf_param,
             )
             for unit_name in tqdm(
                 df[self.ID_col].values, desc='Building copolymers ...',

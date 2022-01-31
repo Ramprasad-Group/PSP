@@ -1,0 +1,2 @@
+ID,smiles,Mwt,Nunits,LeftCap,RightCap,define_BB,Loop,Num,NumConf
+test,A:[L1]CCCCCC[L2];B:[L1]C1C2C([L2])C12,0,[5],C(Cl)(Cl)(Cl)[*],C(F)(F)(F)[*],A-B,False,4,1
