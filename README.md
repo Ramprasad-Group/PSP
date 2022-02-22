@@ -22,7 +22,7 @@ All queries regarding the usage of PSP should be addressed to: **psp-users@group
 We highly recommend interested individuals join the PSP group. This allows you to participate in discussions and keeps you updated on issues, bug fixes, and latest developments.
 
 ## Reference
-If you use PSP, please cite:
+If you use PSP, please cite:\
 Sahu, H.; Shen, K.-H.; Montoya, J. H.; Tran, H.; Ramprasad, R. Polymer Structure Predictor (PSP): A Python Toolkit for Predicting Atomic-Level Structural Models for a Range of Polymer Geometries, *J.Chem.Theory Comput.*, **2022**.
 
 ## Installation
