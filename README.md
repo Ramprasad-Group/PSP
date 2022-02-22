@@ -23,7 +23,7 @@ We highly recommend interested individuals join the PSP group. This allows you t
 
 ## Reference
 If you use PSP, please cite:\
-Sahu, H.; Shen, K.-H.; Montoya, J. H.; Tran, H.; Ramprasad, R. Polymer Structure Predictor (PSP): A Python Toolkit for Predicting Atomic-Level Structural Models for a Range of Polymer Geometries, *J.Chem.Theory Comput.*, **2022**.
+Sahu, H.; Shen, K.-H.; Montoya, J. H.; Tran, H.; Ramprasad, R. Polymer Structure Predictor (PSP): A Python Toolkit for Predicting Atomic-Level Structural Models for a Range of Polymer Geometries, *J. Chem. Theory Comput.*, **2022**.
 
 ## Installation
 PSP requires the following packages to be installed in order to function properly:
