@@ -16,6 +16,15 @@ Ramprasad Group, Georgia Tech, USA\
 [Ramprasad Group website](http://ramprasad.mse.gatech.edu/)\
 Licensed under the [MIT License](LICENSE).
 
+## Contact
+All queries regarding the usage of PSP should be addressed to: **psp-users@groups.gatech.edu**. 
+
+We highly recommend interested individuals join the PSP group. This allows you to participate in discussions and keeps you updated on issues, bug fixes, and latest developments.
+
+## Reference
+If you use PSP, please cite:
+Sahu, H.; Shen, K.-H.; Montoya, J. H.; Tran, H.; Ramprasad, R. Polymer Structure Predictor (PSP): A Python Toolkit for Predicting Atomic-Level Structural Models for a Range of Polymer Geometries, *J.Chem.Theory Comput.*, **2022**.
+
 ## Installation
 PSP requires the following packages to be installed in order to function properly:
 * [RDKit](https://www.rdkit.org/) v2020.09.1.0
