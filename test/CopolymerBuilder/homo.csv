@@ -1,2 +1,0 @@
-ID,smiles,LeftCap,RightCap,Nunits,Mwt,Copolymer_type
-test,A:[L1]CCCCCC[L2],C(Cl)(Cl)(Cl)[*],C(F)(F)(F)[*],[5],0,homo

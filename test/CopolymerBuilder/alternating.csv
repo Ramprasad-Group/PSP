@@ -1,2 +1,0 @@
-ID,smiles,Mwt,CopolymerType,Nunits,LeftCap,RightCap,define_BB,Loop
-test,A:[L1]CCCCCC[L2];C:[L1]C1CCC([L2])C1;D:[L1]C1C2C([L2])C12;B:[L1]c1ccc([L2])cc1,500,UserDefined,"[0.2,0.5,0.1,0.4]",C(Cl)(Cl)(Cl)[*],C(F)(F)(F)[*],A-B:C:D:B-D,False
