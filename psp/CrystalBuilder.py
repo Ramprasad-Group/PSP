@@ -132,9 +132,7 @@ class Builder:
                     self.NumCandidate,
                     NCores_opt,
                 )
-                for VaspInp in tqdm(
-                    self.VaspInp_list, desc="Building models ..."
-                )
+                for VaspInp in tqdm(self.VaspInp_list, desc="Building models ...")
             )
         else:
             result = Parallel(n_jobs=NCores)(
@@ -148,9 +146,7 @@ class Builder:
                     self.NumCandidate,
                     NCores_opt,
                 )
-                for VaspInp in tqdm(
-                    self.VaspInp_list, desc="Building models ..."
-                )
+                for VaspInp in tqdm(self.VaspInp_list, desc="Building models ...")
             )
 
         output = []
@@ -569,9 +565,7 @@ def CrystalBuilderMain(
     # digits = bd.len_digit_number(NSamples ** 8)
 
     count = 0
-    for i in tqdm(
-        samp[0], desc=VaspInp + " Generating models"
-    ):  # Second poly
+    for i in tqdm(samp[0], desc=VaspInp + " Generating models"):  # Second poly
         for j in samp[2]:  # Second poly
             for k in samp[1]:  # Second poly
                 for aX in samp[3]:  # Second poly

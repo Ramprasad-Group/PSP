@@ -49,7 +49,7 @@ class Builder:
         self.SMILES_col = SMILES_col
         self.LeftCap = LeftCap
         self.RightCap = RightCap
-        self.Nunits_col =  Nunits_col
+        self.Nunits_col = Nunits_col
         self.Mwt_col = Mwt_col
         self.define_BB_col = define_BB_col
         self.Loop_col = Loop_col
@@ -83,9 +83,9 @@ class Builder:
             box_type_ = "Rectangular"
         print(self.rdkit_conf_param)
 
-#        NumConf = 1
-#        if 'numConfs' in self.rdkit_conf_param.keys():
-#            NumConf = int(self.rdkit_conf_param['numConfs'])
+        #        NumConf = 1
+        #        if 'numConfs' in self.rdkit_conf_param.keys():
+        #            NumConf = int(self.rdkit_conf_param['numConfs'])
 
         print(
             "\n",
@@ -133,7 +133,7 @@ class Builder:
                 Loop_col=self.Loop_col,
                 OutDir=self.OutDir_xyz,
                 NCores=self.NCores,
-                Output=['xyz','pdb','smi'],
+                Output=['xyz', 'pdb', 'smi'],
                 seed=self.seed,
                 rdkit_conf_param=self.rdkit_conf_param,
             )
@@ -141,8 +141,8 @@ class Builder:
 
             path_to_file = self.OutDir_xyz + df[self.ID_col].values[0] + '_C1.smi'
             with open(path_to_file) as f:
-               contents = f.readlines()
-               smi = contents[0].split()[0]
+                contents = f.readlines()
+                smi = contents[0].split()[0]
 
             results['SMILES'] = smi
             xyz_gen_pd = pd.concat([xyz_gen_pd, results])
@@ -158,7 +158,9 @@ class Builder:
             # Get a list of filenames for XYZ coordinates
             XYZ_list_ind = glob.glob(self.OutDir_xyz + str(row[self.ID_col]) + "*.pdb")
             XYZ_list.append(XYZ_list_ind)
-            NumConf = len(XYZ_list_ind) # Get number of conformer generated for each system
+            NumConf = len(
+                XYZ_list_ind
+            )  # Get number of conformer generated for each system
 
             # Get number of molecules for each conformer of molecules
             NMol_list += [int(row[self.NumMole] / NumConf)] * NumConf
@@ -342,8 +344,13 @@ class Builder:
 
             try:
                 print("LigParGen working on {}.pdb".format(output_prefix))
-                Converter.convert(pdb=os.path.join(self.OutDir_xyz, output_prefix + '.pdb'),
-                                  resname=output_prefix, charge=0, opt=0, outdir='.')
+                Converter.convert(
+                    pdb=os.path.join(self.OutDir_xyz, output_prefix + '.pdb'),
+                    resname=output_prefix,
+                    charge=0,
+                    opt=0,
+                    outdir='.',
+                )
                 os.rename(lig_output_fname, data_fname)
             except BaseException:
                 print('problem running LigParGen for {}.pdb.'.format(output_prefix))

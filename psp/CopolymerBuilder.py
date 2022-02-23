@@ -21,7 +21,7 @@ class Builder:
         LeftCapSMI_col='LeftCap',
         RightCapSMI_col='RightCap',
         Nunits_col='Nunits',  # list of numbers (ratios); follow the order of building blocks
-        Tunits_col='Tunits', # Total number units in a polymer chain
+        Tunits_col='Tunits',  # Total number units in a polymer chain
         Mwt_col='Mwt_polymer',  # if > 0, then Nunits will be determined from molar mass of BB and Mwt
         Copoly_type_col='Copoly_type',  # 'homo', # homo, alternating, block, graft, random
         define_BB_col='define_BB',
@@ -55,8 +55,8 @@ class Builder:
         self.IrrStruc = IrrStruc
         self.GAFF2_atom_typing = GAFF2_atom_typing
         self.Subscript = Subscript
-        self.seed = seed,
-        self.rdkit_conf_param = rdkit_conf_param,
+        self.seed = (seed,)
+        self.rdkit_conf_param = (rdkit_conf_param,)
 
     # list of molecules name and CORRECT/WRONG
     def Build(self):

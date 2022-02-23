@@ -2711,8 +2711,8 @@ def gen_conf_xyz_vasp(
             maxAttempts=NAttempt,
         )
 
-    #   if len(cids) > 0:
-    #       break
+        if len(cids) > 0:
+            break
     n = 0
     for cid in cids:
         n += 1

@@ -331,8 +331,13 @@ class Builder:
 
             try:
                 print("LigParGen working on {}.pdb".format(output_prefix))
-                Converter.convert(pdb=os.path.join(self.OutDir_xyz, output_prefix + '.pdb'),
-                                  resname=output_prefix, charge=0, opt=0, outdir='.')
+                Converter.convert(
+                    pdb=os.path.join(self.OutDir_xyz, output_prefix + '.pdb'),
+                    resname=output_prefix,
+                    charge=0,
+                    opt=0,
+                    outdir='.',
+                )
                 os.rename(lig_output_fname, data_fname)
             except BaseException:
                 print('problem running LigParGen for {}.pdb.'.format(output_prefix))
