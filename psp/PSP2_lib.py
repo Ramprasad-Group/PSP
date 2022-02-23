@@ -8,6 +8,7 @@ import psp.PSP_lib as bd
 import psp.MD_lib as MDlib
 from LigParGenPSP import Converter
 import random
+import statistics
 
 obConversion = ob.OBConversion()
 ff = ob.OBForceField.FindForceField('UFF')
@@ -383,6 +384,7 @@ def build_copoly(
     LeftCap,
     RightCap,
     Nunits,
+    Tunits,
     Mwt,
     Copoly_type,
     define_BB,
@@ -415,16 +417,21 @@ def build_copoly(
     else:
         Mwt = 0
 
-    if Mwt == 0:
+    # Check given total number of units present in a polymer
+    if Tunits in df_smiles.columns:
+        Tunits = int(df_smiles[df_smiles[ID] == unit_name][Tunits].values[0])
+    else:
+        Tunits = 0
+
+    if Mwt == 0 and Tunits == 0:
         Nunits = [int(item) for item in Nunits]
     else:
         Nunits = [float(item) for item in Nunits]
         # Normalize against the sum to ensure that the sum is always 1.0
-        Nunits = [float(item) / sum(Nunits) * Mwt for item in Nunits]
+        Nunits = [float(item) / sum(Nunits) for item in Nunits]
 
     # Get SMILES of individual blocks
     smiles_each = df_smiles[df_smiles[ID] == unit_name][SMILES].values[0]
-
     smiles_dict = {}
     for smi in smiles_each.strip().split(';'):
         smiles_dict[smi.split(':')[0]] = smi.split(':')[1]
@@ -443,16 +450,6 @@ def build_copoly(
             unit_name + '_' + key, smiles_dict[key], Mwt_polymer=Mwt,
         )
 
-    #    if Mwt != 0:
-    #        list_blocks = list(OBMol_Mwt_dict.keys())
-    #        list_blocks.sort() # Ratio defined in Nunits should follow the alphabetical order
-    #        for
-    #        print(Mwt)
-    #        print(Nunits)
-    #        print(OBMol_Mwt_dict)
-    #        print(list_blocks)
-    #    exit()
-    # Is Loop?
     if Loop in df_smiles.columns:
         Loop = eval(str(df_smiles[df_smiles[ID] == unit_name][Loop].values[0]))
 
@@ -482,16 +479,19 @@ def build_copoly(
         define_BB_ = df_smiles[df_smiles[ID] == unit_name][define_BB].values[0]
         if define_BB_ == 'R':
             define_BB_ = list(smiles_dict.keys())
-            define_BB_.sort()
+            define_BB_.sort() # to ensure it matches with Nunits
 
             # If Mwt is provided, update Nunits
             if Mwt != 0:
                 update_Nunits = []
                 for i in range(len(define_BB_)):
                     update_Nunits.append(
-                        round(Nunits[i] / OBMol_Mwt_dict[define_BB_[i]][0])
+                        round((Nunits[i] * Mwt) / OBMol_Mwt_dict[define_BB_[i]][0])
                     )
                 Nunits = update_Nunits
+
+            elif Tunits != 0:
+                Nunits = [round(Tunits*item) for item in Nunits]
 
             random_seq = []
             for i in range(len(define_BB_)):
@@ -512,14 +512,18 @@ def build_copoly(
                 total_units.extend(define_BB_[block].split('-'))
             # print(OBMol_Mwt_dict)
             # Calculate Mwt of each block repeating unit
-            if Mwt != 0:
+            if Mwt != 0 or Tunits != 0:
                 unit_list = list(smiles_dict.keys())
                 unit_list.sort()
                 update_Nunits = []
-                for i in range(len(unit_list)):
-                    update_Nunits.append(
-                        round(Nunits[i] / OBMol_Mwt_dict[unit_list[i]][0])
-                    )
+
+                if Mwt != 0:
+                    for i in range(len(unit_list)):
+                            update_Nunits.append(
+                            round((Nunits[i] * Mwt) / OBMol_Mwt_dict[unit_list[i]][0])
+                        )
+                elif Tunits != 0:
+                    update_Nunits = [round(Tunits*item) for item in Nunits]
 
                 BB_count = []
                 for key in blocks_dict:
@@ -528,8 +532,9 @@ def build_copoly(
                         BB_each_count.append(
                             update_Nunits[(ord(j) - 65)] * (1 / total_units.count(j))
                         )
-                    BB_count.append(round(min(BB_each_count)))
+                    BB_count.append(round(statistics.mean(BB_each_count))) # Take average
                 Nunits = BB_count
+
     else:
         define_BB_ = list(smiles_dict.keys())
         define_BB_.sort()
@@ -749,6 +754,24 @@ def combine_A_ntimes(OBMol, first, second, n):
     main_obmol += OBMol
     for i in range(n - 1):
         main_obmol += OBMol
+        builder.Connect(main_obmol, second + 1, first + (i + 1) * n_OBmol + 1)
+        second = second + n_OBmol
+
+    return main_obmol, first, second
+
+def combine_A_ntimes_pl(OBMol, first, second, n):
+    builder = ob.OBBuilder()
+    builder.SetKeepRings()
+    # Number atoms in leftcap and oligomer
+    n_OBmol = OBMol.NumAtoms()
+
+    # Reorder first and second linking atoms
+    if second < first:
+        first, second = second, first
+
+    main_obmol = ob.OBMol()
+    main_obmol = OBMol * n
+    for i in range(n - 1):
         builder.Connect(main_obmol, second + 1, first + (i + 1) * n_OBmol + 1)
         second = second + n_OBmol
 

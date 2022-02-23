@@ -18,9 +18,10 @@ class Builder:
         NCores=0,
         ID_col='ID',
         SMILES_col='smiles',
-        LeftCap='LeftCap',
-        RightCap='RightCap',
+        LeftCapSMI_col='LeftCap',
+        RightCapSMI_col='RightCap',
         Nunits_col='Nunits',  # list of numbers (ratios); follow the order of building blocks
+        Tunits_col='Tunits', # Total number units in a polymer chain
         Mwt_col='Mwt_polymer',  # if > 0, then Nunits will be determined from molar mass of BB and Mwt
         Copoly_type_col='Copoly_type',  # 'homo', # homo, alternating, block, graft, random
         define_BB_col='define_BB',
@@ -37,9 +38,10 @@ class Builder:
     ):
         self.ID_col = ID_col
         self.SMILES_col = SMILES_col
-        self.LeftCap = LeftCap
-        self.RightCap = RightCap
+        self.LeftCapSMI_col = LeftCapSMI_col
+        self.RightCapSMI_col = RightCapSMI_col
         self.Nunits_col = Nunits_col
+        self.Tunits_col = Tunits_col
         self.Mwt_col = Mwt_col
         self.Copoly_type_col = Copoly_type_col
         self.define_BB_col = define_BB_col
@@ -124,9 +126,10 @@ class Builder:
                 df,
                 self.ID_col,
                 self.SMILES_col,
-                self.LeftCap,
-                self.RightCap,
+                self.LeftCapSMI_col,
+                self.RightCapSMI_col,
                 self.Nunits_col,
+                self.Tunits_col,
                 self.Mwt_col,
                 self.Copoly_type_col,
                 self.define_BB_col,
