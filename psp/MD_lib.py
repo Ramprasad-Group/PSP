@@ -6,8 +6,6 @@ from scipy.spatial.distance import cdist
 from random import shuffle
 import subprocess
 
-# import mmap
-# import os
 from itertools import takewhile, islice, dropwhile
 
 
@@ -73,7 +71,6 @@ def get_initial_model(NMol_list, XYZ_list, tol_dis, xmin, xmax, ymin, ymax, zmin
         zlayer = 1
 
         for i in all_mole_idx:
-            # print('>>>>>>>>>>', i)
             unit = pd.read_csv(
                 XYZ_list[i - 1], header=None, skiprows=2, delim_whitespace=True
             )
@@ -147,85 +144,54 @@ def move_unit(
             and mol_ymax > ymax - min_y_dis
             and mol_xmax > xmax - min_x_dis
         ):
-            # print("Can't pack molecules in the box; length of each axis is increased to 30%.")
             return unit_mod, False, add_yaxis, zlayer
 
         else:
-            # print(sys_ymax, ymax - min_y_dis, mol_ymax)
-            if mol_ymax > ymax - min_y_dis:  #
-                # add_yaxis = 0.0
-                # print(">>>>1")
+            if mol_ymax > ymax - min_y_dis:
                 if mol_xmax > xmax - min_x_dis:
                     unit_mod[3] = unit_mod[3] + sys_mod[3].max() + tol_dis_mod
-                    # print(">>>>2")
                     add_yaxis = unit_mod[2].max()
                     zlayer += 1
-                    # print(unit_mod[2].max())
                 else:
                     unit_mod[3] = unit_mod[3] + last_mol[3].min()
                     unit_mod[2] = unit_mod[2] + last_mol[2].min() - 0.1
                     unit_mod[1] = unit_mod[1] + last_mol[1].max() + tol_dis_mod
 
-                    # print(">>>>3")
                     add_yaxis = max(add_yaxis, unit_mod[2].max())
-                    # print(unit_mod[2].max())
-            # elif sys_ymax > ymax-min_y_dis: #
+
             elif zlayer > 1:
-                # print(">>>>4")
                 if mol_xmax > xmax - min_x_dis:
                     if add_yaxis + min_y_dis < ymax:
-                        # print(">>>>12")
                         unit_mod[3] = unit_mod[3] + last_mol[3].min()
-                        # print('<<<<<<<<<< Do not enter >>>>>>>')
-                        #    unit_mod[2] = unit_mod[2] + last_mol[2].max() + tol_dis_mod #+ 1.19### ISSUE
                         unit_mod[2] = unit_mod[2] + add_yaxis + tol_dis_mod
                     else:  # Add to z axis
-                        # print(">>>>11")
                         unit_mod[3] = unit_mod[3] + sys_mod[3].max() + tol_dis_mod
                         zlayer += 1
-                        # unit_mod[3] = unit_mod[3] + last_mol[3].min()
-                        # unit_mod[2] = unit_mod[2] + add_yaxis + tol_dis_mod
+
                     add_yaxis = unit_mod[2].max()
                 elif sys_xmax > xmax - min_x_dis:
                     unit_mod[3] = unit_mod[3] + last_mol[3].min()
                     unit_mod[2] = unit_mod[2] + last_mol[2].min()
                     unit_mod[1] = unit_mod[1] + last_mol[1].max() + tol_dis_mod
-                    # print(">>>>6")
-                    # print(unit_mod[2].max())
-                    # add_yaxis = max(add_yaxis, unit_mod[2].max())
+
                 else:
                     unit_mod[3] = unit_mod[3] + last_mol[3].min()
                     unit_mod[1] = unit_mod[1] + last_mol[1].max() + tol_dis_mod
-                    # print(">>>>7")
-                    # add_yaxis = max(add_yaxis, unit_mod[2].max())
-                    # print(unit_mod[2].max())
-                    # Additional conditions
 
             else:
                 if mol_xmax > xmax - min_x_dis:
-                    # unit_mod[2] = unit_mod[2] + last_mol[2].max() + tol_dis_mod
                     unit_mod[2] = unit_mod[2] + sys_mod[2].max() + tol_dis_mod
-                    # New commands
-                    # unit_mod[3] = unit_mod[3] + last_mol[3].min()
-                    # unit_mod[1] = unit_mod[1] + last_mol[1].min()
-                    # print(">>>>8")
-                    # print(unit_mod[2].max())
                     add_yaxis = unit_mod[2].max()
                 elif sys_xmax > xmax - min_x_dis:
-                    # print(">>>>9", last_mol[2].min(), add_yaxis)
                     unit_mod[3] = unit_mod[3] + last_mol[3].min()
                     unit_mod[2] = unit_mod[2] + last_mol[2].min()
                     unit_mod[1] = unit_mod[1] + last_mol[1].max() + tol_dis_mod
 
                     add_yaxis = max(add_yaxis, unit_mod[2].max())
-                    # print(unit_mod[2].max())
                 else:
-                    # print(">>>>10")
                     unit_mod[1] = unit_mod[1] + last_mol[1].max() + tol_dis_mod
                     add_yaxis = max(add_yaxis, unit_mod[2].max())
 
-                    # add_yaxis = (max(add_yaxis, unit_mod[2].max()))
-                    # print(unit_mod[2].max())
     return unit_mod, True, add_yaxis, zlayer
 
 
@@ -291,16 +257,8 @@ def evaluate_obj(sys, dis_cutoff, xmin, xmax, ymin, ymax, zmin, zmax):
     dis_val = list(
         zip(*[eval_dis(sys_dis_arr, dis_cutoff, dis_value, a) for a in list_mol])
     )[1]
-    # print(dis_val)
-    # sys_dis_arr, dis_value = [(sys_dis_arr, dis_value) for i,j in
-    # (eval_dis(sys_dis_arr, dis_cutoff, dis_value, a) for a in list_mol)]
-    # dis_value = list(zip(*map(eval_dis, [sys_dis_arr], [dis_cutoff], [dis_value], list_mol)))[1]
-    # dis_value = Counter(True for x in range(1, (12*8)+1))[True]
-    # print(dis_value)
-    # exit()
-    # sys_dis_arr, dis_value
+
     for a in list_mol:
-        #        sys_dis_arr, dis_value = eval_dis(sys_dis_arr, a, dis_cutoff, dis_value)
         unit1 = sys_dis_arr[sys_dis_arr[:, 3] == a][:, :-1]
         unit1_minX, unit1_maxX, unit1_minY, unit1_maxY, unit1_minZ, unit1_maxZ = (
             np.amin(unit1[:, 0]),
@@ -334,7 +292,7 @@ def evaluate_obj(sys, dis_cutoff, xmin, xmax, ymin, ymax, zmin, zmax):
 
     bound_value = 0.0
     # X axis
-    Arr_x = sys[1].values  # sys_dis_arr[:, 0] #
+    Arr_x = sys[1].values
     newArr_x_min = Arr_x[Arr_x < xmin]
     newArr_x_min = xmin - newArr_x_min
 
@@ -342,7 +300,7 @@ def evaluate_obj(sys, dis_cutoff, xmin, xmax, ymin, ymax, zmin, zmax):
     newArr_x_max = newArr_x_max - xmax
 
     # Y axis
-    Arr_y = sys[2].values  # sys_dis_arr[:, 1] #
+    Arr_y = sys[2].values
     newArr_y_min = Arr_y[Arr_y < ymin]
     newArr_y_min = ymin - newArr_y_min
 
@@ -350,7 +308,7 @@ def evaluate_obj(sys, dis_cutoff, xmin, xmax, ymin, ymax, zmin, zmax):
     newArr_y_max = newArr_y_max - ymax
 
     # Z axis
-    Arr_z = sys[3].values  # sys_dis_arr[:, 2] #
+    Arr_z = sys[3].values
     newArr_z_min = Arr_z[Arr_z < zmin]
     newArr_z_min = zmin - newArr_z_min
 

@@ -104,8 +104,7 @@ class Builder:
         start_1 = time.time()
         list_out_xyz = 'output_MB.csv'
         chk_tri = []
-        # ID =
-        # SMILES = self.SMILES_col
+
         df = self.Dataframe.copy()
         df[self.ID_col] = df[self.ID_col].apply(str)
 
@@ -140,8 +139,7 @@ class Builder:
             )
             for unit_name in tqdm(df[self.ID_col].values, desc='Building models ...',)
         )
-        # print(result)
-        # exit()
+
         for i in result:
             chk_tri.append([i[0], i[1], i[2]])
 

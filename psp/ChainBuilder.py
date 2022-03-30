@@ -50,8 +50,6 @@ class Builder:
         self.Inter_Chain_Dis = Inter_Chain_Dis
 
         if self.Method not in ['SA', 'Dimer']:
-            #            print('    - polymer chain building started (', self.Method, ') ...')
-            #        else:
             print("Error: please check keyword for * method ")
             print("SA == simulated annealing")
             print("Dimer == dimerization")

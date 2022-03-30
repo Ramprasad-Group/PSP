@@ -115,7 +115,7 @@ def SA(
         dum2,
         atom1,
         atom2,
-    )  # 102.5
+    )
     fs = np.zeros(n + 1)
     fs[0] = fc
     results.append([0, fc, file_name])

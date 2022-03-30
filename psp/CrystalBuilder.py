@@ -81,8 +81,6 @@ class Builder:
 
         NCores_opt = 1
         NCores = self.NCores
-        # if self.Optimize is True:
-        #    NCores, NCores_opt = NCores_opt, NCores
 
         if self.Polymer is True:
             if isinstance(self.NSamples, int):
@@ -228,17 +226,6 @@ def create_crystal_vasp(
         )
         row1 += int(Num_atom[col].values[1])
 
-    # dist = cdist(crystal_struc[[1, 2, 3]].values, crystal_struc[[1, 2, 3]].values)
-
-    # for i in np.arange(dist.shape[0]):
-    #    for j in np.arange(dist.shape[1]):
-    #        if i != j:
-    #            if dist[i, j] < 0.8:
-    #                print(i, j, dist[i, j])
-
-    #   if (dist < 0.3).any():
-    #       print(filename)
-
     Crystal_Num_atom = Num_atom.copy()
     Crystal_Num_atom.loc[1] = 2 * Crystal_Num_atom.loc[1].astype(int)
     keep_space = MinAtomicDis  # in angstrom
@@ -369,7 +356,6 @@ def CrystalBuilderMainPolymer(
     first_poly = Center_XY_r(xyz_coordinates, 0.0, 0.0)
 
     # Calculate distance between two chains
-    # Max (X,Y) + 2.0
     if Input_radius == 'auto':
         radius = (
             np.sqrt(
@@ -387,9 +373,6 @@ def CrystalBuilderMainPolymer(
 
     else:
         radius = float(Input_radius)
-
-        # Number of digits in total number of crystal models
-        # digits = bd.len_digit_number(NSamples ** 3)
 
     count = 0
     for i in tqdm(samp[0], desc=VaspInp):
@@ -542,7 +525,6 @@ def CrystalBuilderMain(
     first_poly = Center_XY_r(xyz_coordinates, 0.0, 0.0)
 
     # Calculate distance between two chains
-    # Max (X,Y) + 2.0
     if Input_radius == 'auto':
         radius = (
             np.sqrt(
@@ -645,15 +627,6 @@ def CrystalBuilderMain(
                                                 dist[np.isnan(dist)] = 0.0
                                                 dist = dist.flatten()
 
-                                    # Calculate distance between atoms in first_unit and second_unit
-                                    # dist = cdist(
-                                    #    first_poly_moved[[1, 2, 3]].values,
-                                    #    second_poly_moved[[1, 2, 3]].values,
-                                    # )
-                                    # dist[np.isnan(dist)] = 0.0
-                                    # dist = dist.flatten()
-
-                                    # if min(dist) > 2.0:
                                     count += 1
                                     create_crystal_vasp(
                                         os.path.join(

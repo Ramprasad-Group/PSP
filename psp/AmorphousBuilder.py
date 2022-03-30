@@ -141,17 +141,6 @@ class Builder:
             XYZ_list.append(XYZ_list_ind)
             NumConf_list.append(int(row[self.NumConf]))
 
-            # for conf in range(1, row[self.NumConf] + 1):
-            #    XYZ_list.append(
-            #        self.OutDir_xyz
-            #        + str(row[self.ID_col])
-            #        + "_N"
-            #        + str(row[self.Length])
-            #        + "_C"
-            #        + str(conf)
-            #        + ".pdb"
-            #    )
-
         # Define boundary conditions
         if max(self.box_size) == 0.0:  # Box size is not provided
             NMol_type = len(NMol_list)
@@ -258,12 +247,6 @@ class Builder:
             packmol_bond = MDlib.read_mol2_bond(
                 os.path.join(packmol_outdir_model, "packmol.mol2")
             )
-            # packmol_xyz = pd.read_csv(
-            #    self.OutDir_packmol + "packmol.xyz",
-            #    header=None,
-            #    skiprows=2,
-            #    delim_whitespace=True,
-            # )
 
             # Output filename
             if self.NumModel > 1:
@@ -428,61 +411,47 @@ class Builder:
 
         from pysimm import system, forcefield
 
-        # run Pysimm for every mol2 (converted from pdb with Babel) file in the OutDir_xyz directory
+        # run Pysimm for every cml (converted from pdb with Babel) file in the OutDir_xyz directory
         for index, row in self.Dataframe.iterrows():
             _id = str(row[self.ID_col])
             _length = row[self.Length]
             _num = row[self.NumMole]
             _conf = 1  # read in only the first conformer
             output_prefix = "{}_N{}_C{}".format(_id, _length, _conf)
-            mol2_file = os.path.join(self.OutDir_xyz, "{}.mol2".format(output_prefix))
+            pdb_file = os.path.join(self.OutDir_xyz, "{}.pdb".format(output_prefix))
+            cml_file = os.path.join(self.OutDir_xyz, "{}.cml".format(output_prefix))
 
-            obConversion.SetInAndOutFormats("pdb", "mol2")
+            obConversion.SetInAndOutFormats("pdb", "cml")
             mol = ob.OBMol()
-            obConversion.ReadFile(
-                mol, os.path.join(self.OutDir_xyz, output_prefix) + '.pdb'
-            )
-            obConversion.WriteFile(
-                mol, os.path.join(self.OutDir_xyz, output_prefix) + '.mol2'
-            )
+            obConversion.ReadFile(mol, pdb_file)
+            obConversion.WriteFile(mol, cml_file)
 
             data_fname = os.path.join(
                 self.OutDir_pysimm, "{}.lmp".format(output_prefix)
             )
 
             try:
-                print("Pysimm working on {}".format(mol2_file))
-                s = system.read_mol2(mol2_file)
+                print("Pysimm working on {}".format(cml_file))
+                s = system.read_cml(cml_file)
             except BaseException:
-                print('problem reading {} for Pysimm.'.format(mol2_file))
+                print('problem reading {} for Pysimm.'.format(cml_file))
+                exit()
 
             f = forcefield.Gaff2()
             if atom_typing == 'pysimm':
-                try:
-                    print("Pysimm applying force field for {}.".format(mol2_file))
-                    s.apply_forcefield(f, charges='gasteiger')
-                except BaseException:
-                    print(
-                        'Error applying force field with the mol2 file, switch to using cml file.'
-                    )
-
-                    obConversion.SetInAndOutFormats("pdb", "cml")
-                    mol = ob.OBMol()
-                    obConversion.ReadFile(
-                        mol, os.path.join(self.OutDir_xyz, output_prefix) + '.pdb'
-                    )
-                    obConversion.WriteFile(
-                        mol, os.path.join(self.OutDir_xyz, output_prefix) + '.cml'
-                    )
-
-                    s = system.read_cml(
-                        '{}.cml'.format(os.path.join(self.OutDir_xyz, output_prefix))
-                    )
-                    for b in s.bonds:
-                        if b.a.bonds.count == 3 and b.b.bonds.count == 3:
-                            b.order = 4
-                    s.apply_forcefield(f, charges='gasteiger')
+                for b in s.bonds:
+                    if b.a.bonds.count == 3 and b.b.bonds.count == 3:
+                        b.order = 4
+                s.apply_forcefield(f, charges='gasteiger')
             elif atom_typing == 'antechamber':
+                mol2_file = os.path.join(
+                    self.OutDir_xyz, "{}.mol2".format(output_prefix)
+                )
+                obConversion.SetInAndOutFormats("pdb", "mol2")
+                mol = ob.OBMol()
+                obConversion.ReadFile(mol, pdb_file)
+                obConversion.WriteFile(mol, mol2_file)
+
                 print("Antechamber working on {}".format(mol2_file))
                 MDlib.get_type_from_antechamber(s, mol2_file, 'gaff2', f, swap_dict)
                 s.pair_style = 'lj'
@@ -491,6 +460,7 @@ class Builder:
                 print(
                     'Invalid atom typing option, please select pysimm or antechamber.'
                 )
+                exit()
             s.write_lammps(data_fname)
 
             # quickly read the headers of Pysimm generated LAMMPS

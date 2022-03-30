@@ -70,7 +70,6 @@ def localopt(unit_name, file_name, dum1, dum2, atom1, atom2, xyz_tmp_dir):
                 file_name, header=None, skiprows=2, delim_whitespace=True
             )
             return unit_opt
-            # print(unit_name, ": Not optimized using steepest descent.")
         else:
             # read XYZ file: skip the first two rows
             unit_opt = pd.read_csv(
@@ -2317,7 +2316,7 @@ def build_3D(
             return unit_name, 'PARTIAL SUCCESS', Final_SMILES
 
         Final_SMILES.append(smiles_each_ind)
-        # OB_smi_2_xyz_vasp(unit_name, smiles_each_ind, l, out_dir, Inter_Mol_Dis, NumConf=NumConf, seed=None)
+
         NumC = gen_conf_xyz_vasp(
             unit_name,
             m1,
@@ -2336,10 +2335,6 @@ def build_3D(
             return unit_name, 'FAILURE', Final_SMILES
         elif ln == Length[-1]:
             return unit_name, 'SUCCESS', Final_SMILES
-
-        # end_1 = time.time()
-        # print(l, end_1 - start_1)
-    # return unit_name, 'SUCCESS', Final_SMILES
 
 
 def Init_info_Cap(unit_name, smiles_each_ori, xyz_in_dir):
@@ -2904,13 +2899,6 @@ def screen_Candidates(
         )
         list_cryst.append([mol, energy])
 
-    # result = Parallel(n_jobs=NCores_opt)(delayed(opt_mol_ob)(path_each, format_in,
-    # format_out, OptStep, forcefield, OutFile=False) for path_each in vasp_input_list)
-    # print(result)
-    # list_cryst = []
-    # for i in result:
-    #    list_cryst.append([i[0], i[1]])
-
     # Create a pandas DataFrame, sort, and then select
     list_cryst = pd.DataFrame(list_cryst, columns=['OBmol', 'ener'])
     list_cryst = list_cryst.sort_values(by='ener', ascending=True).head(NumCandidate)
@@ -2955,7 +2943,7 @@ def get_gaff2(outfile_name, mol, atom_typing='pysimm'):
     # r = MDlib.get_coord_from_pdb(outfile_name + ".pdb")
     from pysimm import system, forcefield
 
-    obConversion.SetInAndOutFormats("pdb", "mol2")
+    obConversion.SetInAndOutFormats("pdb", "cml")
     if os.path.exists(outfile_name + '.pdb'):
         mol = ob.OBMol()
         obConversion.ReadFile(mol, outfile_name + '.pdb')
@@ -2973,37 +2961,25 @@ def get_gaff2(outfile_name, mol, atom_typing='pysimm'):
             print("Couldn't generate GAFF2 parameter file\n")
             return
 
-    obConversion.WriteFile(mol, outfile_name + '.mol2')
+    obConversion.WriteFile(mol, outfile_name + '.cml')
 
     data_fname = outfile_name + '_gaff2.lmp'
 
     try:
         print("Pysimm working on {}".format(outfile_name + '.mol2'))
-        s = system.read_mol2(outfile_name + '.mol2')
+        s = system.read_cml(outfile_name + '.cml')
 
         f = forcefield.Gaff2()
         if atom_typing == 'pysimm':
-            try:
-                print(
-                    "Pysimm applying force field for {}.".format(outfile_name + '.mol2')
-                )
-                s.apply_forcefield(f, charges='gasteiger')
-            except BaseException:
-                print(
-                    'Error applying force field with the mol2 file, switch to using cml file.'
-                )
-
-                obConversion.SetInAndOutFormats("pdb", "cml")
-                mol = ob.OBMol()
-                obConversion.ReadFile(mol, outfile_name + '.pdb')
-                obConversion.WriteFile(mol, outfile_name + '.cml')
-
-                s = system.read_cml(outfile_name + '.cml')
-                for b in s.bonds:
-                    if b.a.bonds.count == 3 and b.b.bonds.count == 3:
-                        b.order = 4
-                s.apply_forcefield(f, charges='gasteiger')
+            for b in s.bonds:
+                if b.a.bonds.count == 3 and b.b.bonds.count == 3:
+                    b.order = 4
+            s.apply_forcefield(f, charges='gasteiger')
         elif atom_typing == 'antechamber':
+            obConversion.SetInAndOutFormats("pdb", "mol2")
+            mol = ob.OBMol()
+            obConversion.ReadFile(mol, outfile_name + '.pdb')
+            obConversion.WriteFile(mol, outfile_name + '.mol2')
             print("Antechamber working on {}".format(outfile_name + '.mol2'))
             MDlib.get_type_from_antechamber(s, outfile_name + '.mol2', 'gaff2', f)
             s.pair_style = 'lj'
@@ -3013,4 +2989,4 @@ def get_gaff2(outfile_name, mol, atom_typing='pysimm'):
         s.write_lammps(data_fname)
         print("\nGAFF2 parameter file generated.")
     except BaseException:
-        print('problem reading {} for Pysimm.'.format(outfile_name + '.mol2'))
+        print('problem reading {} for Pysimm.'.format(outfile_name + '.cml'))
