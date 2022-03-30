@@ -2962,7 +2962,6 @@ def get_gaff2(outfile_name, mol, atom_typing='pysimm'):
             return
 
     obConversion.WriteFile(mol, outfile_name + '.cml')
-
     data_fname = outfile_name + '_gaff2.lmp'
 
     try:
@@ -2976,9 +2975,7 @@ def get_gaff2(outfile_name, mol, atom_typing='pysimm'):
                     b.order = 4
             s.apply_forcefield(f, charges='gasteiger')
         elif atom_typing == 'antechamber':
-            obConversion.SetInAndOutFormats("pdb", "mol2")
-            mol = ob.OBMol()
-            obConversion.ReadFile(mol, outfile_name + '.pdb')
+            obConversion.SetOutFormat("mol2")
             obConversion.WriteFile(mol, outfile_name + '.mol2')
             print("Antechamber working on {}".format(outfile_name + '.mol2'))
             MDlib.get_type_from_antechamber(s, outfile_name + '.mol2', 'gaff2', f)
