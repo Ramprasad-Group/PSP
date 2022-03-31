@@ -387,7 +387,7 @@ class Builder:
         print("\nOPLS parameter file generated.")
 
     def get_gaff2(
-        self, output_fname='amor_gaff2.lmps', atom_typing='pysimm', swap_dict=None
+        self, output_fname='amor_gaff2.lmps', atom_typing='pysimm', am1bcc_charges=False, swap_dict=None
     ):
         print("\nGenerating GAFF2 parameter file ...\n")
         system_pdb_fname = os.path.join(self.OutDir_packmol, "packmol.pdb")
@@ -439,6 +439,8 @@ class Builder:
 
             f = forcefield.Gaff2()
             if atom_typing == 'pysimm':
+                if am1bcc_charges:
+                    print('AM1BCC charge method is not only available for pysimm atom typing, using gasteiger instead')
                 for b in s.bonds:
                     if b.a.bonds.count == 3 and b.b.bonds.count == 3:
                         b.order = 4
@@ -453,9 +455,9 @@ class Builder:
                 obConversion.WriteFile(mol, mol2_file)
 
                 print("Antechamber working on {}".format(mol2_file))
-                MDlib.get_type_from_antechamber(s, mol2_file, 'gaff2', f, swap_dict)
+                MDlib.get_type_from_antechamber(s, mol2_file, 'gaff2', f, am1bcc_charges, swap_dict)
                 s.pair_style = 'lj'
-                s.apply_forcefield(f, charges='gasteiger', skip_ptypes=True)
+                s.apply_forcefield(f, charges=None if am1bcc_charges else 'gasteiger', skip_ptypes=True)
             else:
                 print(
                     'Invalid atom typing option, please select pysimm or antechamber.'
