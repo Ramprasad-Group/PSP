@@ -822,7 +822,7 @@ def write_lammps_ouput(lammps_output, r, box_size, system_stats, dicts):
 
 
 def get_type_from_antechamber(
-    s, mol2_file, types='gaff2', f=None, swap_dict=None, cleanup=True
+    s, mol2_file, types='gaff2', f=None, am1bcc_charges=False,  swap_dict=None, cleanup=True
 ):
     import os
     import glob
@@ -831,23 +831,19 @@ def get_type_from_antechamber(
     temp_ac_fname = 'temp.ac'
     temp_pdb_fname = None
     try:
-        subprocess.call(
-            '{} -fi mol2 -i {} -fo ac -o {} -at {}'.format(
-                ANTECHAMBER_EXEC, mol2_file, temp_ac_fname, types
-            ),
-            shell=True,
-        )
+        command = '{} -fi mol2 -i {} -fo ac -o {} -at {}'.format(ANTECHAMBER_EXEC, mol2_file, temp_ac_fname, types)
+        if am1bcc_charges:
+            command += ' -c bcc'
+        subprocess.call(command, shell=True)
         fr = open(temp_ac_fname, "r")
     except BaseException:
         print('Error running Antechamber with the mol2 file, switch to using pdb file.')
         temp_pdb_fname = 'temp.pdb'
         s.write_pdb(temp_pdb_fname)
-        subprocess.call(
-            '{} -fi pdb -i {} -fo ac -o {} -at {}'.format(
-                ANTECHAMBER_EXEC, temp_pdb_fname, temp_ac_fname, types
-            ),
-            shell=True,
-        )
+        command = '{} -fi pdb -i {} -fo ac -o {} -at {}'.format(ANTECHAMBER_EXEC, temp_pdb_fname, temp_ac_fname, types)
+        if am1bcc_charges:
+            command += ' -c bcc'
+        subprocess.call(command, shell=True)
         fr = open(temp_ac_fname, "r")
     fr.readline()
     fr.readline()
@@ -855,6 +851,9 @@ def get_type_from_antechamber(
     while line.split()[0] == 'ATOM':
         tag = int(line.split()[1])
         type_name = line.split()[-1]
+        if am1bcc_charges:
+            charge = float(line.split()[-2])
+            s.particles[tag].charge = charge
         if swap_dict:
             for key in swap_dict:
                 if type_name == key:
