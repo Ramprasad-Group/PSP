@@ -440,7 +440,7 @@ class Builder:
             f = forcefield.Gaff2()
             if atom_typing == 'pysimm':
                 if am1bcc_charges:
-                    print('AM1BCC charge method is not available with pysimm atom typing, switching to gasteiger method instead')
+                    print('AM1BCC method is not available with pysimm, using gasteiger method instead')
                 for b in s.bonds:
                     if b.a.bonds.count == 3 and b.b.bonds.count == 3:
                         b.order = 4
