@@ -319,6 +319,7 @@ class Builder:
                     resname=output_prefix,
                     charge=0,
                     opt=0,
+                    lbcc=True,
                     outdir='.',
                 )
                 os.rename(lig_output_fname, data_fname)
