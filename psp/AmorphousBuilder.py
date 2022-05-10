@@ -281,7 +281,7 @@ class Builder:
             pd.DataFrame(), "Amorphous model", np.round((end_1 - start_1) / 60, 2)
         )
 
-    def get_opls(self, output_fname='amor_opls.lmps'):
+    def get_opls(self, output_fname='amor_opls.lmps', lbcc_charges=True):
         print("\nGenerating OPLS parameter file ...\n")
         system_pdb_fname = os.path.join(self.OutDir_packmol, "packmol.pdb")
         r = MDlib.get_coord_from_pdb(system_pdb_fname)
@@ -319,7 +319,7 @@ class Builder:
                     resname=output_prefix,
                     charge=0,
                     opt=0,
-                    lbcc=True,
+                    lbcc=lbcc_charges,
                     outdir='.',
                 )
                 os.rename(lig_output_fname, data_fname)
