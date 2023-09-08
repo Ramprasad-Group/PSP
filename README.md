@@ -1,4 +1,4 @@
-# PolymerStructurePredictor (PSP)
+# PolymerStructurePredictor (PSP) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)][1]
 
 Three-dimensional atomic-level models of polymers are necessary prerequisites for physics-based simulation studies. Polymer structure predictor (PSP) is capable of generating a hierarchy of polymer models, ranging from oligomers to infinite chains to crystals to amorphous models, using a simplified molecular-input line-entry system (SMILES) string of the polymer repeat unit as the primary input. The output structures and accompanying force field (GAFF2/OPLS-AA) parameter files are provided for downstream DFT and MD simulations.
 
@@ -54,5 +54,7 @@ Once all dependencies are installed, clone the PSP repository and install it usi
 ```angular2
 python setup.py install
 ```
->**NOTE**: A colab notebook that demonstrates the step-by-step installation procedure and installs PSP and its dependencies has been provided. 
+>**NOTE**: A colab notebook that demonstrates the step-by-step installation procedure and installs PSP and its dependencies has been provided. [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)][1]
+
+[1]:https://colab.research.google.com/github/Ramprasad-Group/PSP/blob/master/Colab_notebook/psp_Colab_notebook.ipynb
 
